@@ -1,10 +1,12 @@
 # CAPSTONE-2--C2SE.71
-MentorAI Grad
-Project Management System with AI-Assisted Feedback
+# MentorAI Grad
+### Project Management System with AI-Assisted Feedback
 
 MentorAI Grad is a web-based platform designed to support the management and supervision of capstone projects between students and supervisors. The system centralizes project topic approval, milestone tracking, report submission, and supervisor feedback. It also integrates AI to summarize supervisor feedback and highlight key revision points for students.
 
-Project Overview
+---
+
+# Project Overview
 
 Managing capstone projects often involves fragmented communication, unclear progress tracking, and manual document handling. MentorAI Grad addresses these challenges by providing a centralized system where students and supervisors can collaborate effectively throughout the capstone project lifecycle.
 
@@ -12,59 +14,55 @@ The platform allows students to propose project topics, submit milestone reports
 
 To improve learning efficiency, the system integrates AI-assisted summarization to help students quickly understand supervisor feedback.
 
-Key Features
-User Management
+---
 
-User registration and login
+# Key Features
 
-Role-based access control (Student, Supervisor, Admin)
+## User Management
 
-Profile management
+* User registration and login
+* Role-based access control (Student, Supervisor, Admin)
+* Profile management
 
-Project Topic Management
+## Project Topic Management
 
-Students propose capstone project topics
+* Students propose capstone project topics
+* Supervisors review and approve or reject topics
 
-Supervisors review and approve or reject topics
+## Milestone Management
 
-Milestone Management
+* Supervisors define project milestones and deadlines
+* Students track project progress
 
-Supervisors define project milestones and deadlines
+## Submission & Document Management
 
-Students track project progress
+* Students upload milestone reports
+* Supervisors review submissions
+* Support resubmission if required
 
-Submission & Document Management
+## Feedback System
 
-Students upload milestone reports
+* Supervisors provide written feedback
+* Students view and respond to feedback
 
-Supervisors review submissions
+## Progress Monitoring
 
-Support resubmission if required
+* Dashboard displaying project progress
+* Milestone completion status
 
-Feedback System
+## AI-Assisted Feedback Summarization
 
-Supervisors provide written feedback
+* Uses external AI service (Gemini API)
+* Summarizes supervisor feedback
+* Highlights key revision points
 
-Students view and respond to feedback
+---
 
-Progress Monitoring
+# System Architecture
 
-Dashboard displaying project progress
+The system follows a **three-tier web architecture**:
 
-Milestone completion status
-
-AI-Assisted Feedback Summarization
-
-Uses external AI service (Gemini API)
-
-Summarizes supervisor feedback
-
-Highlights key revision points
-
-System Architecture
-
-The system follows a three-tier web architecture:
-
+```
 Client (ReactJS Frontend)
         │
 REST API (NodeJS / Express Backend)
@@ -72,91 +70,87 @@ REST API (NodeJS / Express Backend)
 Database (MySQL)
         │
 External AI Service (Gemini API)
-Components
+```
+
+### Components
 
 Frontend
 
-ReactJS
-
-TailwindCSS
+* ReactJS
+* TailwindCSS
 
 Backend
 
-NodeJS
-
-ExpressJS
+* NodeJS
+* ExpressJS
 
 Database
 
-MySQL
+* MySQL
 
 External Services
 
-Gemini API (AI feedback summarization)
+* Gemini API (AI feedback summarization)
 
-Technology Stack
+---
+
+# Technology Stack
 
 Frontend
 
-ReactJS
-
-TailwindCSS
+* ReactJS
+* TailwindCSS
 
 Backend
 
-NodeJS
-
-ExpressJS
+* NodeJS
+* ExpressJS
 
 Database
 
-MySQL
+* MySQL
 
 AI Integration
 
-Gemini API
+* Gemini API
 
 Development Tools
 
-Git / GitHub
+* Git / GitHub
+* Postman
+* VSCode
 
-Postman
+---
 
-VSCode
+# System Roles
 
-System Roles
-Student
+## Student
 
-Register and log in
+* Register and log in
+* Propose project topics
+* Submit milestone reports
+* View supervisor feedback
+* Track project progress
 
-Propose project topics
+## Supervisor
 
-Submit milestone reports
+* Review and approve project topics
+* Define project milestones
+* Review submissions
+* Provide feedback
 
-View supervisor feedback
+## Administrator
 
-Track project progress
+* Manage users and system roles
+* Monitor system activity
 
-Supervisor
+---
 
-Review and approve project topics
-
-Define project milestones
-
-Review submissions
-
-Provide feedback
-
-Administrator
-
-Manage users and system roles
-
-Monitor system activity
-
-Database Overview
+# Database Overview
 
 Main entities:
 
+```
 Users
 Projects
 Milestones
@@ -164,57 +158,97 @@ Submissions
 Feedback
 Notifications
 Roles
+```
 
 The database is normalized to reduce redundancy and improve query performance.
 
-Installation Guide
-1. Clone repository
+---
+
+# Installation Guide
+
+## 1. Clone repository
+
+```bash
 git clone https://github.com/your-repo/mentorai-grad.git
-2. Install backend dependencies
+```
+
+---
+
+## 2. Install backend dependencies
+
+```bash
 cd backend
 npm install
-3. Install frontend dependencies
+```
+
+---
+
+## 3. Install frontend dependencies
+
+```bash
 cd frontend
 npm install
-4. Configure environment variables
+```
 
-Create .env file in backend folder:
+---
 
+## 4. Configure environment variables
+
+Create `.env` file in backend folder:
+
+```
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=password
 DB_NAME=mentorai_grad
 GEMINI_API_KEY=your_api_key
 JWT_SECRET=your_secret_key
-5. Run backend server
+```
+
+---
+
+## 5. Run backend server
+
+```bash
 npm run dev
-6. Run frontend
+```
+
+---
+
+## 6. Run frontend
+
+```bash
 npm start
-Future Improvements
+```
 
-Real-time notifications for milestones
+---
 
-Advanced analytics dashboard
+# Future Improvements
 
-Integration with university learning management systems
+* Real-time notifications for milestones
+* Advanced analytics dashboard
+* Integration with university learning management systems
+* Enhanced AI-assisted project guidance
 
-Enhanced AI-assisted project guidance
+---
 
-Development Team
+# Development Team
 
 Capstone Project Team
 
-Project Leader / Scrum Master
-
-Backend Developer
-
-Frontend Developer
-
-System Architect
+* Project Leader / Scrum Master
+* Backend Developer
+* Frontend Developer
+* System Architect
 
 International School
 Duy Tan University
 
-License
+---
+
+# License
 
 This project is developed for academic purposes as part of the Capstone Project course.
+
+---
+
