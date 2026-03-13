@@ -1,0 +1,166 @@
+.role-selection-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+}
+
+.role-selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 60px;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.logo-icon {
+  font-size: 24px;
+}
+
+.header-links {
+  display: flex;
+  gap: 30px;
+}
+
+.header-links a {
+  text-decoration: none;
+  color: #666;
+  font-size: 16px;
+  transition: color 0.3s;
+}
+
+.header-links a:hover {
+  color: #1976d2;
+}
+
+.role-selection-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 80px);
+  padding: 40px 20px;
+}
+
+.role-selection-box {
+  background: white;
+  border-radius: 16px;
+  padding: 50px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  max-width: 800px;
+  width: 100%;
+  text-align: center;
+}
+
+.lock-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.role-selection-box h1 {
+  font-size: 32px;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 16px;
+  margin-bottom: 50px;
+}
+
+.role-cards {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.role-card {
+  background: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 40px 30px;
+  width: 280px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.role-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border-color: #1976d2;
+}
+
+.role-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.role-card h3 {
+  font-size: 24px;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+}
+
+.role-card p {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 25px;
+  line-height: 1.5;
+}
+
+.role-button {
+  width: 100%;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.student-button {
+  background: #1976d2;
+  color: white;
+}
+
+.student-button:hover {
+  background: #1565c0;
+}
+
+.teacher-button {
+  background: #7b1fa2;
+  color: white;
+}
+
+.teacher-button:hover {
+  background: #6a1b9a;
+}
+
+@media (max-width: 768px) {
+  .role-selection-header {
+    padding: 15px 20px;
+  }
+
+  .role-selection-box {
+    padding: 30px 20px;
+  }
+
+  .role-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .role-card {
+    width: 100%;
+    max-width: 350px;
+  }
+}
