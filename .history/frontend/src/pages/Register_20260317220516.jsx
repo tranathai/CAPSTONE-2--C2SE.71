@@ -16,6 +16,32 @@ const Register = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const getApiErrorMessage = (err) => {
+    if (!err.response) {
+      return 'Không thể kết nối backend. Hãy chạy backend ở cổng 5000.';
+    }
+
+    // Proxy lỗi: response là HTML (backend không chạy)
+    if (typeof err.response.data === 'string') {
+      return 'Không thể kết nối backend. Hãy chạy backend ở cổng 5000.';
+    }
+
+    if (err.response?.data?.message) {
+      return err.response.data.message;
+    }
+
+    // Lỗi validation từ express-validator (trả về mảng errors)
+    if (err.response?.data?.errors?.length > 0) {
+      return err.response.data.errors[0].msg;
+    }
+
+    if (err.response.status >= 500) {
+      return 'Backend đang lỗi (500). Vui lòng kiểm tra terminal backend.';
+    }
+
+    return 'Đã có lỗi xảy ra';
+  };
+
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@(gmail\.com|gmail\.edu\.vn)$/;
     return emailRegex.test(email);
@@ -79,11 +105,10 @@ const Register = () => {
       if (response.data.success) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        const registeredRole = response.data.user?.role || role;
-        navigate(registeredRole === 'teacher' ? '/teacher-dashboard' : '/dashboard');
+        navigate('/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Đã có lỗi xảy ra');
+      setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }

@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import './Register.css';
+import './Login.css';
 
-const Register = () => {
+const Login = () => {
   const navigate = useNavigate();
   const { role } = useParams();
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    confirmPassword: '',
-    fullName: ''
+    password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -19,18 +17,6 @@ const Register = () => {
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@(gmail\.com|gmail\.edu\.vn)$/;
     return emailRegex.test(email);
-  };
-
-  const validatePassword = (password) => {
-    // Kiểm tra tất cả điều kiện một lần
-    const hasMinLength = password.length >= 6;
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
-    
-    if (!hasMinLength || !hasUpperCase || !hasSpecialChar) {
-      return { valid: false, message: 'Mật khẩu tối thiểu 6 ký tự bao gồm chữ in hoa và ký tự đặc biệt' };
-    }
-    return { valid: true };
   };
 
   const handleChange = (e) => {
@@ -53,34 +39,16 @@ const Register = () => {
       return;
     }
 
-    // Validate password
-    const passwordValidation = validatePassword(formData.password);
-    if (!passwordValidation.valid) {
-      setError(passwordValidation.message);
-      setLoading(false);
-      return;
-    }
-
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
-      setLoading(false);
-      return;
-    }
-
     try {
-      const response = await axios.post('/api/auth/register', {
-        email: formData.email,
-        password: formData.password,
-        fullName: formData.fullName,
+      const response = await axios.post('/api/auth/login', {
+        ...formData,
         role
       });
 
       if (response.data.success) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        const registeredRole = response.data.user?.role || role;
-        navigate(registeredRole === 'teacher' ? '/teacher-dashboard' : '/dashboard');
+        navigate('/dashboard');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Đã có lỗi xảy ra');
@@ -94,8 +62,8 @@ const Register = () => {
   };
 
   return (
-    <div className="register-container">
-      <div className="register-header">
+    <div className="login-container">
+      <div className="login-header">
         <div className="logo">
           <span className="logo-icon">🏠</span>
           <span className="logo-text">MentorAI Grad</span>
@@ -104,36 +72,21 @@ const Register = () => {
           <a href="#home">Home</a>
           <a href="#about">About</a>
           <a href="#support">Support</a>
-          <Link to={`/login/${role}`}>
-            <button className="login-btn">Login</button>
+          <Link to={`/register/${role}`}>
+            <button className="register-btn">Register</button>
           </Link>
         </div>
       </div>
 
-      <div className="register-content">
-        <div className="register-box">
-          <div className="lock-icon">✏️</div>
-          <h1>Create Account</h1>
-          <p className="subtitle">Đăng ký tài khoản {getRoleTitle()}</p>
+      <div className="login-content">
+        <div className="login-box">
+          <div className="lock-icon">🔒</div>
+          <h1>Welcome Back</h1>
+          <p className="subtitle">Đăng nhập với tư cách {getRoleTitle()}</p>
 
           {error && <div className="error-message">{error}</div>}
 
           <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="fullName">
-                <span className="icon">👤</span> Họ và tên
-              </label>
-              <input
-                type="text"
-                id="fullName"
-                name="fullName"
-                placeholder="Nguyễn Văn A"
-                value={formData.fullName}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
             <div className="form-group">
               <label htmlFor="email">
                 <span className="icon">@</span> Email Address
@@ -142,12 +95,11 @@ const Register = () => {
                 type="email"
                 id="email"
                 name="email"
-                placeholder="name@gmail.com hoặc name@gmail.edu.vn"
+                placeholder="name@university.edu"
                 value={formData.email}
                 onChange={handleChange}
                 required
               />
-              <small className="input-hint">Email phải có đuôi @gmail.com hoặc @gmail.edu.vn</small>
             </div>
 
             <div className="form-group">
@@ -172,33 +124,19 @@ const Register = () => {
                   {showPassword ? '👁️' : '👁️‍🗨️'}
                 </button>
               </div>
-              <small className="input-hint">
-                Mật khẩu tối thiểu 6 ký tự bao gồm chữ in hoa và ký tự đặc biệt
-              </small>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="confirmPassword">
-                <span className="icon">🔑</span> Confirm Password
-              </label>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="confirmPassword"
-                name="confirmPassword"
-                placeholder="••••••••"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-              />
+            <div className="form-footer">
+              <a href="#forgot" className="forgot-password">Forgot password?</a>
             </div>
 
-            <button type="submit" className="register-submit-btn" disabled={loading}>
-              {loading ? 'Đang đăng ký...' : 'Register →'}
+            <button type="submit" className="signin-btn" disabled={loading}>
+              {loading ? 'Đang đăng nhập...' : 'Sign In →'}
             </button>
           </form>
 
-          <div className="login-link">
-            Already have an account? <Link to={`/login/${role}`}>Sign in</Link>
+          <div className="signup-link">
+            Don't have an account? <Link to={`/register/${role}`}>Register now</Link>
           </div>
 
           <div className="back-link">
@@ -210,4 +148,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default Login;

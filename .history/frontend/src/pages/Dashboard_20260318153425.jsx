@@ -444,7 +444,7 @@ const Dashboard = () => {
       <div className="sidebar">
         <div className="sidebar-header">
           <div className="logo">
-            <div className="brand-mark">■</div>
+            <span className="logo-icon">🎓</span>
             <span className="logo-text">MentorAI Grad</span>
           </div>
         </div>

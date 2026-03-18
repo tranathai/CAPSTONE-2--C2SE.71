@@ -79,8 +79,7 @@ const Register = () => {
       if (response.data.success) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        const registeredRole = response.data.user?.role || role;
-        navigate(registeredRole === 'teacher' ? '/teacher-dashboard' : '/dashboard');
+        navigate('/dashboard');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Đã có lỗi xảy ra');
