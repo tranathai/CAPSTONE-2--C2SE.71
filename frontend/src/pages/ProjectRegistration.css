@@ -1,0 +1,231 @@
+.project-page {
+  min-height: 100vh;
+  background: #f3f5f9;
+}
+
+.project-topbar {
+  height: 64px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  gap: 16px;
+}
+
+.project-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+}
+
+.project-brand-icon {
+  font-size: 24px;
+}
+
+.project-brand-text {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.project-search {
+  width: 100%;
+  max-width: 430px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f4f7fb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.project-search input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.project-search input::placeholder {
+  color: #9ca3af;
+}
+
+.project-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.project-main {
+  padding: 22px 0 40px;
+}
+
+.project-register-container {
+  width: 100%;
+  max-width: 630px;
+  margin: 0 auto;
+}
+
+.back-dashboard-btn {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 12px;
+  padding: 0;
+}
+
+.register-project-header h1 {
+  margin: 0 0 6px;
+  font-size: 52px;
+  line-height: 1.05;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.register-project-header .subtitle {
+  margin: 0 0 16px;
+  font-size: 15px;
+  color: #6b7280;
+}
+
+.register-project-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.register-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.register-field label {
+  font-size: 34px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #111827;
+}
+
+.register-field input,
+.register-field textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+  outline: none;
+}
+
+.register-field input:focus,
+.register-field textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.tech-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tech-chip,
+.add-tech-btn {
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #eef2ff;
+  color: #1d4ed8;
+  cursor: pointer;
+}
+
+.add-tech-btn {
+  background: #ffffff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.project-note-box {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  border-radius: 8px;
+  padding: 12px;
+  color: #1e40af;
+  font-size: 13px;
+}
+
+.project-form-error {
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.project-register-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.submit-project-btn {
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.save-draft-btn {
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .project-topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .project-brand-text {
+    font-size: 20px;
+  }
+
+  .project-search {
+    max-width: 260px;
+  }
+
+  .project-main {
+    padding: 18px 12px 30px;
+  }
+
+  .project-register-container {
+    max-width: 100%;
+  }
+
+  .register-project-header h1 {
+    font-size: 36px;
+  }
+
+  .register-field label {
+    font-size: 28px;
+  }
+}

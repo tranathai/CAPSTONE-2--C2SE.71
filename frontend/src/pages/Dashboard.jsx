@@ -2,6 +2,88 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 
+const PROJECT_SUBMISSIONS_KEY = 'mentorai_project_submissions';
+
+const readProjectSubmissions = () => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PROJECT_SUBMISSIONS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+};
+
+const writeProjectSubmissions = (submissions) => {
+  localStorage.setItem(PROJECT_SUBMISSIONS_KEY, JSON.stringify(submissions));
+};
+
+const formatShortDate = (dateIso) => {
+  if (!dateIso) {
+    return 'Unknown date';
+  }
+
+  return new Date(dateIso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
+const normalizeSubmissionStatus = (rawStatus) => {
+  const value = String(rawStatus || '').trim().toLowerCase();
+
+  if (['accepted', 'approve', 'approved', 'access'].includes(value)) {
+    return 'accepted';
+  }
+
+  if (['deny', 'denied', 'reject', 'rejected', 'at risk', 'at-risk'].includes(value)) {
+    return 'deny';
+  }
+
+  return 'pending';
+};
+
+const getSubmissionStatusLabel = (status) => {
+  if (status === 'accepted') {
+    return 'Access';
+  }
+
+  if (status === 'deny') {
+    return 'Deny';
+  }
+
+  return 'Pending';
+};
+
+const getSubmissionActionLabel = () => {
+  return 'Review';
+};
+
+const buildSubmissionKey = (item, index = 0) => {
+  if (item?.id) {
+    return String(item.id);
+  }
+
+  return `${item?.studentName || 'unknown'}-${item?.projectTitle || item?.projectName || 'untitled'}-${item?.submittedAt || index}`;
+};
+
+const extractTechStack = (submission) => {
+  const raw = submission?.techStack ?? submission?.technologyStack ?? submission?.technologies;
+
+  if (Array.isArray(raw)) {
+    return raw.map((item) => String(item).trim()).filter(Boolean);
+  }
+
+  if (typeof raw === 'string') {
+    return raw
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
 // Profile Content Component
 const ProfileContent = ({ user, handleLogout }) => {
   const [profileData, setProfileData] = useState({
@@ -252,12 +334,75 @@ const ProfileContent = ({ user, handleLogout }) => {
 
 // Dashboard Content Component
 const DashboardContent = ({ user }) => {
+  const isInstructor = user?.role === 'teacher';
+  const [instructorSubmissions, setInstructorSubmissions] = useState([]);
+  const [activeReview, setActiveReview] = useState(null);
+  const [decisionReason, setDecisionReason] = useState('');
+  const [reviewError, setReviewError] = useState('');
+
+  useEffect(() => {
+    if (!isInstructor) {
+      return;
+    }
+
+    setInstructorSubmissions(readProjectSubmissions().slice(0, 6));
+  }, [isInstructor]);
+
+  const openReviewModal = (submission, index) => {
+    setActiveReview({
+      ...submission,
+      reviewKey: buildSubmissionKey(submission, index)
+    });
+    setDecisionReason(submission.reviewReason || '');
+    setReviewError('');
+  };
+
+  const closeReviewModal = () => {
+    setActiveReview(null);
+    setDecisionReason('');
+    setReviewError('');
+  };
+
+  const submitReviewDecision = (nextStatus) => {
+    const reason = decisionReason.trim();
+
+    if (!reason) {
+      setReviewError('Vui long nhap ly do khi duyet hoac tu choi.');
+      return;
+    }
+
+    const currentSubmissions = readProjectSubmissions();
+    const updatedSubmissions = currentSubmissions.map((item, index) => {
+      const itemKey = buildSubmissionKey(item, index);
+
+      if (itemKey !== activeReview.reviewKey) {
+        return item;
+      }
+
+      return {
+        ...item,
+        status: nextStatus,
+        reviewReason: reason,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: user?.fullName || 'Instructor'
+      };
+    });
+
+    writeProjectSubmissions(updatedSubmissions);
+    setInstructorSubmissions(updatedSubmissions.slice(0, 6));
+    closeReviewModal();
+  };
+
   return (
     <>
       <div className="content-header">
         <div>
           <h1>Dashboard Overview</h1>
-          <p className="subtitle">Welcome back, {user?.fullName?.split(' ')[0] || 'Alex'}. Your project is on track.</p>
+          <p className="subtitle">
+            {isInstructor
+              ? 'Manage and monitor your assigned capstone projects.'
+              : `Welcome back, ${user?.fullName?.split(' ')[0] || 'Alex'}. Your project is on track.`}
+          </p>
         </div>
         <button className="submit-update-btn">+ Submit Update</button>
       </div>
@@ -368,28 +513,147 @@ const DashboardContent = ({ user }) => {
       <div className="section-card">
         <div className="section-header">
           <h2>Recent Submissions</h2>
-          <span className="time-badge">Past 30 days</span>
+          <span className="time-badge">{isInstructor ? 'Latest project proposals' : 'Past 30 days'}</span>
         </div>
-        <div className="submissions-list">
-          <div className="submission-item">
-            <div className="submission-icon">📄</div>
-            <div className="submission-info">
-              <div className="submission-name">Literature_Review_v2.pdf</div>
-              <div className="submission-meta">Submitted Oct 02 • 4.2 MB</div>
-            </div>
-            <div className="submission-status accepted">ACCEPTED</div>
+        {isInstructor ? (
+          <div className="submissions-table-wrapper">
+            {instructorSubmissions.length === 0 ? (
+              <div className="submission-empty">
+                No submissions yet. Projects submitted from New Project will appear here.
+              </div>
+            ) : (
+              <table className="submissions-table">
+                <thead>
+                  <tr>
+                    <th>STUDENT NAME</th>
+                    <th>PROJECT TITLE</th>
+                    <th>STATUS</th>
+                    <th>DATE SUBMITTED</th>
+                    <th>ACTION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {instructorSubmissions.map((item, index) => {
+                    const status = normalizeSubmissionStatus(item.status);
+                    const studentName = item.studentName || item.submittedBy || 'Unknown Student';
+                    const projectTitle = item.projectTitle || item.projectName || 'Untitled Project';
+
+                    return (
+                      <tr key={buildSubmissionKey(item, index)}>
+                        <td>
+                          <div className="student-cell">
+                            <span className="student-avatar">{studentName.charAt(0).toUpperCase()}</span>
+                            <span>{studentName}</span>
+                          </div>
+                        </td>
+                        <td>{projectTitle}</td>
+                        <td>
+                          <span className={`table-status ${status}`}>• {getSubmissionStatusLabel(status)}</span>
+                        </td>
+                        <td>{formatShortDate(item.submittedAt)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="table-action-btn"
+                            onClick={() => openReviewModal(item, index)}
+                          >
+                            {getSubmissionActionLabel(status)}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
-          
-          <div className="submission-item">
-            <div className="submission-icon">💻</div>
-            <div className="submission-info">
-              <div className="submission-name">Initial_Prototype_Source.zip</div>
-              <div className="submission-meta">Submitted Sep 24 • 12.8 MB</div>
+        ) : (
+          <div className="submissions-list">
+            <div className="submission-item">
+              <div className="submission-icon">📄</div>
+              <div className="submission-info">
+                <div className="submission-name">Literature_Review_v2.pdf</div>
+                <div className="submission-meta">Submitted Oct 02 • 4.2 MB</div>
+              </div>
+              <div className="submission-status accepted">ACCEPTED</div>
             </div>
-            <div className="submission-status reviewed">REVIEWED</div>
+
+            <div className="submission-item">
+              <div className="submission-icon">💻</div>
+              <div className="submission-info">
+                <div className="submission-name">Initial_Prototype_Source.zip</div>
+                <div className="submission-meta">Submitted Sep 24 • 12.8 MB</div>
+              </div>
+              <div className="submission-status reviewed">REVIEWED</div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {isInstructor && activeReview && (
+        <div className="review-modal-overlay" onClick={closeReviewModal}>
+          <div className="review-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="review-modal-header">
+              <h3>Review Project Submission</h3>
+              <button type="button" className="review-close-btn" onClick={closeReviewModal}>x</button>
+            </div>
+
+            <div className="review-modal-body">
+              <div className="review-field">
+                <span className="review-label">Project Name</span>
+                <div className="review-value">{activeReview.projectTitle || activeReview.projectName || 'Untitled Project'}</div>
+              </div>
+
+              <div className="review-field">
+                <span className="review-label">Description</span>
+                <div className="review-value">{activeReview.description || 'No description provided.'}</div>
+              </div>
+
+              <div className="review-field">
+                <span className="review-label">Technology Stack</span>
+                <div className="review-tech-list">
+                  {extractTechStack(activeReview).length > 0 ? (
+                    extractTechStack(activeReview).map((tech) => (
+                      <span className="review-tech-chip" key={tech}>{tech}</span>
+                    ))
+                  ) : (
+                    <span className="review-value">No technology stack provided.</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="review-field">
+                <span className="review-label">Ly do</span>
+                <textarea
+                  rows={4}
+                  className="review-reason-input"
+                  placeholder="Nhap ly do duyet hoac tu choi..."
+                  value={decisionReason}
+                  onChange={(event) => setDecisionReason(event.target.value)}
+                />
+                {reviewError && <div className="review-error">{reviewError}</div>}
+              </div>
+            </div>
+
+            <div className="review-modal-actions">
+              <button
+                type="button"
+                className="decision-btn accept"
+                onClick={() => submitReviewDecision('access')}
+              >
+                Duyet (accept)
+              </button>
+              <button
+                type="button"
+                className="decision-btn deny"
+                onClick={() => submitReviewDecision('deny')}
+              >
+                Tu choi (deny)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
@@ -481,7 +745,7 @@ const Dashboard = () => {
         </nav>
 
         <div className="sidebar-footer">
-          <button className="new-project-btn">
+          <button className="new-project-btn" onClick={() => navigate('/project/new')}>
             <span>+</span> New Project
           </button>
         </div>
