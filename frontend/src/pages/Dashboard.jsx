@@ -745,11 +745,7 @@ const Dashboard = () => {
         </nav>
 
         <div className="sidebar-footer">
-<<<<<<< Updated upstream
-          <button className="new-project-btn" onClick={() => navigate('/project/new')}>
-=======
           <button className="student-new-project-btn" onClick={() => navigate('/project/new')}>
->>>>>>> Stashed changes
             <span>+</span> New Project
           </button>
         </div>
