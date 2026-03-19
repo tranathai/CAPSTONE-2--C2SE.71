@@ -70,11 +70,13 @@
 }
 
 .sidebar-footer {
+  margin-top: auto;
+  background: white;
   padding: 20px;
   border-top: 1px solid #e5e7eb;
 }
 
-.new-project-btn {
+.student-new-project-btn {
   width: 100%;
   background: #1976d2;
   color: white;
@@ -91,7 +93,7 @@
   gap: 8px;
 }
 
-.new-project-btn:hover {
+.student-new-project-btn:hover {
   background: #1565c0;
 }
 
@@ -769,11 +771,11 @@
     padding: 12px;
   }
 
-  .new-project-btn {
+  .student-new-project-btn {
     padding: 12px;
   }
 
-  .new-project-btn span:last-child {
+  .student-new-project-btn span:last-child {
     display: none;
   }
 

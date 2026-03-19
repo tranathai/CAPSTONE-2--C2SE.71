@@ -1,15 +1,24 @@
+<<<<<<< Updated upstream
 .project-page {
+=======
+.project-registration-page {
+>>>>>>> Stashed changes
   min-height: 100vh;
   background: #f3f5f9;
 }
 
 .project-topbar {
+<<<<<<< Updated upstream
   height: 64px;
+=======
+  height: 72px;
+>>>>>>> Stashed changes
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: space-between;
+<<<<<<< Updated upstream
   padding: 0 24px;
   gap: 16px;
 }
@@ -27,18 +36,44 @@
 
 .project-brand-text {
   font-size: 32px;
+=======
+  gap: 16px;
+  padding: 0 24px;
+}
+
+.project-brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 190px;
+}
+
+.project-brand-icon {
+  font-size: 20px;
+}
+
+.project-brand-text {
+  font-size: 34px;
+>>>>>>> Stashed changes
   font-weight: 700;
   color: #111827;
 }
 
+<<<<<<< Updated upstream
 .project-search {
   width: 100%;
   max-width: 430px;
+=======
+.project-top-search {
+  flex: 1;
+  max-width: 620px;
+>>>>>>> Stashed changes
   display: flex;
   align-items: center;
   gap: 8px;
   background: #f4f7fb;
   border: 1px solid #e5e7eb;
+<<<<<<< Updated upstream
   border-radius: 8px;
   padding: 8px 12px;
 }
@@ -57,11 +92,32 @@
 }
 
 .project-actions {
+=======
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.project-top-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.project-top-search input::placeholder {
+  color: #9ca3af;
+}
+
+.project-top-actions {
+>>>>>>> Stashed changes
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
+<<<<<<< Updated upstream
 .project-main {
   padding: 22px 0 40px;
 }
@@ -98,12 +154,76 @@
 }
 
 .register-project-card {
+=======
+.project-icon-btn {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.project-icon-btn:hover {
+  background: #f3f4f6;
+}
+
+.project-user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1976d2, #64b5f6);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.project-main-content {
+  padding: 30px 18px 44px;
+}
+
+.project-form-shell {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.back-dashboard-link {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 10px;
+}
+
+.project-form-shell h1 {
+  margin: 0;
+  font-size: 62px;
+  line-height: 1.02;
+  color: #111827;
+  font-weight: 800;
+}
+
+.project-subtitle {
+  margin: 10px 0 20px;
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.project-form-card {
+>>>>>>> Stashed changes
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 24px;
   display: flex;
   flex-direction: column;
+<<<<<<< Updated upstream
   gap: 14px;
 }
 
@@ -136,6 +256,48 @@
 }
 
 .tech-chips {
+=======
+  gap: 18px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-group label {
+  color: #111827;
+  font-size: 38px;
+  line-height: 1.05;
+  font-weight: 700;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 16px;
+  color: #111827;
+  outline: none;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.form-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.tech-chip-row {
+>>>>>>> Stashed changes
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -143,6 +305,7 @@
 }
 
 .tech-chip,
+<<<<<<< Updated upstream
 .add-tech-btn {
   border: 1px solid #c7d2fe;
   border-radius: 999px;
@@ -187,14 +350,74 @@
   border-radius: 8px;
   padding: 12px 20px;
   font-size: 14px;
+=======
+.add-tech-chip {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tech-chip {
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.add-tech-chip {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+}
+
+.project-note-box {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  border-radius: 10px;
+  padding: 12px;
+  color: #1e40af;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.project-action-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.submit-btn {
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 12px 22px;
+  font-size: 20px;
+>>>>>>> Stashed changes
   font-weight: 700;
   cursor: pointer;
 }
 
+<<<<<<< Updated upstream
 .save-draft-btn {
   border: none;
   background: transparent;
   color: #4b5563;
+=======
+.submit-btn:hover {
+  background: #1d4ed8;
+}
+
+.draft-btn {
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  font-size: 20px;
+>>>>>>> Stashed changes
   font-weight: 600;
   cursor: pointer;
 }
@@ -202,6 +425,7 @@
 @media (max-width: 900px) {
   .project-topbar {
     padding: 0 12px;
+<<<<<<< Updated upstream
     gap: 8px;
   }
 
@@ -227,5 +451,28 @@
 
   .register-field label {
     font-size: 28px;
+=======
+  }
+
+  .project-brand-text {
+    font-size: 24px;
+  }
+
+  .project-top-search {
+    max-width: 320px;
+  }
+
+  .project-form-shell h1 {
+    font-size: 44px;
+  }
+
+  .form-group label {
+    font-size: 30px;
+  }
+
+  .submit-btn,
+  .draft-btn {
+    font-size: 16px;
+>>>>>>> Stashed changes
   }
 }

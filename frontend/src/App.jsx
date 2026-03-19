@@ -4,6 +4,10 @@ import RoleSelection from './pages/RoleSelection';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+<<<<<<< Updated upstream
+=======
+import TeacherDashboard from './pages/TeacherDashboard';
+>>>>>>> Stashed changes
 import ProjectRegistration from './pages/ProjectRegistration';
 import './App.css';
 
@@ -21,6 +25,10 @@ function App() {
           <Route path="/login/:role" element={<Login />} />
           <Route path="/register/:role" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
+<<<<<<< Updated upstream
+=======
+          <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+>>>>>>> Stashed changes
           <Route path="/project/new" element={<ProjectRegistration />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
