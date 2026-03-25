@@ -273,6 +273,14 @@
   color: #f59e0b;
 }
 
+.stat-icon.neutral {
+  color: #64748b;
+}
+
+.stat-icon.danger {
+  color: #ef4444;
+}
+
 .stat-value {
   font-size: 24px;
   font-weight: 700;
@@ -297,6 +305,21 @@
 .badge.success {
   background: #d1fae5;
   color: #10b981;
+}
+
+.badge.neutral {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.badge.pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badge.danger {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .progress-bar {
@@ -509,6 +532,36 @@
 .submission-status.reviewed {
   background: #dbeafe;
   color: #1976d2;
+}
+
+.submission-filter-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 12px;
+}
+
+.filter-tab {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  margin-bottom: -13px;
+}
+
+.filter-tab:hover {
+  color: #475569;
+}
+
+.filter-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
 }
 
 .submissions-table-wrapper {
@@ -1180,4 +1233,70 @@
   .logout-btn {
     width: 100%;
   }
+}
+
+/* Student Submission Status Wrapper */
+.submission-status-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.submission-status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.submission-status-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.submission-status.pending {
+  background: #fef3c7;
+  color: #b45309;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.submission-status.accepted {
+  background: #d1fae5;
+  color: #10b981;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.submission-status.deny {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.edit-submission-btn {
+  border: 1px solid #2563eb;
+  background: white;
+  color: #2563eb;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-submission-btn:hover {
+  background: #2563eb;
+  color: white;
 }

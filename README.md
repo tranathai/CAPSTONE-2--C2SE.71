@@ -24,10 +24,11 @@ Hệ thống đăng nhập và đăng ký cho MentorAI Grad với phân quyền 
 - Thư mục `database/` đã có sẵn schema MySQL cho `users`, `students`, `lecturers` để tích hợp sau này.
 
 ### Frontend
-- React (JSX)
-- React Router DOM
+- React 18 (JSX)
+- React Router DOM v7
 - Axios
 - CSS3
+- localStorage (quản lý submissions)
 
 ## Cài đặt
 
@@ -94,9 +95,26 @@ npm start
    - Click "Register" để tạo tài khoản mới
    - Tự động đăng nhập sau khi đăng ký thành công
 
-4. **Dashboard** (`/dashboard`)
-   - Hiển thị thông tin người dùng
-   - Có nút Logout để đăng xuất
+4. **Dashboard Sinh viên** (`/dashboard`)
+   - Hiển thị thông tin người dùng và project của sinh viên
+   - Phần **Recent Submissions**: Danh sách các đề tài sinh viên đã đăng ký
+     - Xem trạng thái: ⏳ Pending, ✓ Accepted, ✕ Denied
+   - Nút **+ Submit Update**: Chỉnh sửa đề tài đang pending và lưu lại
+   - Nút **+ New Project**: Tạo đề tài mới
+   - Nút **Logout**: Đăng xuất
+
+5. **Dashboard Giáo viên** (`/teacher-dashboard`)
+   - Quản lý và giám sát các đề tài của sinh viên
+   - Phần **Recent Submissions** với filter tabs:
+     - **⏳ Waiting for Review**: Hiển thị đề tài chờ duyệt
+     - **✓ Reviewed**: Hiển thị đề tài đã được phê duyệt hoặc từ chối
+   - Action buttons:
+     - **Review**: Để xem chi tiết và phê duyệt/từ chối đề tài pending
+     - **View Details**: Để xem thông tin đề tài đã approve
+     - **View Feedback**: Để xem lý do từ chối
+   - Modal review với 2 nút:
+     - **Duyet (accept)**: Phê duyệt đề tài
+     - **Tu choi (deny)**: Từ chối đề tài kèm lý do
 
 ## API Endpoints
 
@@ -158,15 +176,19 @@ frontend/
 │   └── index.html
 ├── src/
 │   ├── pages/
-│   │   ├── RoleSelection.jsx      # Trang chọn vai trò
+│   │   ├── RoleSelection.jsx           # Trang chọn vai trò
 │   │   ├── RoleSelection.css
-│   │   ├── Login.jsx             # Trang đăng nhập
+│   │   ├── Login.jsx                   # Trang đăng nhập
 │   │   ├── Login.css
-│   │   ├── Register.jsx          # Trang đăng ký
+│   │   ├── Register.jsx                # Trang đăng ký
 │   │   ├── Register.css
-│   │   ├── Dashboard.jsx         # Trang dashboard
-│   │   └── Dashboard.css
-│   ├── App.jsx                   # Main app với routing
+│   │   ├── Dashboard.jsx               # Trang dashboard sinh viên
+│   │   ├── Dashboard.css
+│   │   ├── ProjectRegistration.jsx     # Form đăng ký/chỉnh sửa đề tài
+│   │   ├── ProjectRegistration.css
+│   │   ├── TeacherDashboard.jsx        # Trang dashboard giáo viên
+│   │   └── TeacherDashboard.css
+│   ├── App.jsx                          # Main app với routing
 │   ├── App.css
 │   ├── index.jsx
 │   └── index.css
@@ -180,16 +202,53 @@ frontend/
 - Protected routes với middleware authentication
 - Validation dữ liệu đầu vào với express-validator
 
+## Lưu trữ dữ liệu
+
+- **Backend**: MongoDB lưu trữ thông tin user (email, password, fullName, role)
+- **Frontend**: localStorage lưu trữ:
+  - `token`: JWT token cho authentication
+  - `user`: Thông tin user hiện tại
+  - `mentorai_project_submissions`: Danh sách submissions của sinh viên
+    - Cấu trúc: `{ id, projectTitle, description, techStack[], studentName, studentEmail, status, submittedAt, updatedAt?, reviewReason?, reviewedBy? }`
+    - Status có thể là: `pending`, `access` (approved), `deny` (denied)
+
+## Tính năng Chi tiết
+
+### Sinh viên
+- ✅ Đăng nhập/Đăng ký với vai trò Student
+- ✅ Xem danh sách các đề tài đã đăng ký
+- ✅ Tạo đề tài mới (Project Registration)
+- ✅ Chỉnh sửa đề tài đang pending status
+- ✅ Xem trạng thái phê duyệt: Pending, Accepted, Denied
+- ✅ Submit update để cập nhật đề tài pending
+- ✅ Quản lý thông tin cá nhân (Profile)
+
+### Giáo viên
+- ✅ Đăng nhập/Đăng ký với vai trò Teacher
+- ✅ Xem danh sách đề tài chờ phê duyệt (Waiting for Review)
+- ✅ Xem danh sách đề tài đã phê duyệt (Reviewed)
+- ✅ Phê duyệt đề tài (Duyet)
+- ✅ Từ chối đề tài với lý do (Tu choi)
+- ✅ Xem chi tiết đề tài: tên đề tài, mô tả, tech stack
+- ✅ Quản lý thông tin cá nhân (Profile)
+
 ## Phát triển tiếp
 
 Các tính năng có thể thêm vào:
+- Lưu submissions lên Backend (DB) thay vì localStorage
+- API endpoints cho Project CRUD operations
+- Notification system khi submission được review
+- Email notification khi submission được approve/deny
+- Search và filter functionality
+- Upload file (document, presentation, source code)
+- Comment/Discussion trên submissions
+- Version control cho submissions
 - Reset password
 - Email verification
 - Social login (Google, Facebook)
-- Profile management
-- Role-based dashboard với các tính năng riêng cho Student/Teacher
 - Upload avatar
 - 2FA (Two-Factor Authentication)
+- Schedule/Timeline cho submission deadlines
 
 ## License
 

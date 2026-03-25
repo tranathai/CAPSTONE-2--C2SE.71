@@ -23,7 +23,7 @@ function App() {
           <Route path="/register/:role" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
-          <Route path="/project/new" element={<ProjectRegistration />} />
+          <Route path="/project/ProjectRegistration" element={<ProjectRegistration />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>

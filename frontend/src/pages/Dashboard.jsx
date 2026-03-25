@@ -17,6 +17,12 @@ const writeProjectSubmissions = (submissions) => {
   localStorage.setItem(PROJECT_SUBMISSIONS_KEY, JSON.stringify(submissions));
 };
 
+const ROADMAP_MILESTONE_TEMPLATE = [
+  { id: 'proposal', title: 'Đề cương', weeksFromStart: 2 },
+  { id: 'midterm', title: 'Giữa kỳ', weeksFromStart: 6 },
+  { id: 'final', title: 'Cuối kỳ', weeksFromStart: 10 }
+];
+
 const formatShortDate = (dateIso) => {
   if (!dateIso) {
     return 'Unknown date';
@@ -27,6 +33,52 @@ const formatShortDate = (dateIso) => {
     day: 'numeric',
     year: 'numeric'
   });
+};
+
+const addWeeksToDate = (dateIso, weeks) => {
+  const base = new Date(dateIso);
+  if (Number.isNaN(base.getTime())) {
+    return null;
+  }
+
+  const result = new Date(base);
+  result.setDate(result.getDate() + weeks * 7);
+  return result.toISOString();
+};
+
+const createRoadmapMilestones = (startDateIso) => {
+  return ROADMAP_MILESTONE_TEMPLATE
+    .map((item) => {
+      const deadline = addWeeksToDate(startDateIso, item.weeksFromStart);
+      if (!deadline) {
+        return null;
+      }
+
+      return {
+        id: item.id,
+        title: item.title,
+        weeksFromStart: item.weeksFromStart,
+        deadline
+      };
+    })
+    .filter(Boolean);
+};
+
+const getSubmissionRoadmap = (submission) => {
+  if (!submission) {
+    return [];
+  }
+
+  if (Array.isArray(submission.roadmapMilestones) && submission.roadmapMilestones.length > 0) {
+    return submission.roadmapMilestones;
+  }
+
+  const startDate = submission.startDate || submission.reviewedAt || submission.submittedAt;
+  if (!startDate) {
+    return [];
+  }
+
+  return createRoadmapMilestones(startDate);
 };
 
 const normalizeSubmissionStatus = (rawStatus) => {
@@ -45,18 +97,66 @@ const normalizeSubmissionStatus = (rawStatus) => {
 
 const getSubmissionStatusLabel = (status) => {
   if (status === 'accepted') {
-    return 'Access';
+    return 'Approved';
   }
 
   if (status === 'deny') {
-    return 'Deny';
+    return 'Declined';
   }
 
   return 'Pending';
 };
 
-const getSubmissionActionLabel = () => {
+const getSubmissionActionLabel = (status) => {
+  if (status === 'accepted') {
+    return 'View Details';
+  }
+
+  if (status === 'deny') {
+    return 'View Feedback';
+  }
+
   return 'Review';
+};
+
+const getStudentStatusCardConfig = (status) => {
+  if (status === 'new') {
+    return {
+      value: 'New',
+      icon: '🆕',
+      iconClassName: 'neutral',
+      badgeClassName: 'neutral',
+      badgeText: 'Create your first project submission'
+    };
+  }
+
+  if (status === 'accepted') {
+    return {
+      value: 'Approved',
+      icon: '✓',
+      iconClassName: 'success',
+      badgeClassName: 'success',
+      badgeText: '✓ Approved by instructor'
+    };
+  }
+
+  if (status === 'deny') {
+    return {
+      value: 'Declined',
+      icon: '✕',
+      iconClassName: 'danger',
+      badgeClassName: 'danger',
+      badgeText: '✕ Please revise and resubmit'
+    };
+  }
+
+  return {
+    value: 'Pending',
+    icon: '⏳',
+    iconClassName: 'warning',
+    badgeClassName: 'pending',
+    badgeText: '⏳ Waiting for review'
+  };
 };
 
 const buildSubmissionKey = (item, index = 0) => {
@@ -334,19 +434,55 @@ const ProfileContent = ({ user, handleLogout }) => {
 
 // Dashboard Content Component
 const DashboardContent = ({ user }) => {
+  const navigate = useNavigate();
   const isInstructor = user?.role === 'teacher';
   const [instructorSubmissions, setInstructorSubmissions] = useState([]);
+  const [studentSubmissions, setStudentSubmissions] = useState([]);
   const [activeReview, setActiveReview] = useState(null);
   const [decisionReason, setDecisionReason] = useState('');
   const [reviewError, setReviewError] = useState('');
 
-  useEffect(() => {
-    if (!isInstructor) {
-      return;
-    }
+  const latestStudentSubmission = !isInstructor && studentSubmissions.length > 0
+    ? [...studentSubmissions].sort((a, b) => {
+      const aTime = new Date(a.updatedAt || a.submittedAt || 0).getTime();
+      const bTime = new Date(b.updatedAt || b.submittedAt || 0).getTime();
+      return bTime - aTime;
+    })[0]
+    : null;
 
-    setInstructorSubmissions(readProjectSubmissions().slice(0, 6));
-  }, [isInstructor]);
+  const latestStudentStatus = latestStudentSubmission
+    ? normalizeSubmissionStatus(latestStudentSubmission.status)
+    : 'new';
+  const studentStatusCard = getStudentStatusCardConfig(latestStudentStatus);
+  const latestApprovedSubmission = !isInstructor
+    ? [...studentSubmissions]
+      .filter((item) => normalizeSubmissionStatus(item.status) === 'accepted')
+      .sort((a, b) => {
+        const aTime = new Date(a.reviewedAt || a.updatedAt || a.submittedAt || 0).getTime();
+        const bTime = new Date(b.reviewedAt || b.updatedAt || b.submittedAt || 0).getTime();
+        return bTime - aTime;
+      })[0] || null
+    : null;
+  const studentRoadmapMilestones = getSubmissionRoadmap(latestApprovedSubmission);
+  const upcomingMilestone = studentRoadmapMilestones.find((item) => new Date(item.deadline).getTime() >= Date.now())
+    || studentRoadmapMilestones[studentRoadmapMilestones.length - 1]
+    || null;
+  const activeMilestoneIndex = studentRoadmapMilestones.findIndex((item) => new Date(item.deadline).getTime() >= Date.now());
+  const resolvedActiveMilestoneIndex = activeMilestoneIndex === -1
+    ? Math.max(studentRoadmapMilestones.length - 1, 0)
+    : activeMilestoneIndex;
+
+  useEffect(() => {
+    if (isInstructor) {
+      const allSubmissions = readProjectSubmissions();
+      const pendingOnly = allSubmissions.filter((item) => normalizeSubmissionStatus(item.status) === 'pending');
+      setInstructorSubmissions(pendingOnly.slice(0, 6));
+    } else {
+      const allSubmissions = readProjectSubmissions();
+      const mySubmissions = allSubmissions.filter((item) => item.studentEmail === user?.email);
+      setStudentSubmissions(mySubmissions);
+    }
+  }, [isInstructor, user?.email]);
 
   const openReviewModal = (submission, index) => {
     setActiveReview({
@@ -372,6 +508,7 @@ const DashboardContent = ({ user }) => {
     }
 
     const currentSubmissions = readProjectSubmissions();
+    const reviewTime = new Date().toISOString();
     const updatedSubmissions = currentSubmissions.map((item, index) => {
       const itemKey = buildSubmissionKey(item, index);
 
@@ -379,11 +516,16 @@ const DashboardContent = ({ user }) => {
         return item;
       }
 
+      const shouldCreateRoadmap = normalizeSubmissionStatus(nextStatus) === 'accepted';
+      const startDate = shouldCreateRoadmap ? (item.startDate || reviewTime) : item.startDate;
+
       return {
         ...item,
         status: nextStatus,
         reviewReason: reason,
-        reviewedAt: new Date().toISOString(),
+        reviewedAt: reviewTime,
+        startDate,
+        roadmapMilestones: shouldCreateRoadmap ? createRoadmapMilestones(startDate) : item.roadmapMilestones,
         reviewedBy: user?.fullName || 'Instructor'
       };
     });
@@ -391,6 +533,17 @@ const DashboardContent = ({ user }) => {
     writeProjectSubmissions(updatedSubmissions);
     setInstructorSubmissions(updatedSubmissions.slice(0, 6));
     closeReviewModal();
+  };
+
+  const handleSubmitUpdate = () => {
+    if (!isInstructor && studentSubmissions.length > 0) {
+      const pendingSubmission = studentSubmissions.find((item) => normalizeSubmissionStatus(item.status) === 'pending');
+      if (pendingSubmission) {
+        navigate('/project/ProjectRegistration', { state: { editSubmissionId: pendingSubmission.id, editSubmission: pendingSubmission } });
+        return;
+      }
+    }
+    navigate('/project/ProjectRegistration');
   };
 
   return (
@@ -404,7 +557,7 @@ const DashboardContent = ({ user }) => {
               : `Welcome back, ${user?.fullName?.split(' ')[0] || 'Alex'}. Your project is on track.`}
           </p>
         </div>
-        <button className="submit-update-btn">+ Submit Update</button>
+        <button className="submit-update-btn" onClick={handleSubmitUpdate}>+ Submit Update</button>
       </div>
 
       {/* Stats Cards */}
@@ -412,11 +565,15 @@ const DashboardContent = ({ user }) => {
         <div className="stat-card">
           <div className="stat-header">
             <span className="stat-label">Project Status</span>
-            <span className="stat-icon success">✓</span>
+            <span className={`stat-icon ${isInstructor ? 'success' : studentStatusCard.iconClassName}`}>
+              {isInstructor ? '✓' : studentStatusCard.icon}
+            </span>
           </div>
-          <div className="stat-value">Approved</div>
+          <div className="stat-value">{isInstructor ? 'Approved' : studentStatusCard.value}</div>
           <div className="stat-footer">
-            <span className="badge success">✓ Fully validated</span>
+            <span className={`badge ${isInstructor ? 'success' : studentStatusCard.badgeClassName}`}>
+              {isInstructor ? '✓ Fully validated' : studentStatusCard.badgeText}
+            </span>
           </div>
         </div>
 
@@ -438,9 +595,17 @@ const DashboardContent = ({ user }) => {
             <span className="stat-label">Next Deadline</span>
             <span className="stat-icon warning">📅</span>
           </div>
-          <div className="stat-value">Oct 20</div>
+          <div className="stat-value">
+            {isInstructor
+              ? 'Oct 20'
+              : (upcomingMilestone ? formatShortDate(upcomingMilestone.deadline) : 'TBD')}
+          </div>
           <div className="stat-footer">
-            <span className="badge">Final Draft Submission</span>
+            <span className="badge">
+              {isInstructor
+                ? 'Final Draft Submission'
+                : (upcomingMilestone ? upcomingMilestone.title : 'Auto after approval')}
+            </span>
           </div>
         </div>
 
@@ -462,58 +627,94 @@ const DashboardContent = ({ user }) => {
           <h2>Project Roadmap</h2>
           <a href="#" className="view-details">View All Details</a>
         </div>
-        <div className="roadmap">
-          <div className="roadmap-step completed">
-            <div className="step-icon">✓</div>
-            <div className="step-info">
-              <div className="step-title">Proposal</div>
-              <div className="step-date">Completed Sep 05</div>
+        {isInstructor ? (
+          <div className="roadmap">
+            <div className="roadmap-step completed">
+              <div className="step-icon">✓</div>
+              <div className="step-info">
+                <div className="step-title">Proposal</div>
+                <div className="step-date">Completed Sep 05</div>
+              </div>
+            </div>
+            <div className="roadmap-connector completed"></div>
+
+            <div className="roadmap-step completed">
+              <div className="step-icon">✓</div>
+              <div className="step-info">
+                <div className="step-title">Research</div>
+                <div className="step-date">Completed Sep 28</div>
+              </div>
+            </div>
+            <div className="roadmap-connector active"></div>
+
+            <div className="roadmap-step active">
+              <div className="step-icon">▶</div>
+              <div className="step-info">
+                <div className="step-title">Development</div>
+                <div className="step-date">In Progress</div>
+              </div>
+            </div>
+            <div className="roadmap-connector"></div>
+
+            <div className="roadmap-step">
+              <div className="step-icon">⏱️</div>
+              <div className="step-info">
+                <div className="step-title">Final Draft</div>
+                <div className="step-date">Target Oct 20</div>
+              </div>
+            </div>
+            <div className="roadmap-connector"></div>
+
+            <div className="roadmap-step">
+              <div className="step-icon">🎯</div>
+              <div className="step-info">
+                <div className="step-title">Defense</div>
+                <div className="step-date">Target Nov 15</div>
+              </div>
             </div>
           </div>
-          <div className="roadmap-connector completed"></div>
-          
-          <div className="roadmap-step completed">
-            <div className="step-icon">✓</div>
-            <div className="step-info">
-              <div className="step-title">Research</div>
-              <div className="step-date">Completed Sep 28</div>
+        ) : (
+          studentRoadmapMilestones.length === 0 ? (
+            <div className="submission-empty">
+              Roadmap milestones are generated automatically after your project is approved.
             </div>
-          </div>
-          <div className="roadmap-connector active"></div>
-          
-          <div className="roadmap-step active">
-            <div className="step-icon">▶</div>
-            <div className="step-info">
-              <div className="step-title">Development</div>
-              <div className="step-date">In Progress</div>
+          ) : (
+            <div className="roadmap">
+              {studentRoadmapMilestones.map((milestone, index) => {
+                const isCompleted = index < resolvedActiveMilestoneIndex;
+                const isActive = index === resolvedActiveMilestoneIndex;
+                const stepClassName = isCompleted ? 'completed' : (isActive ? 'active' : '');
+                const connectorClassName = index < resolvedActiveMilestoneIndex
+                  ? 'completed'
+                  : (index === resolvedActiveMilestoneIndex ? 'active' : '');
+
+                return (
+                  <React.Fragment key={milestone.id || `${milestone.title}-${index}`}>
+                    <div className={`roadmap-step ${stepClassName}`}>
+                      <div className="step-icon">
+                        {isCompleted ? '✓' : (isActive ? '▶' : '⏱️')}
+                      </div>
+                      <div className="step-info">
+                        <div className="step-title">{milestone.title}</div>
+                        <div className="step-date">Deadline {formatShortDate(milestone.deadline)}</div>
+                      </div>
+                    </div>
+                    {index < studentRoadmapMilestones.length - 1 && (
+                      <div className={`roadmap-connector ${connectorClassName}`}></div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
-          </div>
-          <div className="roadmap-connector"></div>
-          
-          <div className="roadmap-step">
-            <div className="step-icon">⏱️</div>
-            <div className="step-info">
-              <div className="step-title">Final Draft</div>
-              <div className="step-date">Target Oct 20</div>
-            </div>
-          </div>
-          <div className="roadmap-connector"></div>
-          
-          <div className="roadmap-step">
-            <div className="step-icon">🎯</div>
-            <div className="step-info">
-              <div className="step-title">Defense</div>
-              <div className="step-date">Target Nov 15</div>
-            </div>
-          </div>
-        </div>
+          )
+        )}
       </div>
 
       {/* Recent Submissions */}
       <div className="section-card">
         <div className="section-header">
           <h2>Recent Submissions</h2>
-          <span className="time-badge">{isInstructor ? 'Latest project proposals' : 'Past 30 days'}</span>
+          <span className="time-badge">Latest project proposals</span>
         </div>
         {isInstructor ? (
           <div className="submissions-table-wrapper">
@@ -569,23 +770,37 @@ const DashboardContent = ({ user }) => {
           </div>
         ) : (
           <div className="submissions-list">
-            <div className="submission-item">
-              <div className="submission-icon">📄</div>
-              <div className="submission-info">
-                <div className="submission-name">Literature_Review_v2.pdf</div>
-                <div className="submission-meta">Submitted Oct 02 • 4.2 MB</div>
+            {studentSubmissions.length === 0 ? (
+              <div className="submission-empty">
+                No projects yet. Click "+ New Project" to create your first project submission.
               </div>
-              <div className="submission-status accepted">ACCEPTED</div>
-            </div>
+            ) : (
+              studentSubmissions.map((item, index) => {
+                const status = normalizeSubmissionStatus(item.status);
+                const projectTitle = item.projectTitle || item.projectName || 'Untitled Project';
 
-            <div className="submission-item">
-              <div className="submission-icon">💻</div>
-              <div className="submission-info">
-                <div className="submission-name">Initial_Prototype_Source.zip</div>
-                <div className="submission-meta">Submitted Sep 24 • 12.8 MB</div>
-              </div>
-              <div className="submission-status reviewed">REVIEWED</div>
-            </div>
+                return (
+                  <div key={buildSubmissionKey(item, index)} className="submission-item">
+                    <div className="submission-icon">📋</div>
+                    <div className="submission-info">
+                      <div className="submission-name">{projectTitle}</div>
+                      <div className="submission-meta">
+                        Submitted {formatShortDate(item.submittedAt)}
+                        {item.description && ` • ${item.description.substring(0, 50)}...`}
+                      </div>
+                    </div>
+                    <div className="submission-status-container">
+                      <div className="submission-status-label">Status</div>
+                      <span className={`submission-status ${status}`}>
+                        {status === 'pending' && '⏳ Pending'}
+                        {status === 'accepted' && '✓ Approved'}
+                        {status === 'deny' && '✕ Declined'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </div>
@@ -672,7 +887,14 @@ const Dashboard = () => {
       return;
     }
 
-    setUser(JSON.parse(userData));
+    const parsedUser = JSON.parse(userData);
+
+    if (parsedUser?.role === 'teacher') {
+      navigate('/teacher-dashboard', { replace: true });
+      return;
+    }
+
+    setUser(parsedUser);
   }, [navigate]);
 
   const handleLogout = () => {
@@ -745,7 +967,7 @@ const Dashboard = () => {
         </nav>
 
         <div className="sidebar-footer">
-          <button className="student-new-project-btn" onClick={() => navigate('/project/new')}>
+          <button className="student-new-project-btn" onClick={() => navigate('/project/ProjectRegistration')}>
             <span>+</span> New Project
           </button>
         </div>

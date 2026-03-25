@@ -257,14 +257,14 @@
   background: #fff3df;
 }
 
-.status-pill.risk {
-  color: #c82439;
-  background: #ffe9ec;
-}
-
-.status-pill.graded {
+.status-pill.accepted {
   color: #0f8c4d;
   background: #e5f8ee;
+}
+
+.status-pill.deny {
+  color: #c82439;
+  background: #ffe9ec;
 }
 
 .action-btn {
@@ -311,4 +311,191 @@
   .teacher-table {
     min-width: 760px;
   }
+}
+
+/* Filter tabs */
+.submission-filter-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+
+.filter-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  margin-bottom: -13px;
+}
+
+.filter-tab:hover {
+  color: var(--text-main);
+}
+
+.filter-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+/* Empty state */
+.submission-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+/* Review modal */
+.review-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(29, 42, 64, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1200;
+}
+
+.review-modal {
+  width: 100%;
+  max-width: 760px;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 56px rgba(29, 42, 64, 0.22);
+  overflow: hidden;
+}
+
+.review-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.review-modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--text-main);
+}
+
+.review-close-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 2px 6px;
+}
+
+.review-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.review-label {
+  font-size: 13px;
+  color: var(--text-soft);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.review-value {
+  font-size: 15px;
+  color: var(--text-main);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.review-tech-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.review-tech-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.review-reason-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 92px;
+  font-family: inherit;
+  color: var(--text-main);
+}
+
+.review-reason-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(19, 99, 230, 0.14);
+}
+
+.review-error {
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.review-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.decision-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.decision-btn.accept {
+  background: #166534;
+  color: #ffffff;
+}
+
+.decision-btn.accept:hover {
+  background: #14532d;
+}
+
+.decision-btn.deny {
+  background: #991b1b;
+  color: #ffffff;
+}
+
+.decision-btn.deny:hover {
+  background: #7f1d1d;
 }

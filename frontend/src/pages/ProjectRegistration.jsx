@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './ProjectRegistration.css';
 
 const PROJECT_SUBMISSIONS_KEY = 'mentorai_project_submissions';
 
 const ProjectRegistration = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [techInput, setTechInput] = useState('');
@@ -13,6 +14,7 @@ const ProjectRegistration = () => {
   const [userInitial, setUserInitial] = useState('S');
   const [userInfo, setUserInfo] = useState({ fullName: 'Unknown Student', email: '' });
   const [error, setError] = useState('');
+  const [editSubmissionId, setEditSubmissionId] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -30,11 +32,20 @@ const ProjectRegistration = () => {
         fullName: user?.fullName || 'Unknown Student',
         email: user?.email || ''
       });
+
+      // Check if we're in edit mode
+      if (location.state?.editSubmissionId && location.state?.editSubmission) {
+        const submission = location.state.editSubmission;
+        setEditSubmissionId(submission.id);
+        setProjectName(submission.projectTitle || '');
+        setDescription(submission.description || '');
+        setTechStack(Array.isArray(submission.techStack) ? submission.techStack : ['Python', 'TensorFlow', 'React']);
+      }
     } catch (parseError) {
       setUserInitial('S');
       setUserInfo({ fullName: 'Unknown Student', email: '' });
     }
-  }, [navigate]);
+  }, [navigate, location.state]);
 
   const addTech = () => {
     const value = techInput.trim();
@@ -60,17 +71,6 @@ const ProjectRegistration = () => {
       .map((item) => String(item).trim())
       .filter(Boolean);
 
-    const payload = {
-      id: `submission_${Date.now()}`,
-      projectTitle: projectName.trim(),
-      description: description.trim(),
-      techStack: normalizedTechStack,
-      studentName: userInfo.fullName,
-      studentEmail: userInfo.email,
-      submittedAt: new Date().toISOString(),
-      status: 'pending'
-    };
-
     let current = [];
     try {
       current = JSON.parse(localStorage.getItem(PROJECT_SUBMISSIONS_KEY) || '[]');
@@ -81,7 +81,36 @@ const ProjectRegistration = () => {
       current = [];
     }
 
-    localStorage.setItem(PROJECT_SUBMISSIONS_KEY, JSON.stringify([payload, ...current]));
+    if (editSubmissionId) {
+      // Edit mode: update existing submission
+      const updatedSubmissions = current.map((item) => {
+        if (item.id === editSubmissionId) {
+          return {
+            ...item,
+            projectTitle: projectName.trim(),
+            description: description.trim(),
+            techStack: normalizedTechStack,
+            updatedAt: new Date().toISOString()
+          };
+        }
+        return item;
+      });
+      localStorage.setItem(PROJECT_SUBMISSIONS_KEY, JSON.stringify(updatedSubmissions));
+    } else {
+      // Create mode: add new submission
+      const payload = {
+        id: `submission_${Date.now()}`,
+        projectTitle: projectName.trim(),
+        description: description.trim(),
+        techStack: normalizedTechStack,
+        studentName: userInfo.fullName,
+        studentEmail: userInfo.email,
+        submittedAt: new Date().toISOString(),
+        status: 'pending'
+      };
+      localStorage.setItem(PROJECT_SUBMISSIONS_KEY, JSON.stringify([payload, ...current]));
+    }
+
     navigate('/dashboard');
   };
 
@@ -111,9 +140,11 @@ const ProjectRegistration = () => {
             BACK TO DASHBOARD
           </button>
 
-          <h1>Register New Project</h1>
+          <h1>{editSubmissionId ? 'Edit Project' : 'Register New Project'}</h1>
           <p className="project-subtitle">
-            Submit your capstone project details for faculty approval. Ensure all technical requirements are met.
+            {editSubmissionId
+              ? 'Update your capstone project details. Your changes will be resubmitted for approval.'
+              : 'Submit your capstone project details for faculty approval. Ensure all technical requirements are met.'}
           </p>
 
           <section className="project-form-card">
@@ -167,8 +198,9 @@ const ProjectRegistration = () => {
             <div className="project-note-box">
               <span>ⓘ</span>
               <span>
-                Once submitted, the project will be reviewed by the faculty coordinator. You will receive an email
-                notification once a decision is made.
+                {editSubmissionId
+                  ? 'Save your changes and the project will be resubmitted for faculty approval.'
+                  : 'Once submitted, the project will be reviewed by the faculty coordinator. You will receive an email notification once a decision is made.'}
               </span>
             </div>
 
@@ -176,7 +208,7 @@ const ProjectRegistration = () => {
 
             <div className="project-action-row">
               <button type="button" className="submit-btn" onClick={handleSubmitForApproval}>
-                Submit for Approval
+                {editSubmissionId ? 'Save Changes' : 'Submit for Approval'}
               </button>
               <button type="button" className="draft-btn">Save as Draft</button>
             </div>
