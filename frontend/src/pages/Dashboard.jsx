@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
+import Reports from './Reports';
 
 // Profile Content Component
 const ProfileContent = ({ user, handleLogout }) => {
@@ -421,6 +422,8 @@ const Dashboard = () => {
     switch (activeMenuItem) {
       case 'profile':
         return <ProfileContent user={user} handleLogout={handleLogout} />;
+      case "reports":
+        return <Reports />;
       case 'dashboard':
       default:
         return <DashboardContent user={user} />;

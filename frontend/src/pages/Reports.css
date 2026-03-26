@@ -1,0 +1,323 @@
+/* --- PHẦN CŨ CỦA BẠN (Đã được tối ưu) --- */
+
+.reports-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: #1e293b;
+  background-color: #f8fafc;
+  min-height: 100vh;
+  position: relative; /* Để toast định vị chuẩn */
+}
+
+.content-header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 15px;
+}
+
+.section-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-header h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.time-badge {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.upload-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: flex-end;
+}
+
+.form-field label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #334155;
+}
+
+.milestone-select, .edit-input, .edit-select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background-color: white;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.milestone-select:focus, .edit-input:focus {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.submit-update-btn, .btn-save {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #1976d2;
+  color: white;
+  padding: 11px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.submit-update-btn:hover, .btn-save:hover {
+  background-color: #1565c0;
+  transform: translateY(-1px);
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.report-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.report-table td {
+  padding: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+.report-table tr:hover {
+  background-color: #f8fafc;
+}
+
+.file-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-icon-bg {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: white;
+}
+
+.file-icon-bg.pdf { background-color: #ef4444; }
+.file-icon-bg.docx { background-color: #2563eb; }
+
+.file-name-text {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.milestone-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-icon {
+  background: #f1f5f9;
+  border: none;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-icon:hover { background: #e2e8f0; }
+.btn-icon.delete:hover { background: #fee2e2; color: #ef4444; }
+
+
+/* --- PHẦN MỚI: TOAST NOTIFICATION (GÓC PHẢI) --- */
+
+.toast-notification {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  min-width: 300px;
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  border-left: 6px solid #10b981; /* Xanh cho success */
+  animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  overflow: hidden;
+}
+
+.toast-notification.error {
+  border-left-color: #ef4444; /* Đỏ cho xóa */
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toast-icon { font-size: 20px; }
+
+.toast-message {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Thanh Progress Bar 3 giây */
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.toast-progress::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 100%;
+  width: 100%;
+  background-color: #10b981;
+  animation: progress 3s linear forwards;
+}
+
+.toast-notification.error .toast-progress::after {
+  background-color: #ef4444;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .upload-wrapper { grid-template-columns: 1fr; }
+  .toast-notification { left: 20px; right: 20px; min-width: auto; }
+}
+/* Thêm vào phần nút Icon */
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px; /* Khoảng cách giữa 3 nút */
+}
+
+.btn-icon {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+/* Nút tải xuống có màu hơi xanh nhẹ khi hover */
+.btn-icon[title="Tải xuống"]:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+/* Nút sửa có màu vàng/cam nhẹ khi hover */
+.btn-icon[title="Sửa"]:hover {
+  background: #fffbeb;
+  border-color: #f59e0b;
+}
+
+.btn-icon.delete:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* Tinh chỉnh nút đóng Toast */
+.toast-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: #94a3b8;
+  cursor: pointer;
+  margin-left: auto;
+  padding: 0 4px;
+}
+
+.toast-close-btn:hover {
+  color: #1e293b;
+}
