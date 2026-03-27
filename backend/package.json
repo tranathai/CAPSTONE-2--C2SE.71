@@ -1,25 +1,23 @@
 {
-  "name": "mentoral-grad-backend",
+  "name": "backend",
   "version": "1.0.0",
-  "description": "Backend for MentorAI Grad authentication system",
-  "main": "server.js",
+  "description": "",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js"
   },
-  "keywords": ["authentication", "express", "mongodb"],
+  "keywords": [],
   "author": "",
   "license": "ISC",
+  "type": "module",
   "dependencies": {
-    "express": "^4.18.2",
-    "mongoose": "^7.0.0",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.0.3",
-    "express-validator": "^7.0.0"
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "mysql2": "^3.15.3"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22"
+    "nodemon": "^3.1.14"
   }
 }

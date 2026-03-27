@@ -1,0 +1,210 @@
+.content {
+  flex: 1;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.review-page {
+  background: #f8fafc;
+  min-height: calc(100vh - 60px);
+}
+
+.review-breadcrumb {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 16px 24px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.review-breadcrumb-muted {
+  color: #64748b;
+}
+
+.review-breadcrumb-strong {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.review-breadcrumb-sep {
+  color: #94a3b8;
+  font-size: 12px;
+  transform: translateY(-1px);
+}
+
+.review-main {
+  padding: 24px;
+}
+
+.review-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.review-title {
+  font-size: 24px;
+  line-height: 32px;
+  letter-spacing: -0.6px;
+  color: #0f172a;
+}
+
+.review-subtitle {
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 20px;
+  color: #64748b;
+}
+
+.review-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.review-btn {
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 14px;
+  line-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+}
+
+.review-btn.secondary {
+  background: #fff;
+  border-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.review-btn.primary {
+  background: #135bec;
+  border-color: #135bec;
+  color: #fff;
+}
+
+.review-pdf-shell {
+  margin-top: 24px;
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  height: 720px;
+}
+
+.review-pdf-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #fff;
+}
+
+.review-status {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  font-size: 14px;
+  background: #f8fafc;
+}
+
+.review-pdf-page {
+  background: #fff;
+  width: 592px;
+  max-width: calc(100% - 64px);
+  height: calc(100% - 96px);
+  margin: 48px auto;
+  padding: 48px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.review-skeleton {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.review-skeleton.line {
+  height: 16px;
+  margin-top: 16px;
+}
+
+.review-skeleton.block {
+  height: 40px;
+  margin-top: 16px;
+}
+
+.review-skeleton.diagram {
+  margin-top: 24px;
+  height: 160px;
+  border: 1px dashed #e2e8f0;
+  background: #f8fafc;
+  border-radius: 8px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.review-skeleton.w-sm {
+  width: 200px;
+}
+
+.review-skeleton.w-md {
+  width: 85%;
+}
+
+.review-skeleton.w-lg {
+  width: 100%;
+}
+
+.review-skeleton.h-md {
+  height: 40px;
+  width: 100%;
+}
+
+.review-pdf-toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+}
+
+.review-toolbar-pill {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(6px);
+  border-radius: 9999px;
+  padding: 8px 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.review-toolbar-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.review-toolbar-text {
+  font-size: 12px;
+  line-height: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #fff;
+  font-weight: 500;
+}

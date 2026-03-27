@@ -1,0 +1,29 @@
+.header {
+  height: 60px;
+  background: white;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
+
+.search {
+  width: 350px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.header-right {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.avatar {
+  background: #2563eb;
+  color: white;
+  padding: 8px;
+  border-radius: 50%;
+}
