@@ -366,10 +366,15 @@
 }
 
 .view-details {
+  border: none;
+  background: transparent;
+  padding: 0;
   color: #1976d2;
   font-size: 14px;
   font-weight: 500;
+  font-family: inherit;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .view-details:hover {
@@ -475,6 +480,7 @@
 }
 
 .submission-item {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -482,11 +488,19 @@
   background: #f9fafb;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
-  transition: background 0.2s;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .submission-item:hover {
   background: #f3f4f6;
+}
+
+.submission-item.active {
+  border-color: #1976d2;
+  background: #eff6ff;
+  box-shadow: 0 0 0 1px #bfdbfe;
 }
 
 .submission-icon {
@@ -1299,4 +1313,64 @@
 .edit-submission-btn:hover {
   background: #2563eb;
   color: white;
+}
+
+.project-detail-panel {
+  margin-top: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.project-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.project-detail-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.project-detail-description {
+  margin: 12px 0;
+  color: #334155;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.project-detail-meta {
+  display: grid;
+  gap: 6px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.project-comment-box {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+}
+
+.project-comment-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1d4ed8;
+  margin-bottom: 8px;
+}
+
+.project-comment-content {
+  color: #0f172a;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }

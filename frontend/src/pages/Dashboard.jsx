@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 
@@ -165,6 +165,14 @@ const buildSubmissionKey = (item, index = 0) => {
   }
 
   return `${item?.studentName || 'unknown'}-${item?.projectTitle || item?.projectName || 'untitled'}-${item?.submittedAt || index}`;
+};
+
+const getSubmissionSelectionKey = (item) => {
+  if (item?.id) {
+    return String(item.id);
+  }
+
+  return `${item?.studentEmail || 'unknown'}-${item?.projectTitle || item?.projectName || 'untitled'}-${item?.submittedAt || 'unknown'}`;
 };
 
 const extractTechStack = (submission) => {
@@ -438,35 +446,42 @@ const DashboardContent = ({ user }) => {
   const isInstructor = user?.role === 'teacher';
   const [instructorSubmissions, setInstructorSubmissions] = useState([]);
   const [studentSubmissions, setStudentSubmissions] = useState([]);
+  const [selectedSubmissionKey, setSelectedSubmissionKey] = useState('');
   const [activeReview, setActiveReview] = useState(null);
   const [decisionReason, setDecisionReason] = useState('');
   const [reviewError, setReviewError] = useState('');
 
-  const latestStudentSubmission = !isInstructor && studentSubmissions.length > 0
-    ? [...studentSubmissions].sort((a, b) => {
+  const sortedStudentSubmissions = useMemo(() => {
+    if (isInstructor) {
+      return [];
+    }
+
+    return [...studentSubmissions].sort((a, b) => {
       const aTime = new Date(a.updatedAt || a.submittedAt || 0).getTime();
       const bTime = new Date(b.updatedAt || b.submittedAt || 0).getTime();
       return bTime - aTime;
-    })[0]
+    });
+  }, [isInstructor, studentSubmissions]);
+
+  const selectedSubmission = !isInstructor
+    ? (sortedStudentSubmissions.find((item) => getSubmissionSelectionKey(item) === selectedSubmissionKey)
+      || sortedStudentSubmissions[0]
+      || null)
     : null;
 
-  const latestStudentStatus = latestStudentSubmission
-    ? normalizeSubmissionStatus(latestStudentSubmission.status)
+  const selectedStudentStatus = selectedSubmission
+    ? normalizeSubmissionStatus(selectedSubmission.status)
     : 'new';
-  const studentStatusCard = getStudentStatusCardConfig(latestStudentStatus);
-  const latestApprovedSubmission = !isInstructor
-    ? [...studentSubmissions]
-      .filter((item) => normalizeSubmissionStatus(item.status) === 'accepted')
-      .sort((a, b) => {
-        const aTime = new Date(a.reviewedAt || a.updatedAt || a.submittedAt || 0).getTime();
-        const bTime = new Date(b.reviewedAt || b.updatedAt || b.submittedAt || 0).getTime();
-        return bTime - aTime;
-      })[0] || null
-    : null;
-  const studentRoadmapMilestones = getSubmissionRoadmap(latestApprovedSubmission);
+  const studentStatusCard = getStudentStatusCardConfig(selectedStudentStatus);
+
+  const studentRoadmapMilestones = selectedSubmission && selectedStudentStatus === 'accepted'
+    ? getSubmissionRoadmap(selectedSubmission)
+    : [];
+
   const upcomingMilestone = studentRoadmapMilestones.find((item) => new Date(item.deadline).getTime() >= Date.now())
     || studentRoadmapMilestones[studentRoadmapMilestones.length - 1]
     || null;
+
   const activeMilestoneIndex = studentRoadmapMilestones.findIndex((item) => new Date(item.deadline).getTime() >= Date.now());
   const resolvedActiveMilestoneIndex = activeMilestoneIndex === -1
     ? Math.max(studentRoadmapMilestones.length - 1, 0)
@@ -483,6 +498,25 @@ const DashboardContent = ({ user }) => {
       setStudentSubmissions(mySubmissions);
     }
   }, [isInstructor, user?.email]);
+
+  useEffect(() => {
+    if (isInstructor) {
+      return;
+    }
+
+    if (sortedStudentSubmissions.length === 0) {
+      setSelectedSubmissionKey('');
+      return;
+    }
+
+    const hasSelected = sortedStudentSubmissions.some(
+      (item) => getSubmissionSelectionKey(item) === selectedSubmissionKey
+    );
+
+    if (!hasSelected) {
+      setSelectedSubmissionKey(getSubmissionSelectionKey(sortedStudentSubmissions[0]));
+    }
+  }, [isInstructor, selectedSubmissionKey, sortedStudentSubmissions]);
 
   const openReviewModal = (submission, index) => {
     setActiveReview({
@@ -625,7 +659,7 @@ const DashboardContent = ({ user }) => {
       <div className="section-card">
         <div className="section-header">
           <h2>Project Roadmap</h2>
-          <a href="#" className="view-details">View All Details</a>
+          <button type="button" className="view-details">View All Details</button>
         </div>
         {isInstructor ? (
           <div className="roadmap">
@@ -684,9 +718,10 @@ const DashboardContent = ({ user }) => {
                 const isCompleted = index < resolvedActiveMilestoneIndex;
                 const isActive = index === resolvedActiveMilestoneIndex;
                 const stepClassName = isCompleted ? 'completed' : (isActive ? 'active' : '');
-                const connectorClassName = index < resolvedActiveMilestoneIndex
+
+                const connectorClassName = index < resolvedActiveMilestoneIndex - 1
                   ? 'completed'
-                  : (index === resolvedActiveMilestoneIndex ? 'active' : '');
+                  : (index === resolvedActiveMilestoneIndex - 1 ? 'active' : '');
 
                 return (
                   <React.Fragment key={milestone.id || `${milestone.title}-${index}`}>
@@ -770,33 +805,73 @@ const DashboardContent = ({ user }) => {
           </div>
         ) : (
           <div className="submissions-list">
-            {studentSubmissions.length === 0 ? (
+            {sortedStudentSubmissions.length === 0 ? (
               <div className="submission-empty">
                 No projects yet. Click "+ New Project" to create your first project submission.
               </div>
             ) : (
-              studentSubmissions.map((item, index) => {
+              sortedStudentSubmissions.map((item, index) => {
                 const status = normalizeSubmissionStatus(item.status);
                 const projectTitle = item.projectTitle || item.projectName || 'Untitled Project';
+                const currentSelectionKey = getSubmissionSelectionKey(item);
+                const isSelected = currentSelectionKey === getSubmissionSelectionKey(selectedSubmission || {});
 
                 return (
-                  <div key={buildSubmissionKey(item, index)} className="submission-item">
-                    <div className="submission-icon">📋</div>
-                    <div className="submission-info">
-                      <div className="submission-name">{projectTitle}</div>
-                      <div className="submission-meta">
-                        Submitted {formatShortDate(item.submittedAt)}
-                        {item.description && ` • ${item.description.substring(0, 50)}...`}
+                  <div key={buildSubmissionKey(item, index)}>
+                    <button
+                      type="button"
+                      className={`submission-item ${isSelected ? 'active' : ''}`}
+                      onClick={() => setSelectedSubmissionKey(currentSelectionKey)}
+                    >
+                      <div className="submission-icon">📋</div>
+                      <div className="submission-info">
+                        <div className="submission-name">{projectTitle}</div>
+                        <div className="submission-meta">
+                          Submitted {formatShortDate(item.submittedAt)}
+                          {item.description && ` • ${item.description.substring(0, 50)}...`}
+                        </div>
                       </div>
-                    </div>
-                    <div className="submission-status-container">
-                      <div className="submission-status-label">Status</div>
-                      <span className={`submission-status ${status}`}>
-                        {status === 'pending' && '⏳ Pending'}
-                        {status === 'accepted' && '✓ Approved'}
-                        {status === 'deny' && '✕ Declined'}
-                      </span>
-                    </div>
+                      <div className="submission-status-container">
+                        <div className="submission-status-label">Status</div>
+                        <span className={`submission-status ${status}`}>
+                          {status === 'pending' && '⏳ Pending'}
+                          {status === 'accepted' && '✓ Approved'}
+                          {status === 'deny' && '✕ Declined'}
+                        </span>
+                      </div>
+                    </button>
+                    
+                    {isSelected && (
+                      <div className="project-detail-panel">
+                        <div className="project-detail-header">
+                          <h3>{projectTitle}</h3>
+                          <span className={`submission-status ${normalizeSubmissionStatus(item.status)}`}>
+                            {normalizeSubmissionStatus(item.status) === 'pending' && '⏳ Pending'}
+                            {normalizeSubmissionStatus(item.status) === 'accepted' && '✓ Approved'}
+                            {normalizeSubmissionStatus(item.status) === 'deny' && '✕ Declined'}
+                          </span>
+                        </div>
+
+                        <p className="project-detail-description">
+                          {item.description || 'No project description provided.'}
+                        </p>
+
+                        <div className="project-detail-meta">
+                          <div><strong>Submitted:</strong> {formatShortDate(item.submittedAt)}</div>
+                          <div><strong>Updated:</strong> {formatShortDate(item.updatedAt || item.submittedAt)}</div>
+                          {item.reviewedBy && (
+                            <div><strong>Reviewed by:</strong> {item.reviewedBy}</div>
+                          )}
+                        </div>
+
+                        <div className="project-comment-box">
+                          <div className="project-comment-title">Giảng viên nhận xét</div>
+                          <div className="project-comment-content">
+                            {item.reviewReason || 'Chưa có nhận xét từ giảng viên cho project này.'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })

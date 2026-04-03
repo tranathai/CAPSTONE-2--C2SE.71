@@ -83,11 +83,17 @@ const extractTechStack = (submission) => {
 const TeacherDashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [allSubmissions, setAllSubmissions] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [statusFilter, setStatusFilter] = useState('pending');
   const [activeReview, setActiveReview] = useState(null);
   const [decisionReason, setDecisionReason] = useState('');
   const [reviewError, setReviewError] = useState('');
+
+  const totalProjects = allSubmissions.length;
+  const pendingReviews = allSubmissions.filter((item) => normalizeSubmissionStatus(item.status) === 'pending').length;
+  const approvedProjects = allSubmissions.filter((item) => normalizeSubmissionStatus(item.status) === 'accepted').length;
+  const projectsAtRisk = allSubmissions.filter((item) => normalizeSubmissionStatus(item.status) === 'deny').length;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -108,6 +114,7 @@ const TeacherDashboard = () => {
 
     // Load submissions from localStorage
     const allSubmissions = readProjectSubmissions();
+    setAllSubmissions(allSubmissions);
     let filtered = allSubmissions;
 
     if (statusFilter === 'pending') {
@@ -167,6 +174,7 @@ const TeacherDashboard = () => {
     });
 
     writeProjectSubmissions(updatedSubmissions);
+    setAllSubmissions(updatedSubmissions);
     
     // Refresh submissions list
     let filtered = updatedSubmissions;
@@ -233,21 +241,21 @@ const TeacherDashboard = () => {
 
         <section className="teacher-cards">
           <article className="overview-card">
-            <p className="chip good">+0% this week</p>
+            <p className="chip good">{approvedProjects} approved</p>
             <h3>Total Projects</h3>
-            <strong>24</strong>
+            <strong>{totalProjects}</strong>
           </article>
 
           <article className="overview-card">
-            <p className="chip warm">+20% since yesterday</p>
+            <p className="chip warm">{pendingReviews} waiting</p>
             <h3>Pending Reviews</h3>
-            <strong>5</strong>
+            <strong>{pendingReviews}</strong>
           </article>
 
           <article className="overview-card">
-            <p className="chip bad">-5% from average</p>
+            <p className="chip bad">{projectsAtRisk} declined</p>
             <h3>Projects at Risk</h3>
-            <strong>2</strong>
+            <strong>{projectsAtRisk}</strong>
           </article>
         </section>
 

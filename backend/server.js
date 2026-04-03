@@ -1,14 +1,22 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-// const connectDB = require('./config/database');
+const { connectDB } = require('./config/database');
 
 // Load environment variables
 dotenv.config();
 
-// Connect to database (DISABLED - using mock data for now)
-// connectDB();
-console.log('⚠️  Database connection DISABLED - Using mock data');
+const USE_MOCK_DATA = String(process.env.USE_MOCK_DATA || 'true').toLowerCase() === 'true';
+
+// Connect to database when not running in mock mode
+if (USE_MOCK_DATA) {
+  console.log('⚠️  Mock mode enabled - Database connection skipped');
+} else {
+  connectDB().catch((error) => {
+    console.error('Database connection failed:', error.message);
+    process.exit(1);
+  });
+}
 
 const app = express();
 
