@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import axios from '../utils/axios';
 import './Register.css';
 
 const Register = () => {
@@ -88,7 +88,7 @@ const Register = () => {
       const response = await axios.post('/api/auth/register', {
         email: formData.email,
         password: formData.password,
-        fullName: formData.fullName,
+        name: formData.fullName,
         role
       });
 

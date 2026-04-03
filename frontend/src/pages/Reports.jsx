@@ -1,199 +1,372 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import axios from '../utils/axios';
 import './Reports.css';
 
+import ConfirmModal from '../components/ConfirmModal/ConfirmModal';
+import Toast from '../components/Toast/Toast';
+
 const Reports = () => {
-  const [reports, setReports] = useState([
-    { id: 1, name: 'Phan_tich_yeu_cau_STMSUAI.pdf', milestone: 'Milestone 1', date: '15/03/2026', size: '1.2 MB', sender: 'Nga (Student)', type: 'pdf' },
-    { id: 2, name: 'Design_Document_V1.docx', milestone: 'Milestone 2', date: '22/03/2026', size: '2.5 MB', sender: 'Nga (Student)', type: 'docx' }
-  ]);
+  const fileInputRef = useRef(null);
+  
+  const [documents, setDocuments] = useState([]);
+  const [tempFile, setTempFile] = useState(null);
+  const [selectedMilestoneId, setSelectedMilestoneId] = useState("");
+  const [milestoneOptions, setMilestoneOptions] = useState([]);
+  
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, type: '', data: null, title: '', message: '' });
 
-  const [selectedMilestone, setSelectedMilestone] = useState('Milestone 1');
-  const [editingId, setEditingId] = useState(null);
-  const [editValue, setEditValue] = useState({ name: '', milestone: '' });
-  const [notification, setNotification] = useState({ show: false, message: '', type: '' });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingDoc, setEditingDoc] = useState(null);
+  const [inlineEditingId, setInlineEditingId] = useState(null); 
+  const [newFileName, setNewFileName] = useState('');
+  const [fileExtension, setFileExtension] = useState(''); // State lưu đuôi file
 
-  const showToast = (message, type = 'success') => {
-    setNotification({ show: true, message, type });
-  };
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ show: true, message, type });
+  }, []);
 
-  useEffect(() => {
-    if (notification.show) {
-      const timer = setTimeout(() => {
-        setNotification({ ...notification, show: false });
-      }, 3000);
-      return () => clearTimeout(timer);
+  const fetchData = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('/api/reports', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        const docs = res.data.data.map(item => {
+          // Lấy phiên bản mới nhất
+          const latestVersion = item.versions[item.versions.length - 1];
+          return {
+            id: item.milestone.id,
+            milestone: item.milestone.name,
+            // ƯU TIÊN: hiển thị file_name từ DB, nếu chưa có thì dùng logic cắt path
+            name: latestVersion?.file_name || (latestVersion ? latestVersion.file_path.split(/[\\/]/).pop() : item.milestone.name),
+            versions: item.versions.map(v => ({
+              id: v.id,
+              fileName: v.file_name || v.file_path.split(/[\\/]/).pop(),
+              v: v.version_number,
+              date: new Date(v.submitted_at).toLocaleDateString('vi-VN')
+            })),
+            status: item.versions.length ? 'Submitted' : 'Not Submitted',
+            submissionId: item.submission ? item.submission.id : null
+          };
+        });
+        setDocuments(docs);
+        setMilestoneOptions(res.data.data.map(item => ({ id: item.milestone.id, name: item.milestone.name })));
+      }
+    } catch (error) {
+      showToast("Lỗi khi tải dữ liệu", "error");
     }
-  }, [notification.show]);
+  }, [showToast]);
 
-  const handleFileUpload = (e) => {
+  useEffect(() => { 
+    fetchData(); 
+  }, [fetchData]);
+
+  const onFileChange = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-
-    const fileExtension = file.name.split('.').pop().toLowerCase();
-    const newFile = {
-      id: Date.now(),
-      name: file.name,
-      milestone: selectedMilestone,
-      date: new Date().toLocaleDateString('vi-VN'),
-      size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
-      sender: 'Nga (Student)',
-      type: fileExtension
-    };
-
-    setReports([newFile, ...reports]);
-    showToast(`Đã tải lên báo cáo cho ${selectedMilestone}!`, 'success');
-    e.target.value = null; 
+    if (file) setTempFile(file);
   };
 
-  const deleteFile = (id) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa báo cáo này không?')) {
-      setReports(reports.filter(r => r.id !== id));
-      showToast('Đã xóa báo cáo thành công!', 'error');
+  const handleUpload = async () => {
+  if (!tempFile || !selectedMilestoneId) return showToast("Please select a file and milestone", "error");
+
+  // 1. Lấy thông tin file gốc
+  const originalName = tempFile.name;
+  const lastDotIndex = originalName.lastIndexOf('.');
+  const name = originalName.substring(0, lastDotIndex);
+  const ext = originalName.substring(lastDotIndex);
+
+  // 2. Tạo tên file mới với timestamp để tránh trùng lặp/ghi đè
+  // Định dạng: TenFile_17123456789.docx
+  const uniqueFileName = `${name}_${Date.now()}${ext}`;
+
+  const formData = new FormData();
+  
+  // 3. Sử dụng tham số thứ 3 của append để ghi đè tên file gửi đi
+  formData.append('report', tempFile, uniqueFileName); 
+  formData.append('milestone_id', selectedMilestoneId);
+
+  try {
+    const token = localStorage.getItem('token');
+    const res = await axios.post('/api/reports/upload', formData, {
+      headers: { 
+        Authorization: `Bearer ${token}`, 
+        'Content-Type': 'multipart/form-data' 
+      }
+    });
+    
+    if (res.data.success) {
+      showToast("Uploaded successfully!");
+      setTempFile(null);
+      setSelectedMilestoneId("");
+      fetchData();
+    }
+  } catch (error) {
+    showToast('Submission failed.', "error");
+  }
+};
+
+  const triggerDeleteAll = (doc) => {
+    setConfirmConfig({
+      isOpen: true,
+      type: 'DELETE_ALL',
+      data: doc,
+      title: "Delete entire history?",
+      message: `Are you sure you want to delete all versions of "${doc.milestone}"?`
+    });
+  };
+
+  const triggerDeleteVersion = (versionId) => {
+    setConfirmConfig({
+      isOpen: true,
+      type: 'DELETE_VERSION',
+      data: versionId,
+      title: "Delete this version?",
+      message: "This action will permanently delete the selected file."
+    });
+  };
+
+  const handleConfirmAction = async () => {
+    const { type, data } = confirmConfig;
+    const token = localStorage.getItem('token');
+    try {
+      if (type === 'DELETE_ALL') {
+        await axios.delete(`/api/reports/${data.submissionId}`, { headers: { Authorization: `Bearer ${token}` } });
+        showToast("History cleared successfully");
+      } else if (type === 'DELETE_VERSION') {
+        await axios.delete(`/api/reports/version/${data}`, { headers: { Authorization: `Bearer ${token}` } });
+        showToast("Version deleted successfully");
+        setIsEditModalOpen(false);
+      }
+      fetchData();
+    } catch (error) {
+      showToast("Delete failed", "error");
+    }
+    setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleViewFile = async (versionId, originalFileName) => {
+    try {
+      const res = await axios.get(`/api/reports/version/${versionId}/download`, { responseType: 'blob' });
+      const contentType = res.headers['content-type'];
+      const blob = new Blob([res.data], { type: contentType });
+      const fileURL = window.URL.createObjectURL(blob);
+      if (contentType.includes('word') || contentType.includes('officedocument')) {
+        const link = document.createElement('a');
+        link.href = fileURL; link.download = originalFileName;
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      } else { window.open(fileURL, '_blank'); }
+    } catch (error) { showToast('Error opening file.', "error"); }
+  };
+
+  const handleDownload = async (versionId, originalFileName) => {
+    try {
+      const res = await axios.get(`/api/reports/version/${versionId}/download`, { responseType: 'blob' });
+      const blob = new Blob([res.data]);
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = originalFileName;
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    } catch (error) { showToast('Error downloading file.', "error"); }
+  };
+
+  // Logic tách tên và định dạng
+  const startEditingName = (doc) => {
+    const latest = doc.versions[doc.versions.length - 1];
+    if (latest) {
+      const fullFileName = latest.fileName;
+      const lastDotIndex = fullFileName.lastIndexOf('.');
+      
+      if (lastDotIndex !== -1) {
+        setNewFileName(fullFileName.substring(0, lastDotIndex));
+        setFileExtension(fullFileName.substring(lastDotIndex)); // Lưu lại .pdf, .docx...
+      } else {
+        setNewFileName(fullFileName);
+        setFileExtension('');
+      }
+      
+      setInlineEditingId(doc.id);
     }
   };
 
-  const downloadFile = (report) => {
-    // 1. Tạo nội dung giả lập cho file 
-    const fileContent = `Báo cáo: ${report.name}\nMilestone: ${report.milestone}\nNgày nộp: ${report.date}\nNgười nộp: ${report.sender}`;
-    const blob = new Blob([fileContent], { type: 'text/plain' });
+  const saveInlineFileName = async (versionId) => {
+    if (!newFileName.trim()) return;
     
-    // 2. Tạo một đường dẫn (URL) tạm thời cho file
-    const url = window.URL.createObjectURL(blob);
+    // Tự động nối lại đuôi file khi gửi lên Server
+    const finalFileName = `${newFileName.trim()}${fileExtension}`;
     
-    // 3. Tạo một thẻ <a> ẩn để kích hoạt lệnh tải
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = report.name; // Đặt tên file khi tải về
-    
-    document.body.appendChild(link);
-    link.click(); // Kích hoạt tải xuống
-    
-    // 4. Dọn dẹp
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-
-    showToast(`Đang tải xuống: ${report.name}`, 'success');
-  };
-
-  const startEdit = (report) => {
-    setEditingId(report.id);
-    setEditValue({ name: report.name, milestone: report.milestone });
-  };
-
-  const saveEdit = (id) => {
-    setReports(reports.map(r => 
-      r.id === id ? { ...r, name: editValue.name, milestone: editValue.milestone } : r
-    ));
-    setEditingId(null);
-    showToast('Cập nhật thông tin thành công!', 'success');
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`/api/reports/version/${versionId}/name`, 
+        { file_name: finalFileName },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      showToast('Filename updated successfully');
+      setInlineEditingId(null);
+      fetchData();
+    } catch (error) { showToast('Error updating filename.', "error"); }
   };
 
   return (
-    <div className="reports-container">
-      {/* Toast Notification góc phải */}
-      {notification.show && (
-        <div className={`toast-notification ${notification.type}`}>
-          <div className="toast-content">
-            <span className="toast-icon">
-              {notification.type === 'error' ? '🗑️' : '✅'}
-            </span>
-            <span className="toast-message">{notification.message}</span>
-            <button className="toast-close-btn" onClick={() => setNotification({ ...notification, show: false })}>×</button>
-          </div>
-          <div className="toast-progress"></div>
-        </div>
+    <div className="modern-container">
+      {toast.show && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(prev => ({ ...prev, show: false }))} 
+        />
       )}
 
-      <div className="content-header">
-        <h1>Báo cáo dự án</h1>
-        <p className="subtitle">Hệ thống quản lý báo cáo MentorAI Grad.</p>
-      </div>
+      <header className="modern-header centered-header">
+        <h1>Report Submission Management</h1>
+      </header>
 
-      <div className="section-card">
-        <div className="upload-wrapper">
-          <div className="form-field">
-            <label>Chọn Milestone nộp bài</label>
-            <select value={selectedMilestone} onChange={(e) => setSelectedMilestone(e.target.value)} className="milestone-select">
-              <option value="Milestone 1">Milestone 1: Đề xuất dự án</option>
-              <option value="Milestone 2">Milestone 2: Thiết kế hệ thống</option>
-              <option value="Milestone 3">Milestone 3: Bản demo sản phẩm</option>
-              <option value="Final Thesis">Báo cáo cuối kỳ (Thesis)</option>
-            </select>
+      <section className="upload-section-card">
+        <div className="upload-grid">
+          <div className="file-drop-zone" onClick={() => fileInputRef.current.click()}>
+            <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#6366f1', marginBottom: '10px' }}>
+              cloud_upload
+            </span>
+            <p>{tempFile ? tempFile.name : "Click to select a file"}</p>
+            <input type="file" ref={fileInputRef} hidden accept=".pdf,.docx,.zip,.rar" onChange={onFileChange} />
           </div>
-          <div className="form-field">
-            <label>Tải lên tệp mới</label>
-            <label htmlFor="file-upload" className="submit-update-btn" style={{ cursor: 'pointer' }}>
-              <span>📁</span> Chọn file từ máy tính
-            </label>
-            <input type="file" id="file-upload" onChange={handleFileUpload} accept=".pdf,.docx" hidden />
+          <div className="upload-actions">
+            <select className="modern-select" value={selectedMilestoneId} onChange={(e) => setSelectedMilestoneId(e.target.value)}>
+              <option value="">Select Milestone</option>
+              {milestoneOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+            <button className="btn-modern-primary" onClick={handleUpload}>Upload Now</button>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="section-card">
-        <div className="table-responsive">
-          <table className="report-table">
-            <thead>
-              <tr>
-                <th>Tên báo cáo</th>
-                <th>Milestone</th>
-                <th>Ngày nộp</th>
-                <th style={{ textAlign: 'right' }}>Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reports.map((report) => (
-                <tr key={report.id}>
+      <div className="modern-card-table">
+        <table className="modern-table">
+          <thead>
+            <tr>
+              <th>Milestone</th>
+              <th>Document Title</th>
+              <th>Status</th>
+              <th>Current Version</th>
+              <th className="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {documents.map((doc) => {
+              const latest = doc.versions[doc.versions.length - 1];
+              const isEditing = inlineEditingId === doc.id;
+
+              return (
+                <tr key={doc.id} className={doc.status === 'Submitted' ? 'row-success' : ''}>
+                  <td><span className={`tag-ms ${doc.milestone.replace(/\s+/g, '-').toLowerCase()}`}>{doc.milestone}</span></td>
+                  <td className="font-semibold">{doc.name}</td>
                   <td>
-                    {editingId === report.id ? (
-                      <input 
-                        className="edit-input"
-                        value={editValue.name} 
-                        onChange={(e) => setEditValue({...editValue, name: e.target.value})}
-                      />
-                    ) : (
-                      <div className="file-info-cell">
-                        <span className={`file-icon-bg ${report.type}`}>{report.type.toUpperCase()}</span>
-                        <span className="file-name-text">{report.name}</span>
-                      </div>
-                    )}
+                    <span className={`status-badge ${doc.status === 'Submitted' ? 'is-done' : 'is-pending'}`}>
+                      {doc.status === 'Submitted' ? 'Submitted' : 'Not Submitted'}
+                    </span>
                   </td>
                   <td>
-                    {editingId === report.id ? (
-                      <select 
-                        className="edit-select"
-                        value={editValue.milestone} 
-                        onChange={(e) => setEditValue({...editValue, milestone: e.target.value})}
-                      >
-                        <option>Milestone 1</option>
-                        <option>Milestone 2</option>
-                        <option>Milestone 3</option>
-                        <option>Final Thesis</option>
-                      </select>
-                    ) : (
-                      <span className="milestone-badge">{report.milestone}</span>
-                    )}
-                  </td>
-                  <td>{report.date}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="action-buttons">
-                      {editingId === report.id ? (
-                        <button className="btn-save" onClick={() => saveEdit(report.id)}>Lưu</button>
+                    {latest ? (
+                      isEditing ? (
+                        <div className="inline-edit-box animated-fade-in">
+                          <div className="input-with-ext">
+                             <input type="text" className="inline-input" value={newFileName} onChange={(e) => setNewFileName(e.target.value)} autoFocus />
+                             <span className="ext-label">{fileExtension}</span>
+                          </div>
+                          <div className="inline-edit-actions">
+                            <button className="btn-confirm-edit" title="Xác nhận" onClick={() => saveInlineFileName(latest.id)}>
+                              <span className="material-symbols-outlined">check</span>
+                            </button>
+                            <button className="btn-cancel-edit" title="Hủy" onClick={() => setInlineEditingId(null)}>
+                              <span className="material-symbols-outlined">close</span>
+                            </button>
+                          </div>
+                        </div>
                       ) : (
+                        <div className="ver-tag-wrapper">
+                          <span className="ver-badge">V{latest.v}</span>
+                          <div className="ver-filename">{latest.fileName}</div>
+                        </div>
+                      )
+                    ) : '--'}
+                  </td>
+                  <td className="text-right">
+                    <div className="action-group">
+                      {doc.versions.length > 0 ? (
                         <>
-                          <button className="btn-icon" onClick={() => downloadFile(report.name)} title="Tải xuống">📥</button>
-                          <button className="btn-icon" onClick={() => startEdit(report)} title="Sửa">✏️</button>
-                          <button className="btn-icon delete" onClick={() => deleteFile(report.id)} title="Xóa">🗑️</button>
+                          <button className="btn-action edit" title="History" onClick={() => { setEditingDoc(doc); setIsEditModalOpen(true); }}>
+                            <span className="material-symbols-outlined">history</span>
+                          </button>
+                          <button className="btn-action edit" title="Edit Name" onClick={() => startEditingName(doc)}>
+                            <span className="material-symbols-outlined">edit</span>
+                          </button>
+                          <button className="btn-action view" title="View" onClick={() => handleViewFile(latest?.id, latest?.fileName)}>
+                            <span className="material-symbols-outlined">visibility</span>
+                          </button>
+                          <button className="btn-action download" title="Download" onClick={() => handleDownload(latest?.id, latest?.fileName)}>
+                            <span className="material-symbols-outlined">download</span>
+                          </button>
+                          <button className="btn-action delete" title="Delete All" onClick={() => triggerDeleteAll(doc)}>
+                            <span className="material-symbols-outlined">delete_forever</span>
+                          </button>
                         </>
-                      )}
+                      ) : <span className="text-sm-gray">Empty</span>}
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
+
+      {isEditModalOpen && editingDoc && (
+        <div className="modal-overlay history-overlay" onClick={() => setIsEditModalOpen(false)}>
+          <div className="modal-content history-modal" onClick={e => e.stopPropagation()}>
+            <header className="modal-header-modern">
+                <h2>Submission History: {editingDoc.milestone}</h2>
+                <p className="modal-subtitle">Manage previous versions</p>
+            </header>
+            <div className="version-list">
+              {editingDoc.versions.slice().reverse().map((ver, idx) => (
+                <div key={ver.id} className="version-item">
+                  <div className="v-info">
+                    <div className="v-header-row">
+                        <span className="v-num">Version V{ver.v}</span>
+                        {idx === 0 && <span className="latest-tag">Latest</span>}
+                    </div>
+                    <p className="v-name">{ver.fileName}</p>
+                    <span className="v-time"> {ver.date} </span>
+                  </div>
+                  <div className="v-actions-modal">
+                    <button className="btn-v-view" title="View" onClick={() => handleViewFile(ver.id, ver.fileName)}>
+                      <span className="material-symbols-outlined">visibility</span>
+                    </button>
+                    <button className="btn-v-dl" title="Download" onClick={() => handleDownload(ver.id, ver.fileName)}>
+                      <span className="material-symbols-outlined">download</span>
+                    </button>
+                    <button className="btn-v-del" title="Delete" onClick={() => triggerDeleteVersion(ver.id)}>
+                      <span className="material-symbols-outlined">delete</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={() => setIsEditModalOpen(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal 
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        onConfirm={handleConfirmAction}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };
