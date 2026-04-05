@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import axios from '../utils/axios';
+import axios from 'axios';
 import './Register.css';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -71,10 +69,10 @@ const Register = () => {
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
+      const response = await axios.post('/api/auth/register', {
         email: formData.email,
         password: formData.password,
-        name: formData.fullName,
+        fullName: formData.fullName,
         role
       });
 
@@ -85,14 +83,7 @@ const Register = () => {
         navigate(registeredRole === 'teacher' ? '/teacher-dashboard' : '/dashboard');
       }
     } catch (err) {
-      const validationMessage = err.response?.data?.errors?.[0]?.msg;
-      const backendMessage = err.response?.data?.message;
-
-      if (err.response?.status === 504) {
-        setError('Không kết nối được backend. Hãy chạy backend ở cổng 5000 rồi thử lại.');
-      } else {
-        setError(validationMessage || backendMessage || 'Đã có lỗi xảy ra');
-      }
+      setError(err.response?.data?.message || 'Đã có lỗi xảy ra');
     } finally {
       setLoading(false);
     }

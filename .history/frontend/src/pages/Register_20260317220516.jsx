@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import axios from '../utils/axios';
+import axios from 'axios';
 import './Register.css';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -17,6 +15,32 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const getApiErrorMessage = (err) => {
+    if (!err.response) {
+      return 'Không thể kết nối backend. Hãy chạy backend ở cổng 5000.';
+    }
+
+    // Proxy lỗi: response là HTML (backend không chạy)
+    if (typeof err.response.data === 'string') {
+      return 'Không thể kết nối backend. Hãy chạy backend ở cổng 5000.';
+    }
+
+    if (err.response?.data?.message) {
+      return err.response.data.message;
+    }
+
+    // Lỗi validation từ express-validator (trả về mảng errors)
+    if (err.response?.data?.errors?.length > 0) {
+      return err.response.data.errors[0].msg;
+    }
+
+    if (err.response.status >= 500) {
+      return 'Backend đang lỗi (500). Vui lòng kiểm tra terminal backend.';
+    }
+
+    return 'Đã có lỗi xảy ra';
+  };
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@(gmail\.com|gmail\.edu\.vn)$/;
@@ -71,28 +95,20 @@ const Register = () => {
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
+      const response = await axios.post('/api/auth/register', {
         email: formData.email,
         password: formData.password,
-        name: formData.fullName,
+        fullName: formData.fullName,
         role
       });
 
       if (response.data.success) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        const registeredRole = response.data.user?.role || role;
-        navigate(registeredRole === 'teacher' ? '/teacher-dashboard' : '/dashboard');
+        navigate('/dashboard');
       }
     } catch (err) {
-      const validationMessage = err.response?.data?.errors?.[0]?.msg;
-      const backendMessage = err.response?.data?.message;
-
-      if (err.response?.status === 504) {
-        setError('Không kết nối được backend. Hãy chạy backend ở cổng 5000 rồi thử lại.');
-      } else {
-        setError(validationMessage || backendMessage || 'Đã có lỗi xảy ra');
-      }
+      setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
