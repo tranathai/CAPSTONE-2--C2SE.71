@@ -43,6 +43,20 @@ const normalizeSubmissionStatus = (rawStatus) => {
   return 'pending';
 };
 
+const isInCurrentMonth = (dateIso) => {
+  if (!dateIso) {
+    return false;
+  }
+
+  const parsed = new Date(dateIso);
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+
+  const now = new Date();
+  return parsed.getFullYear() === now.getFullYear() && parsed.getMonth() === now.getMonth();
+};
+
 const getStatusLabel = (status) => {
   if (status === 'accepted') {
     return 'Approved';
@@ -91,9 +105,15 @@ const TeacherDashboard = () => {
   const [reviewError, setReviewError] = useState('');
 
   const totalProjects = allSubmissions.length;
-  const pendingReviews = allSubmissions.filter((item) => normalizeSubmissionStatus(item.status) === 'pending').length;
   const approvedProjects = allSubmissions.filter((item) => normalizeSubmissionStatus(item.status) === 'accepted').length;
-  const projectsAtRisk = allSubmissions.filter((item) => normalizeSubmissionStatus(item.status) === 'deny').length;
+  const pendingReviewsThisMonth = allSubmissions.filter((item) => (
+    normalizeSubmissionStatus(item.status) === 'pending'
+    && isInCurrentMonth(item.submittedAt || item.updatedAt)
+  )).length;
+  const projectsAtRiskThisMonth = allSubmissions.filter((item) => (
+    normalizeSubmissionStatus(item.status) === 'deny'
+    && isInCurrentMonth(item.reviewedAt || item.updatedAt || item.submittedAt)
+  )).length;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -247,15 +267,15 @@ const TeacherDashboard = () => {
           </article>
 
           <article className="overview-card">
-            <p className="chip warm">{pendingReviews} waiting</p>
-            <h3>Pending Reviews</h3>
-            <strong>{pendingReviews}</strong>
+            <p className="chip warm">{pendingReviewsThisMonth} waiting this month</p>
+            <h3>Pending Reviews (This Month)</h3>
+            <strong>{pendingReviewsThisMonth}</strong>
           </article>
 
           <article className="overview-card">
-            <p className="chip bad">{projectsAtRisk} declined</p>
-            <h3>Projects at Risk</h3>
-            <strong>{projectsAtRisk}</strong>
+            <p className="chip bad">{projectsAtRiskThisMonth} declined this month</p>
+            <h3>Projects at Risk (This Month)</h3>
+            <strong>{projectsAtRiskThisMonth}</strong>
           </article>
         </section>
 

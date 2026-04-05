@@ -1374,3 +1374,34 @@
   line-height: 1.5;
   white-space: pre-wrap;
 }
+
+.roadmap-details-panel {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f8fafc;
+  display: grid;
+  gap: 14px;
+}
+
+.roadmap-detail-group {
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+}
+
+.roadmap-detail-group h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.roadmap-detail-group ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #334155;
+  display: grid;
+  gap: 8px;
+}

@@ -23,6 +23,37 @@ const ROADMAP_MILESTONE_TEMPLATE = [
   { id: 'final', title: 'Cuối kỳ', weeksFromStart: 10 }
 ];
 
+const ROADMAP_DOCUMENT_SECTIONS = [
+  {
+    title: 'Milestone 1 - Proposal',
+    documents: [
+      'Tài liệu đề xuất Dự án (Proposal)',
+      'Kế hoạch dự án (Project Plan, Sprint plan)'
+    ]
+  },
+  {
+    title: 'Milestone 2 - Giữa kỳ',
+    documents: [
+      'Tài liệu yêu cầu (SRS / User Stories)',
+      'Tài liệu kiến trúc hệ thống (Architecture Design)',
+      'Tài liệu thiết kế UI (UI Design)'
+    ]
+  },
+  {
+    title: 'Milestone 3 - Cuối kỳ',
+    documents: [
+      'Test Plan',
+      'Test Cases / Test Data',
+      'Test Report / Bug Report',
+      'Management Documents (meeting, evidence)',
+      'Code Standards',
+      'Reflection / Peer evaluation',
+      'Technical Report',
+      'Source Code'
+    ]
+  }
+];
+
 const formatShortDate = (dateIso) => {
   if (!dateIso) {
     return 'Unknown date';
@@ -33,6 +64,40 @@ const formatShortDate = (dateIso) => {
     day: 'numeric',
     year: 'numeric'
   });
+};
+
+const formatTimeAgo = (dateIso) => {
+  if (!dateIso) {
+    return 'Chưa có thời gian nhận xét';
+  }
+
+  const targetTime = new Date(dateIso).getTime();
+  if (Number.isNaN(targetTime)) {
+    return 'Chưa có thời gian nhận xét';
+  }
+
+  const diffMs = Date.now() - targetTime;
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+  if (diffMinutes < 1) {
+    return 'Vừa xong';
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} phút trước`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} giờ trước`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) {
+    return `${diffDays} ngày trước`;
+  }
+
+  return formatShortDate(dateIso);
 };
 
 const addWeeksToDate = (dateIso, weeks) => {
@@ -450,6 +515,7 @@ const DashboardContent = ({ user }) => {
   const [activeReview, setActiveReview] = useState(null);
   const [decisionReason, setDecisionReason] = useState('');
   const [reviewError, setReviewError] = useState('');
+  const [showRoadmapDetails, setShowRoadmapDetails] = useState(false);
 
   const sortedStudentSubmissions = useMemo(() => {
     if (isInstructor) {
@@ -473,6 +539,16 @@ const DashboardContent = ({ user }) => {
     ? normalizeSubmissionStatus(selectedSubmission.status)
     : 'new';
   const studentStatusCard = getStudentStatusCardConfig(selectedStudentStatus);
+
+  const latestFeedbackContent = !isInstructor
+    ? (selectedSubmission?.reviewReason || 'Chưa có nhận xét từ giảng viên')
+    : 'Review Received';
+  const latestFeedbackTime = !isInstructor
+    ? formatTimeAgo(selectedSubmission?.reviewedAt)
+    : '2h ago';
+  const latestFeedbackAuthor = !isInstructor
+    ? (selectedSubmission?.reviewedBy || 'Giảng viên')
+    : 'Dr. Sarah Smith';
 
   const studentRoadmapMilestones = selectedSubmission && selectedStudentStatus === 'accepted'
     ? getSubmissionRoadmap(selectedSubmission)
@@ -645,12 +721,12 @@ const DashboardContent = ({ user }) => {
 
         <div className="stat-card">
           <div className="stat-header">
-            <span className="stat-label">Latest Feedback</span>
+            <span className="stat-label">{isInstructor ? 'Latest Feedback' : 'Giảng viên nhận xét'}</span>
             <span className="stat-icon">💬</span>
           </div>
-          <div className="stat-value">Review Received</div>
+          <div className="stat-value">{latestFeedbackContent}</div>
           <div className="stat-footer">
-            <span className="feedback-text">Dr. Sarah Smith • 2h ago</span>
+            <span className="feedback-text">{latestFeedbackAuthor} • {latestFeedbackTime}</span>
           </div>
         </div>
       </div>
@@ -659,7 +735,7 @@ const DashboardContent = ({ user }) => {
       <div className="section-card">
         <div className="section-header">
           <h2>Project Roadmap</h2>
-          <button type="button" className="view-details">View All Details</button>
+          <button type="button" className="view-details" onClick={() => setShowRoadmapDetails((prev) => !prev)}>{showRoadmapDetails ? 'Hide All Details' : 'View All Details'}</button>
         </div>
         {isInstructor ? (
           <div className="roadmap">
@@ -743,6 +819,23 @@ const DashboardContent = ({ user }) => {
             </div>
           )
         )}
+
+        {showRoadmapDetails && (
+          <div className="roadmap-details-panel">
+            {ROADMAP_DOCUMENT_SECTIONS.map((section) => (
+              <div className="roadmap-detail-group" key={section.title}>
+                <h3>{section.title}</h3>
+                <ul>
+                  {section.documents.map((document) => (
+                    <li key={document}>{document}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+
+
       </div>
 
       {/* Recent Submissions */}
@@ -1079,3 +1172,8 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+
+
+
+
