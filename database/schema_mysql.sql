@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS lecturers (
   PRIMARY KEY (id),
   UNIQUE KEY uk_lecturers_user_id (user_id),
   UNIQUE KEY uk_lecturers_lecturer_code (lecturer_code),
-  CONSTRAINT fk_lecturers_user`
+  CONSTRAINT fk_lecturers_user
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE
     ON UPDATE CASCADE
