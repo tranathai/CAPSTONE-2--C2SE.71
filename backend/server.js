@@ -6,17 +6,12 @@ const { connectDB } = require('./config/database');
 // Load environment variables
 dotenv.config();
 
-const USE_MOCK_DATA = String(process.env.USE_MOCK_DATA || 'true').toLowerCase() === 'true';
-
-// Connect to database when not running in mock mode
-if (USE_MOCK_DATA) {
-  console.log('⚠️  Mock mode enabled - Database connection skipped');
-} else {
-  connectDB().catch((error) => {
-    console.error('Database connection failed:', error.message);
-    process.exit(1);
-  });
-}
+// Connect to database - MySQL is required
+connectDB().catch((error) => {
+  console.error('Database connection failed:', error.message);
+  console.log('Please ensure MySQL is running and .env is configured correctly');
+  process.exit(1);
+});
 
 const app = express();
 
