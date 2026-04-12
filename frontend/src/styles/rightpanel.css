@@ -1,9 +1,79 @@
 .right {
-  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  min-width: 300px;
+  max-width: min(380px, 40vw);
   background: #fff;
   border-left: 1px solid #e2e8f0;
   height: 100vh;
+  overflow: hidden;
+}
+
+.rp-section--tight {
+  flex-shrink: 0;
+  padding-top: 16px;
+  padding-bottom: 12px;
+}
+
+.rp-profile--compact {
+  margin-top: 8px;
+  padding: 10px 12px;
+}
+
+.rp-profile-text {
+  min-width: 0;
+}
+
+.rp-feedback-workspace {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.mentor-feedback-panel {
+  padding: 16px 20px 24px;
+}
+
+.mentor-feedback-form-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mentor-feedback-actions .rp-btn.primary {
+  width: 100%;
+}
+
+.mentor-feedback-list-panel {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mentor-feedback-textarea--panel {
+  min-height: 120px;
+  font-size: 13px;
+}
+
+.rp-ai--compact {
+  flex-shrink: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  border-top: none;
+}
+
+.rp-ai-snippet {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .rp-ai {

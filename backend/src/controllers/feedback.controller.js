@@ -80,10 +80,10 @@ export async function postFeedback(req, res, next) {
       });
     }
 
-    if (roleName !== "supervisor") {
+    if (roleName !== "supervisor" && roleName !== "mentor") {
       return res.status(403).json({
         success: false,
-        message: "Chỉ supervisor mới được tạo feedback",
+        message: "Chỉ mentor/supervisor mới được tạo feedback",
       });
     }
 

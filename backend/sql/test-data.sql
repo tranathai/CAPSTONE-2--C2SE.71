@@ -28,11 +28,20 @@ VALUES
   (1, 1, 1)
 ON DUPLICATE KEY UPDATE is_leader = VALUES(is_leader);
 
-INSERT INTO submissions (id, team_id, title)
+INSERT INTO milestones (id, name)
 VALUES
-  (1, 1, 'Final Technical Report')
+  (1, 'Proposal'),
+  (2, 'Mid-term report'),
+  (3, 'Final report')
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+-- Nếu bảng submissions chưa có milestone_id, chạy sql/add-submission-milestone.sql trước.
+INSERT INTO submissions (id, team_id, milestone_id, title)
+VALUES
+  (1, 1, 3, 'Final Technical Report')
 ON DUPLICATE KEY UPDATE
   team_id = VALUES(team_id),
+  milestone_id = VALUES(milestone_id),
   title = VALUES(title);
 
 INSERT INTO submission_versions (

@@ -21,6 +21,13 @@
   align-items: center;
 }
 
+.role-select {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #fff;
+}
+
 .avatar {
   background: #2563eb;
   color: white;

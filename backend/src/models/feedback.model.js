@@ -1,12 +1,39 @@
 import pool from "../config/db.js";
 
+let userColumnMetaPromise;
+
+async function getUserColumnMeta() {
+  if (!userColumnMetaPromise) {
+    userColumnMetaPromise = pool
+      .query("SHOW COLUMNS FROM users")
+      .then(([rows]) => {
+        const names = new Set(rows.map((row) => row.Field));
+        return {
+          hasFullName: names.has("full_name"),
+          hasName: names.has("name"),
+        };
+      })
+      .catch((error) => {
+        userColumnMetaPromise = null;
+        throw error;
+      });
+  }
+  return userColumnMetaPromise;
+}
+
 export async function findFeedbacksByVersionId(versionId) {
+  const { hasFullName, hasName } = await getUserColumnMeta();
+  const supervisorNameSelect = hasFullName
+    ? "u.full_name"
+    : hasName
+      ? "u.name"
+      : "CONCAT('Supervisor #', f.supervisor_id)";
   const sql = `
     SELECT
       f.id,
       f.submission_version_id,
       f.supervisor_id,
-      u.full_name AS supervisor_name,
+      ${supervisorNameSelect} AS supervisor_name,
       f.content,
       f.created_at
     FROM feedbacks f

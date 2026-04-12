@@ -79,6 +79,11 @@
   padding: 0 8px;
 }
 
+a.sb-item {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
 .sb-item {
   width: 100%;
   background: transparent;

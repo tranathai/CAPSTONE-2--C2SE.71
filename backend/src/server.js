@@ -1,8 +1,11 @@
 import "dotenv/config";
+import path from "path";
 import express from "express";
 import cors from "cors";
 import submissionRouter from "./routes/submission.routes.js";
 import feedbackRouter from "./routes/feedback.routes.js";
+import teamRouter from "./routes/team.routes.js";
+import milestoneRouter from "./routes/milestone.routes.js";
 import { checkDbConnection } from "./config/db.js";
 
 const app = express();
@@ -10,6 +13,10 @@ const port = Number(process.env.PORT || 3000);
 
 app.use(cors());
 app.use(express.json());
+app.use(
+  "/uploads",
+  express.static(path.join(process.cwd(), "uploads")),
+);
 
 app.get("/api/health", (_req, res) => {
   res.status(200).json({
@@ -20,6 +27,8 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/submissions", submissionRouter);
 app.use("/api/feedbacks", feedbackRouter);
+app.use("/api/teams", teamRouter);
+app.use("/api/milestones", milestoneRouter);
 
 app.use((req, res) => {
   res.status(404).json({
