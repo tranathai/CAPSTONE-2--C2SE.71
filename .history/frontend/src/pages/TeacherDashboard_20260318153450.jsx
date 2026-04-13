@@ -106,8 +106,8 @@ const TeacherDashboard = () => {
         <header className="teacher-header">
           <input className="teacher-search" placeholder="Search projects, students..." />
           <div className="teacher-header-right">
-            <button className="header-icon" aria-label="notifications">🔔</button>
-            <button className="header-icon" aria-label="messages">💬</button>
+            <button className="header-icon" aria-label="notifications">i</button>
+            <button className="header-icon" aria-label="screen">[]</button>
             <button className="logout-mini" onClick={handleLogout}>Logout</button>
           </div>
         </header>
