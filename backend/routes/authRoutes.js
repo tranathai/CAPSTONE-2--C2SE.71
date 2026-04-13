@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-// Using MySQL database controller
-const { register, login, getMe, getAllMockUsers } = require('../controllers/authController.mysql');
+// Using REAL database controller
+const { register, login, getMe, getAllMockUsers } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
 // Validation rules
@@ -16,8 +16,8 @@ const registerValidation = [
     .matches(/[A-Z]/)
     .matches(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/)
     .withMessage('Mật khẩu tối thiểu 6 ký tự bao gồm chữ in hoa và ký tự đặc biệt'),
-  body('fullName').notEmpty().withMessage('Họ tên không được để trống'),
-  body('role').isIn(['student', 'teacher']).withMessage('Vai trò không hợp lệ')
+  body('name').notEmpty().withMessage('Họ tên không được để trống'),
+  body('role').isIn(['student', 'supervisor']).withMessage('Vai trò không hợp lệ')
 ];
 
 const loginValidation = [
@@ -26,7 +26,7 @@ const loginValidation = [
     .matches(/^[^\s@]+@(gmail\.com|gmail\.edu\.vn)$/)
     .withMessage('Gmail không đúng định dạng vui lòng nhập lại'),
   body('password').notEmpty().withMessage('Mật khẩu không được để trống'),
-  body('role').isIn(['student', 'teacher']).withMessage('Vai trò không hợp lệ')
+  body('role').isIn(['student', 'supervisor']).withMessage('Vai trò không hợp lệ')
 ];
 
 // Routes

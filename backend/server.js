@@ -1,17 +1,23 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { connectDB } = require('./config/database');
+const { connectDB } = require('./config/mysql');
+const { sequelize } = require('./models');
 
 // Load environment variables
 dotenv.config();
 
-// Connect to database - MySQL is required
-connectDB().catch((error) => {
-  console.error('Database connection failed:', error.message);
-  console.log('Please ensure MySQL is running and .env is configured correctly');
-  process.exit(1);
-});
+// Connect to MySQL database
+connectDB();
+
+// Automatically sync models with database (DISABLED temporarily - tables already exist)
+// sequelize.sync({ logging: console.log, force: false }).then(() => {
+//   console.log('Sequelize models synced with MySQL');
+// }).catch((err) => {
+//   console.error('Sequelize sync error:', err.message);
+//   console.error('Full error:', err);
+//   process.exit(1);
+// });
 
 const app = express();
 
@@ -22,6 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/reports', require('./routes/reportRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => {

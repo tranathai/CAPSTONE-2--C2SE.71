@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { getPool } = require('../config/database');
+const { User } = require('../models');
 
 exports.protect = async (req, res, next) => {
   let token;
@@ -13,32 +13,29 @@ exports.protect = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'temporary_secret_key');
 
       // Get user from database
-      const pool = getPool();
-      if (pool) {
-        const [users] = await pool.query('SELECT id, email, full_name, role FROM users WHERE id = ?', [decoded.id]);
-        if (users.length === 0) {
-          return res.status(401).json({ 
-            success: false, 
-            message: 'Không tìm thấy người dùng' 
-          });
-        }
-        req.user = { id: users[0].id };
-      } else {
-        req.user = { id: decoded.id };
+      const user = await User.findByPk(decoded.id);
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Token không hợp lệ - người dùng không tồn tại'
+        });
       }
 
+      req.user = user;
       next();
     } catch (error) {
       console.error('Auth middleware error:', error);
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Không có quyền truy cập' 
+      return res.status(401).json({
+        success: false,
+        message: 'Token không hợp lệ'
       });
     }
-  } else if (!token) {
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Không có token, quyền truy cập bị từ chối' 
+  }
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Không có token, quyền truy cập bị từ chối'
     });
   }
 };
