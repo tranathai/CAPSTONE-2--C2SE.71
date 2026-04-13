@@ -39,51 +39,42 @@ function SubmissionsPage() {
   return (
     <div className="submissions-page">
       <div className="page-header-row">
-        <h1 className="page-title">Tất cả submissions</h1>
+        <h1 className="page-title">Submissions</h1>
         <p className="page-lead">
-          Giảng viên xem và mở trang review cho từng bài nộp.
+          Danh sách các bài nộp của bạn
         </p>
       </div>
 
       {loading ? (
-        <div className="page-status">Đang tải…</div>
+        <div className="page-status">Dang tai...</div>
       ) : error ? (
         <div className="form-error">{error}</div>
       ) : items.length === 0 ? (
-        <div className="page-muted">Chưa có submission.</div>
+        <div className="page-muted">Chua co submission.</div>
       ) : (
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Tiêu đề</th>
-                <th>Team</th>
-                <th>Milestone</th>
-                <th>Sinh viên</th>
-                <th>Phiên bản</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.id}</td>
-                  <td>{row.title}</td>
-                  <td>{row.team_name}</td>
-                  <td>{row.milestone_name || "—"}</td>
-                  <td>{row.student_name || "—"}</td>
-                  <td>v{row.version_number}</td>
-                  <td>
-                    <Link className="table-link" to={`/mentor/review/${row.id}`}>
-                      Xem review
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="feedback-list">
+          {items.map((item) => (
+            <li key={item.id} className="feedback-item">
+              <div className="feedback-head">
+                <strong>{item.title || "Submission"}</strong>
+                <span className="feedback-date">v{item.version_number} • {item.team_name || "—"}</span>
+              </div>
+              <p className="feedback-body">
+                <span style={{ display: "block", marginBottom: "8px" }}>
+                  👤 <strong>{item.student_name || "—"}</strong>
+                </span>
+                {item.milestone_name && (
+                  <span style={{ display: "block", marginBottom: "8px" }}>
+                    📋 Milestone: {item.milestone_name}
+                  </span>
+                )}
+                <Link className="table-link" to={`/student/review/${item.id}`}>
+                  Xem chi tiết →
+                </Link>
+              </p>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

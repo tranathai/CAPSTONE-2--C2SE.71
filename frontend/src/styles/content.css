@@ -6,7 +6,7 @@
 
 .review-page {
   background: #f8fafc;
-  min-height: calc(100vh - 60px);
+  min-height: 100%;
 }
 
 .review-breadcrumb {
@@ -243,7 +243,7 @@
 .upload-page,
 .submissions-page {
   background: #f8fafc;
-  min-height: calc(100vh - 60px);
+  min-height: 100%;
   padding: 24px;
 }
 
@@ -509,7 +509,7 @@
 
 .pm-page {
   background: #f3f5f9;
-  min-height: calc(100vh - 60px);
+  min-height: 100%;
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -653,6 +653,16 @@
 
 .submission-link:hover {
   border-color: #135bec;
+}
+
+.submission-link-button {
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .submission-link-title {

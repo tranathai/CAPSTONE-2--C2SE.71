@@ -68,10 +68,10 @@ function SidebarMentor() {
       </div>
 
       <div className="sb-footer">
-        <button className="sb-new-project" type="button">
+        <NavLink className="sb-new-project" to="/project/ProjectRegistration">
           <Plus size={16} />
           New Project
-        </button>
+        </NavLink>
       </div>
     </div>
   );

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { getTeams } from "../../../lib/api";
 import { DEMO_TEAM_ID } from "../../../config/demoUser";
 import "../../../styles/content.css";
 
-function MyProjectsPage() {
+function MyProjectsPage({ onProjectSelect }) {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -47,15 +46,35 @@ function MyProjectsPage() {
         <ul className="submission-link-list">
           {teams.map((team) => (
             <li key={team.id}>
-              <Link
-                className="submission-link"
-                to={`/student/project-management/${team.id}`}
-              >
-                <span className="submission-link-title">{team.name}</span>
-                <span className="submission-link-meta">
-                  Bam de vao trang quan ly deliverables
-                </span>
-              </Link>
+              {onProjectSelect ? (
+                <button
+                  className="submission-link submission-link-button"
+                  onClick={() => onProjectSelect(team.id)}
+                  type="button"
+                >
+                  <span className="submission-link-title">{team.name}</span>
+                  <span className="submission-link-meta">
+                    Bam de vao trang quan ly deliverables
+                  </span>
+                </button>
+              ) : (
+                <a
+                  className="submission-link"
+                  href={`/myproject/project-management/${team.id}`}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    textDecoration: 'none',
+                    color: 'inherit'
+                  }}
+                >
+                  <span className="submission-link-title">{team.name}</span>
+                  <span className="submission-link-meta">
+                    Bam de vao trang quan ly deliverables
+                  </span>
+                </a>
+              )}
             </li>
           ))}
         </ul>

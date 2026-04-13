@@ -12,8 +12,9 @@ function badgeClass(status) {
   return "pm-badge";
 }
 
-function ProjectManagement() {
-  const { teamId } = useParams();
+function ProjectManagement({ teamId: propTeamId }) {
+  const { teamId: paramTeamId } = useParams();
+  const teamId = propTeamId || paramTeamId;
   const numericTeamId = Number(teamId);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);

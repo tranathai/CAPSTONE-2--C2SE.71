@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './Dashboard.css';
+import MyProjectsPage from '../components/Content/Student/MyProjectsPage';
+import FeedbackPage from '../components/Content/Student/FeedbackPage';
+import ProjectManagement from '../components/Content/Student/ProjectManagement';
 
 const PROJECT_SUBMISSIONS_KEY = 'mentorai_project_submissions';
 
@@ -1042,9 +1045,32 @@ const DashboardContent = ({ user }) => {
 };
 
 const Dashboard = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [activeMenuItem, setActiveMenuItem] = useState('dashboard');
+  const [selectedTeamId, setSelectedTeamId] = useState(null);
+
+  useEffect(() => {
+    const normalizedPath = location.pathname.toLowerCase();
+
+    if (normalizedPath.startsWith('/myproject')) {
+      setActiveMenuItem('project');
+      if (normalizedPath === '/myproject') {
+        setSelectedTeamId(null);
+      }
+      return;
+    }
+
+    if (normalizedPath === '/student/feedback') {
+      setActiveMenuItem('reports');
+      return;
+    }
+
+    if (normalizedPath === '/dashboard') {
+      setActiveMenuItem('dashboard');
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -1073,9 +1099,35 @@ const Dashboard = () => {
 
   const renderContent = () => {
     switch (activeMenuItem) {
+      case 'project':
+        if (selectedTeamId) {
+          return (
+            <div>
+              <button
+                onClick={() => setSelectedTeamId(null)}
+                style={{
+                  marginBottom: '16px',
+                  padding: '8px 16px',
+                  backgroundColor: '#f0f0f0',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                ← Quay lại My Project
+              </button>
+              <ProjectManagement teamId={selectedTeamId} />
+            </div>
+          );
+        }
+        return <MyProjectsPage onProjectSelect={setSelectedTeamId} />;
+      case 'reports':
+        return <FeedbackPage />;
+      case 'dashboard':
+        return <DashboardContent user={user} />;
       case 'profile':
         return <ProfileContent user={user} handleLogout={handleLogout} />;
-      case 'dashboard':
       default:
         return <DashboardContent user={user} />;
     }
@@ -1106,14 +1158,14 @@ const Dashboard = () => {
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'project' ? 'active' : ''}`}
-            onClick={() => setActiveMenuItem('project')}
+            onClick={() => navigate('/myproject')}
           >
             <span className="nav-icon">📁</span>
             <span className="nav-text">My Project</span>
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'reports' ? 'active' : ''}`}
-            onClick={() => setActiveMenuItem('reports')}
+            onClick={() => navigate('/student/feedback')}
           >
             <span className="nav-icon">📈</span>
             <span className="nav-text">Reports</span>
