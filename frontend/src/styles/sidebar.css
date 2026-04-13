@@ -1,0 +1,136 @@
+.sidebar {
+  width: 256px;
+  height: 100vh;
+  background: #fff;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right: 1px solid #e2e8f0;
+}
+
+.sb-brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 24px;
+}
+
+.sb-brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #135bec;
+}
+
+.sb-brand-text {
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 28px;
+  letter-spacing: -0.45px;
+  color: #0f172a;
+}
+
+.sb-profile {
+  margin: 0 16px 24px;
+  padding: 13px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.sb-profile-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  object-fit: cover;
+  background: #e2e8f0;
+}
+
+.sb-profile-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.sb-profile-name {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 20px;
+  color: #0f172a;
+}
+
+.sb-profile-role {
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 16px;
+  color: #64748b;
+}
+
+.sb-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 8px;
+}
+
+a.sb-item {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.sb-item {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  line-height: 24px;
+  color: #475569;
+  text-align: left;
+}
+
+.sb-item:hover {
+  background: #f1f5f9;
+}
+
+.sb-item.active {
+  background: #135bec;
+  color: #fff;
+}
+
+.sb-item.active svg {
+  color: #fff;
+}
+
+.sb-footer {
+  border-top: 1px solid #e2e8f0;
+  padding: 17px 16px 16px;
+}
+
+.sb-new-project {
+  width: 100%;
+  background: #135bec;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 24px;
+}
