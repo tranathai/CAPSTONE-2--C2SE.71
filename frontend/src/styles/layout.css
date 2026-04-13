@@ -1,13 +1,35 @@
 .layout {
-  display: flex;
+  --sidebar-width: 236px;
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   height: 100vh; /* full chiều cao màn hình */
   width: 100%;
   overflow: hidden;
 }
 
+.layout--with-right {
+  --right-panel-width: clamp(300px, 28vw, 380px);
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(--right-panel-width);
+}
+
+.layout > .sidebar {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.layout > .main {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.layout--with-right > .right {
+  grid-column: 3;
+  grid-row: 1;
+}
+
 .main {
-  flex: 1;
   min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -20,6 +42,13 @@
 }
 
 .main-content {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
+  width: 0;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    --sidebar-width: 208px;
+  }
 }

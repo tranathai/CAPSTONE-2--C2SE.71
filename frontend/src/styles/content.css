@@ -1,13 +1,19 @@
 .content {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
   padding: 0;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .review-page {
   background: #f8fafc;
+  height: 100%;
   min-height: calc(100vh - 78px);
   min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -37,18 +43,44 @@
 }
 
 .review-main {
-  padding: 24px;
+  flex: 1;
+  min-height: 0;
+  padding: 20px 24px 24px;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-meta-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.review-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  background: rgba(19, 91, 236, 0.08);
+  color: #135bec;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
 }
 
 .review-title-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .review-title {
+  margin: 0;
   font-size: 24px;
   line-height: 32px;
   letter-spacing: -0.6px;
@@ -56,20 +88,17 @@
 }
 
 .review-subtitle {
-  margin-top: 4px;
+  margin: 4px 0 0;
   font-size: 14px;
   line-height: 20px;
   color: #64748b;
-
-.review-docx-inner,
-.review-pdf-frame {
-  min-width: 0;
-}
 }
 
 .review-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .review-btn {
@@ -80,10 +109,6 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-.review-docx-inner,
-.review-pdf-frame {
-  min-width: 0;
-}
   border: 1px solid transparent;
   cursor: pointer;
   user-select: none;
@@ -102,13 +127,18 @@
 }
 
 .review-pdf-shell {
-  margin-top: 24px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  min-height: clamp(520px, 82vh, 900px);
+  height: clamp(520px, 82vh, 900px);
+  width: 100%;
   background: #e2e8f0;
   border: 1px solid #cbd5e1;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
   position: relative;
-  height: clamp(420px, calc(100vh - 320px), 640px);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
 }
 
 .review-pdf-frame {
@@ -116,6 +146,8 @@
   height: 100%;
   border: none;
   background: #fff;
+  display: block;
+  min-width: 0;
 }
 
 .review-docx-inner {
@@ -124,6 +156,7 @@
   height: 100%;
   background: #fff;
   overflow: auto;
+  min-width: 0;
 }
 
 .review-docx-loading {
@@ -151,6 +184,7 @@
 
 .review-status {
   height: 100%;
+  min-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -161,13 +195,12 @@
 
 .review-pdf-page {
   background: #fff;
-  width: 592px;
-  max-width: calc(100% - 64px);
-  height: calc(100% - 96px);
-  margin: 48px auto;
-  padding: 48px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  border-radius: 2px;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 32px;
+  box-shadow: none;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -218,9 +251,10 @@
 
 .review-pdf-toolbar {
   position: absolute;
-  left: 50%;
-  bottom: 40px;
-  transform: translateX(-50%);
+  left: 16px;
+  bottom: 16px;
+  transform: none;
+  z-index: 1;
 }
 
 .review-toolbar-pill {
@@ -250,6 +284,14 @@
   letter-spacing: 1.2px;
   color: #fff;
   font-weight: 500;
+}
+
+.review-pdf-shell > :first-child,
+.review-docx-inner > :first-child {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
 }
 
 .upload-page,
@@ -613,6 +655,24 @@
   .pm-page,
   .review-main {
     padding: 16px;
+  }
+
+  .review-title-row {
+    flex-direction: column;
+  }
+
+  .review-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .review-pdf-page {
+    padding: 20px;
+  }
+
+  .review-pdf-shell {
+    min-height: 68vh;
+    height: 68vh;
   }
 
   .page-title {

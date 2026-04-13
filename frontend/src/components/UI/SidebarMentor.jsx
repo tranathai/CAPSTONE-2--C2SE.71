@@ -32,10 +32,14 @@ function SidebarMentor() {
         </div>
 
         <nav className="sb-nav" aria-label="Mentor Sidebar">
-          <button className="sb-item" type="button">
+          <NavLink
+            className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}
+            to="/teacher-dashboard"
+            end
+          >
             <LayoutDashboard size={18} />
             Dashboard
-          </button>
+          </NavLink>
           <button className="sb-item" type="button">
             <FolderKanban size={18} />
             Projects
