@@ -1,11 +1,9 @@
-import {
-  GraduationCap,
+﻿import {
   LayoutDashboard,
   FolderKanban,
   FileText,
   Users,
   Settings,
-  Plus,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import "../../styles/sidebar.css";
@@ -21,20 +19,14 @@ function SidebarMentor() {
     <div className="sidebar">
       <div>
         <div className="sb-brand">
-          <div className="sb-brand-icon" aria-hidden="true">
-            <GraduationCap size={18} color="#fff" />
-          </div>
+          <div className="sb-brand-icon" aria-hidden="true" />
           <div className="sb-brand-text">MentorAI Grad</div>
         </div>
 
         <div className="sb-profile">
-          <img
-            className="sb-profile-img"
-            src="https://i.pravatar.cc/80?img=13"
-            alt="Dr. Smith"
-          />
+          <div className="sb-profile-avatar" aria-hidden="true">H</div>
           <div className="sb-profile-meta">
-            <div className="sb-profile-name">Dr. Smith</div>
+            <div className="sb-profile-name">henny4</div>
             <div className="sb-profile-role">Senior Instructor</div>
           </div>
         </div>
@@ -65,13 +57,6 @@ function SidebarMentor() {
             Settings
           </button>
         </nav>
-      </div>
-
-      <div className="sb-footer">
-        <NavLink className="sb-new-project" to="/project/ProjectRegistration">
-          <Plus size={16} />
-          New Project
-        </NavLink>
       </div>
     </div>
   );

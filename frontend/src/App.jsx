@@ -6,7 +6,7 @@ import RoleSelection from "./pages/RoleSelection";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import TeacherDashboard from "./pages/TeacherDashboard";
+import TeacherDashboard from "./pages/TeacherDashboardClean";
 import ProjectRegistration from "./pages/ProjectRegistration";
 import ReviewPage from "./components/Content/Mentor/ReviewPage";
 import SubmissionsPage from "./components/Content/Student/SubmissionsPage";

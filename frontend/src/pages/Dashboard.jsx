@@ -4,6 +4,7 @@ import './Dashboard.css';
 import MyProjectsPage from '../components/Content/Student/MyProjectsPage';
 import FeedbackPage from '../components/Content/Student/FeedbackPage';
 import ProjectManagement from '../components/Content/Student/ProjectManagement';
+import SubmissionsPage from '../components/Content/Student/SubmissionsPage';
 
 const PROJECT_SUBMISSIONS_KEY = 'mentorai_project_submissions';
 
@@ -1067,6 +1068,11 @@ const Dashboard = () => {
       return;
     }
 
+    if (normalizedPath === '/student/submissions') {
+      setActiveMenuItem('submissions');
+      return;
+    }
+
     if (normalizedPath === '/dashboard') {
       setActiveMenuItem('dashboard');
     }
@@ -1124,6 +1130,8 @@ const Dashboard = () => {
         return <MyProjectsPage onProjectSelect={setSelectedTeamId} />;
       case 'reports':
         return <FeedbackPage />;
+      case 'submissions':
+        return <SubmissionsPage />;
       case 'dashboard':
         return <DashboardContent user={user} />;
       case 'profile':
@@ -1162,6 +1170,13 @@ const Dashboard = () => {
           >
             <span className="nav-icon">📁</span>
             <span className="nav-text">My Project</span>
+          </div>
+          <div 
+            className={`nav-item ${activeMenuItem === 'submissions' ? 'active' : ''}`}
+            onClick={() => setActiveMenuItem('submissions')}
+          >
+            <span className="nav-icon">📄</span>
+            <span className="nav-text">Submissions</span>
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'reports' ? 'active' : ''}`}
