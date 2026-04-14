@@ -4,7 +4,6 @@ import './Dashboard.css';
 import MyProjectsPage from '../components/Content/Student/MyProjectsPage';
 import FeedbackPage from '../components/Content/Student/FeedbackPage';
 import ProjectManagement from '../components/Content/Student/ProjectManagement';
-import SubmissionsPage from '../components/Content/Student/SubmissionsPage';
 
 const PROJECT_SUBMISSIONS_KEY = 'mentorai_project_submissions';
 
@@ -1069,7 +1068,7 @@ const Dashboard = () => {
     }
 
     if (normalizedPath === '/student/submissions') {
-      setActiveMenuItem('submissions');
+      setActiveMenuItem('project');
       return;
     }
 
@@ -1108,18 +1107,11 @@ const Dashboard = () => {
       case 'project':
         if (selectedTeamId) {
           return (
-            <div>
+            <div className="pm-shell">
               <button
+                type="button"
+                className="pm-back-btn"
                 onClick={() => setSelectedTeamId(null)}
-                style={{
-                  marginBottom: '16px',
-                  padding: '8px 16px',
-                  backgroundColor: '#f0f0f0',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
               >
                 ← Quay lại My Project
               </button>
@@ -1130,8 +1122,6 @@ const Dashboard = () => {
         return <MyProjectsPage onProjectSelect={setSelectedTeamId} />;
       case 'reports':
         return <FeedbackPage />;
-      case 'submissions':
-        return <SubmissionsPage />;
       case 'dashboard':
         return <DashboardContent user={user} />;
       case 'profile':
@@ -1172,18 +1162,11 @@ const Dashboard = () => {
             <span className="nav-text">My Project</span>
           </div>
           <div 
-            className={`nav-item ${activeMenuItem === 'submissions' ? 'active' : ''}`}
-            onClick={() => setActiveMenuItem('submissions')}
-          >
-            <span className="nav-icon">📄</span>
-            <span className="nav-text">Submissions</span>
-          </div>
-          <div 
             className={`nav-item ${activeMenuItem === 'reports' ? 'active' : ''}`}
             onClick={() => navigate('/student/feedback')}
           >
-            <span className="nav-icon">📈</span>
-            <span className="nav-text">Reports</span>
+            <span className="nav-icon">💬</span>
+            <span className="nav-text">Feedback</span>
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'team' ? 'active' : ''}`}
