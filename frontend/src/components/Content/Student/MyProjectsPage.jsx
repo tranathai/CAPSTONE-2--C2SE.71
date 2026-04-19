@@ -20,16 +20,44 @@ function normalizeSubmissionStatus(rawStatus) {
   return "pending";
 }
 
-function getApprovedProjects() {
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getMemberEmails(submission) {
+  const members = Array.isArray(submission?.teamMembers) ? submission.teamMembers : [];
+  return members
+    .map((member) => normalizeEmail(member?.email))
+    .filter(Boolean);
+}
+
+function isSubmissionVisibleToUser(submission, userEmail) {
+  const normalizedUserEmail = normalizeEmail(userEmail);
+  if (!normalizedUserEmail) {
+    return false;
+  }
+
+  const ownerEmail = normalizeEmail(submission?.studentEmail);
+  if (ownerEmail === normalizedUserEmail) {
+    return true;
+  }
+
+  return getMemberEmails(submission).includes(normalizedUserEmail);
+}
+
+function getApprovedProjects(userEmail) {
   const submissions = readProjectSubmissions();
   return submissions
-    .filter((item) => normalizeSubmissionStatus(item.status) === "accepted")
+    .filter((item) => {
+      return normalizeSubmissionStatus(item.status) === "accepted" && isSubmissionVisibleToUser(item, userEmail);
+    })
     .map((item) => ({
       id: `approved-${item.id}`,
       name: item.projectTitle || item.projectName || "Unnamed Project",
       meta: "Group project",
       submissionId: item.id,
-      clickable: false,
+      clickable: true,
+      kind: "approved",
     }));
 }
 
@@ -45,25 +73,24 @@ function ProjectItem({ item, onProjectSelect }) {
 
   if (item.clickable && onProjectSelect) {
     return (
-      <div
+      <button
         className="submission-link submission-link-button"
-        onClick={() => onProjectSelect(item.teamId)}
+        onClick={() => onProjectSelect(item)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            onProjectSelect(item.teamId);
+            onProjectSelect(item);
           }
         }}
-        role="button"
-        tabIndex={0}
+        type="button"
       >
         {content}
-      </div>
+      </button>
     );
   }
 
   return (
-    <div className="submission-link submission-link-button submission-link-static">
+    <div className="submission-link submission-link-static">
       {content}
     </div>
   );
@@ -73,9 +100,23 @@ function MyProjectsPage({ onProjectSelect }) {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
 
   useEffect(() => {
     let active = true;
+
+    try {
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        const user = JSON.parse(userData);
+        setCurrentUserEmail(normalizeEmail(user?.email));
+      } else {
+        setCurrentUserEmail("");
+      }
+    } catch {
+      setCurrentUserEmail("");
+    }
+
     async function load() {
       try {
         setLoading(true);
@@ -95,7 +136,7 @@ function MyProjectsPage({ onProjectSelect }) {
     };
   }, []);
 
-  const approvedProjects = useMemo(() => getApprovedProjects(), []);
+  const approvedProjects = useMemo(() => getApprovedProjects(currentUserEmail), [currentUserEmail]);
   const projectItems = useMemo(() => {
     const teamItems = teams.map((team) => ({
       id: `team-${team.id}`,
@@ -103,6 +144,7 @@ function MyProjectsPage({ onProjectSelect }) {
       meta: "Group project",
       teamId: team.id,
       clickable: true,
+      kind: "team",
     }));
 
     const merged = [...teamItems, ...approvedProjects];

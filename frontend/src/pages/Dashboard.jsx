@@ -1049,7 +1049,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [activeMenuItem, setActiveMenuItem] = useState('dashboard');
-  const [selectedTeamId, setSelectedTeamId] = useState(null);
+  const [selectedProjectItem, setSelectedProjectItem] = useState(null);
 
   useEffect(() => {
     const normalizedPath = location.pathname.toLowerCase();
@@ -1057,7 +1057,7 @@ const Dashboard = () => {
     if (normalizedPath.startsWith('/myproject')) {
       setActiveMenuItem('project');
       if (normalizedPath === '/myproject') {
-        setSelectedTeamId(null);
+        setSelectedProjectItem(null);
       }
       return;
     }
@@ -1105,21 +1105,21 @@ const Dashboard = () => {
   const renderContent = () => {
     switch (activeMenuItem) {
       case 'project':
-        if (selectedTeamId) {
+        if (selectedProjectItem) {
           return (
             <div className="pm-shell">
               <button
                 type="button"
                 className="pm-back-btn"
-                onClick={() => setSelectedTeamId(null)}
+                onClick={() => setSelectedProjectItem(null)}
               >
                 ← Quay lại My Project
               </button>
-              <ProjectManagement teamId={selectedTeamId} />
+              <ProjectManagement projectItem={selectedProjectItem} />
             </div>
           );
         }
-        return <MyProjectsPage onProjectSelect={setSelectedTeamId} />;
+        return <MyProjectsPage onProjectSelect={setSelectedProjectItem} />;
       case 'reports':
         return <FeedbackPage />;
       case 'dashboard':
@@ -1151,7 +1151,7 @@ const Dashboard = () => {
             className={`nav-item ${activeMenuItem === 'dashboard' ? 'active' : ''}`}
             onClick={() => {
               setActiveMenuItem('dashboard');
-              setSelectedTeamId(null);
+              setSelectedProjectItem(null);
               navigate('/dashboard');
             }}
           >
@@ -1162,6 +1162,7 @@ const Dashboard = () => {
             className={`nav-item ${activeMenuItem === 'project' ? 'active' : ''}`}
             onClick={() => {
               setActiveMenuItem('project');
+              setSelectedProjectItem(null);
               navigate('/myproject');
             }}
           >
