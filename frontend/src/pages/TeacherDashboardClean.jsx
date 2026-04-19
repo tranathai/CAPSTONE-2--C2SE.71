@@ -53,6 +53,82 @@ const extractTechStack = (submission) => {
   return [];
 };
 
+const MILESTONE_FIELDS = [
+  { id: 'proposal', label: 'Milestone 1 - Proposal' },
+  { id: 'midterm', label: 'Milestone 2 - Midterm' },
+  { id: 'final', label: 'Milestone 3 - Final' },
+];
+
+const emptyMilestoneDates = {
+  proposal: '',
+  midterm: '',
+  final: '',
+};
+
+const toDateInputValue = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+};
+
+const addWeeksToDateInput = (baseDateIso, weeks) => {
+  if (!baseDateIso) return '';
+  const base = new Date(baseDateIso);
+  if (Number.isNaN(base.getTime())) return '';
+  const next = new Date(base);
+  next.setDate(next.getDate() + weeks * 7);
+  return next.toISOString().slice(0, 10);
+};
+
+const getInitialMilestoneDates = (submission) => {
+  const roadmapMilestones = Array.isArray(submission?.roadmapMilestones)
+    ? submission.roadmapMilestones
+    : [];
+
+  if (roadmapMilestones.length > 0) {
+    return {
+      proposal: toDateInputValue(roadmapMilestones.find((item) => item.id === 'proposal')?.deadline),
+      midterm: toDateInputValue(roadmapMilestones.find((item) => item.id === 'midterm')?.deadline),
+      final: toDateInputValue(roadmapMilestones.find((item) => item.id === 'final')?.deadline),
+    };
+  }
+
+  const submittedAt = submission?.submittedAt || new Date().toISOString();
+  return {
+    proposal: addWeeksToDateInput(submittedAt, 2),
+    midterm: addWeeksToDateInput(submittedAt, 6),
+    final: addWeeksToDateInput(submittedAt, 10),
+  };
+};
+
+const getTodayDateInputValue = () => new Date().toISOString().slice(0, 10);
+
+const extractTeamMembers = (submission) => {
+  const members = Array.isArray(submission?.teamMembers) ? submission.teamMembers : [];
+  if (members.length > 0) {
+    return members
+      .map((member) => {
+        const email = String(member?.email || '').trim().toLowerCase();
+        const fullName = String(member?.fullName || email.split('@')[0] || 'Team Member').trim();
+        if (!email) return null;
+        return { fullName, email };
+      })
+      .filter(Boolean);
+  }
+
+  const fallbackEmail = String(submission?.studentEmail || '').trim().toLowerCase();
+  const fallbackName = String(submission?.studentName || submission?.submittedBy || '').trim();
+  if (!fallbackEmail && !fallbackName) {
+    return [];
+  }
+
+  return [{
+    fullName: fallbackName || fallbackEmail.split('@')[0] || 'Team Member',
+    email: fallbackEmail || 'No email provided',
+  }];
+};
+
 const TeacherDashboardClean = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -61,6 +137,7 @@ const TeacherDashboardClean = () => {
   const [statusFilter, setStatusFilter] = useState('pending');
   const [activeReview, setActiveReview] = useState(null);
   const [decisionReason, setDecisionReason] = useState('');
+  const [milestoneDates, setMilestoneDates] = useState(emptyMilestoneDates);
   const [reviewError, setReviewError] = useState('');
 
   const totalProjects = allSubmissions.length;
@@ -111,13 +188,30 @@ const TeacherDashboardClean = () => {
       reviewKey: buildSubmissionKey(submission, index),
     });
     setDecisionReason(submission.reviewReason || '');
+    setMilestoneDates(getInitialMilestoneDates(submission));
     setReviewError('');
   };
 
   const closeReviewModal = () => {
     setActiveReview(null);
     setDecisionReason('');
+    setMilestoneDates(emptyMilestoneDates);
     setReviewError('');
+  };
+
+  const setMilestoneDate = (milestoneId, value) => {
+    setMilestoneDates((prev) => ({
+      ...prev,
+      [milestoneId]: value,
+    }));
+  };
+
+  const buildRoadmapMilestones = () => {
+    return MILESTONE_FIELDS.map((item) => ({
+      id: item.id,
+      title: item.label,
+      deadline: new Date(`${milestoneDates[item.id]}T00:00:00`).toISOString(),
+    }));
   };
 
   const submitReviewDecision = (nextStatus) => {
@@ -127,8 +221,35 @@ const TeacherDashboardClean = () => {
       return;
     }
 
+    if (nextStatus === 'access') {
+      if (!milestoneDates.proposal || !milestoneDates.midterm || !milestoneDates.final) {
+        setReviewError('Vui long nhap day du 3 moc milestone truoc khi duyet.');
+        return;
+      }
+
+      const todayValue = getTodayDateInputValue();
+      if (
+        milestoneDates.proposal < todayValue ||
+        milestoneDates.midterm < todayValue ||
+        milestoneDates.final < todayValue
+      ) {
+        setReviewError('Milestone khong duoc dat truoc ngay hien tai.');
+        return;
+      }
+
+      const proposalTime = new Date(`${milestoneDates.proposal}T00:00:00`).getTime();
+      const midtermTime = new Date(`${milestoneDates.midterm}T00:00:00`).getTime();
+      const finalTime = new Date(`${milestoneDates.final}T00:00:00`).getTime();
+
+      if (!(proposalTime <= midtermTime && midtermTime <= finalTime)) {
+        setReviewError('Milestone 2 phai khong som hon Milestone 1, va Milestone 3 phai khong som hon Milestone 2.');
+        return;
+      }
+    }
+
     const currentSubmissions = readProjectSubmissions();
     const reviewTime = new Date().toISOString();
+    const roadmapMilestones = nextStatus === 'access' ? buildRoadmapMilestones() : [];
     const updatedSubmissions = currentSubmissions.map((item, index) => {
       const itemKey = buildSubmissionKey(item, index);
       if (itemKey !== activeReview.reviewKey) {
@@ -141,6 +262,7 @@ const TeacherDashboardClean = () => {
         reviewReason: reason,
         reviewedAt: reviewTime,
         reviewedBy: user?.fullName || 'Instructor',
+        roadmapMilestones,
       };
     });
 
@@ -331,6 +453,36 @@ const TeacherDashboardClean = () => {
                     ) : (
                       <span className="review-value">No technology stack provided.</span>
                     )}
+                  </div>
+                </div>
+                <div className="review-field">
+                  <span className="review-label">Thanh vien tham gia</span>
+                  <div className="review-member-list">
+                    {extractTeamMembers(activeReview).length > 0 ? (
+                      extractTeamMembers(activeReview).map((member) => (
+                        <div className="review-member-item" key={member.email}>
+                          <strong>{member.fullName}</strong>
+                          <span>{member.email}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="review-value">Chua co thong tin thanh vien.</span>
+                    )}
+                  </div>
+                </div>
+                <div className="review-field">
+                  <span className="review-label">Milestone (bat buoc khi duyet)</span>
+                  <div className="review-milestone-grid">
+                    {MILESTONE_FIELDS.map((field) => (
+                      <label key={field.id} className="review-milestone-item">
+                        <span>{field.label}</span>
+                        <input
+                          type="date"
+                          value={milestoneDates[field.id] || ''}
+                          onChange={(event) => setMilestoneDate(field.id, event.target.value)}
+                        />
+                      </label>
+                    ))}
                   </div>
                 </div>
                 <div className="review-field">

@@ -1,7 +1,73 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getTeams } from "../../../lib/api";
 import { DEMO_TEAM_ID } from "../../../config/demoUser";
 import "../../../styles/content.css";
+
+const PROJECT_SUBMISSIONS_KEY = "mentorai_project_submissions";
+
+function readProjectSubmissions() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PROJECT_SUBMISSIONS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeSubmissionStatus(rawStatus) {
+  const value = String(rawStatus || "").trim().toLowerCase();
+  if (["accepted", "approve", "approved", "access"].includes(value)) return "accepted";
+  return "pending";
+}
+
+function getApprovedProjects() {
+  const submissions = readProjectSubmissions();
+  return submissions
+    .filter((item) => normalizeSubmissionStatus(item.status) === "accepted")
+    .map((item) => ({
+      id: `approved-${item.id}`,
+      name: item.projectTitle || item.projectName || "Unnamed Project",
+      meta: "Group project",
+      submissionId: item.id,
+      clickable: false,
+    }));
+}
+
+function ProjectItem({ item, onProjectSelect }) {
+  const content = (
+    <>
+      <div className="submission-link-main">
+        <span className="submission-link-title">{item.name}</span>
+      </div>
+      <span className="submission-link-meta">{item.meta || "Group project"}</span>
+    </>
+  );
+
+  if (item.clickable && onProjectSelect) {
+    return (
+      <div
+        className="submission-link submission-link-button"
+        onClick={() => onProjectSelect(item.teamId)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onProjectSelect(item.teamId);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <div className="submission-link submission-link-button submission-link-static">
+      {content}
+    </div>
+  );
+}
 
 function MyProjectsPage({ onProjectSelect }) {
   const [teams, setTeams] = useState([]);
@@ -29,6 +95,29 @@ function MyProjectsPage({ onProjectSelect }) {
     };
   }, []);
 
+  const approvedProjects = useMemo(() => getApprovedProjects(), []);
+  const projectItems = useMemo(() => {
+    const teamItems = teams.map((team) => ({
+      id: `team-${team.id}`,
+      name: team.name,
+      meta: "Group project",
+      teamId: team.id,
+      clickable: true,
+    }));
+
+    const merged = [...teamItems, ...approvedProjects];
+    const seen = new Set();
+
+    return merged.filter((item) => {
+      const key = item.name.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
+  }, [teams, approvedProjects]);
+
   return (
     <div className="submissions-page">
       <div className="page-header-row">
@@ -40,41 +129,13 @@ function MyProjectsPage({ onProjectSelect }) {
         <div className="page-status">Dang tai project...</div>
       ) : error ? (
         <div className="form-error">{error}</div>
-      ) : teams.length === 0 ? (
+      ) : projectItems.length === 0 ? (
         <div className="page-muted">Chua co project nao.</div>
       ) : (
         <ul className="submission-link-list">
-          {teams.map((team) => (
-            <li key={team.id}>
-              {onProjectSelect ? (
-                <button
-                  className="submission-link submission-link-button"
-                  onClick={() => onProjectSelect(team.id)}
-                  type="button"
-                >
-                  <span className="submission-link-title">{team.name}</span>
-                  <span className="submission-link-meta">
-                    Bam de vao trang quan ly deliverables
-                  </span>
-                </button>
-              ) : (
-                <a
-                  className="submission-link"
-                  href={`/myproject/project-management/${team.id}`}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    textDecoration: 'none',
-                    color: 'inherit'
-                  }}
-                >
-                  <span className="submission-link-title">{team.name}</span>
-                  <span className="submission-link-meta">
-                    Bam de vao trang quan ly deliverables
-                  </span>
-                </a>
-              )}
+          {projectItems.map((item) => (
+            <li key={item.id}>
+              <ProjectItem item={item} onProjectSelect={onProjectSelect} />
             </li>
           ))}
         </ul>

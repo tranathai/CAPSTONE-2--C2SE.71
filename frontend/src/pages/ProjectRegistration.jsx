@@ -1,8 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { lookupUserByEmail } from '../lib/api';
 import './ProjectRegistration.css';
 
 const PROJECT_SUBMISSIONS_KEY = 'mentorai_project_submissions';
+const GMAIL_REGEX = /^[^\s@]+@(gmail\.com|gmail\.edu\.vn)$/i;
+
+const normalizeMember = (member) => {
+  const email = String(member?.email || '').trim().toLowerCase();
+  if (!email) {
+    return null;
+  }
+
+  return {
+    email,
+    fullName: String(member?.fullName || email.split('@')[0] || 'Member').trim(),
+    role: String(member?.role || 'student').trim() || 'student'
+  };
+};
 
 const ProjectRegistration = () => {
   const navigate = useNavigate();
@@ -13,6 +28,10 @@ const ProjectRegistration = () => {
   const [techStack, setTechStack] = useState(['Python', 'TensorFlow', 'React']);
   const [userInitial, setUserInitial] = useState('S');
   const [userInfo, setUserInfo] = useState({ fullName: 'Unknown Student', email: '' });
+  const [memberEmailInput, setMemberEmailInput] = useState('');
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [memberError, setMemberError] = useState('');
+  const [memberLoading, setMemberLoading] = useState(false);
   const [error, setError] = useState('');
   const [editSubmissionId, setEditSubmissionId] = useState(null);
 
@@ -33,6 +52,16 @@ const ProjectRegistration = () => {
         email: user?.email || ''
       });
 
+      const currentUserMember = normalizeMember({
+        email: user?.email,
+        fullName: user?.fullName,
+        role: user?.role || 'student'
+      });
+
+      if (currentUserMember) {
+        setTeamMembers([currentUserMember]);
+      }
+
       // Check if we're in edit mode
       if (location.state?.editSubmissionId && location.state?.editSubmission) {
         const submission = location.state.editSubmission;
@@ -40,10 +69,25 @@ const ProjectRegistration = () => {
         setProjectName(submission.projectTitle || '');
         setDescription(submission.description || '');
         setTechStack(Array.isArray(submission.techStack) ? submission.techStack : ['Python', 'TensorFlow', 'React']);
+
+        const existingMembers = Array.isArray(submission.teamMembers)
+          ? submission.teamMembers.map(normalizeMember).filter(Boolean)
+          : [];
+
+        if (currentUserMember) {
+          const mergedMembers = [
+            currentUserMember,
+            ...existingMembers.filter((member) => member.email !== currentUserMember.email)
+          ];
+          setTeamMembers(mergedMembers);
+        } else if (existingMembers.length > 0) {
+          setTeamMembers(existingMembers);
+        }
       }
     } catch (parseError) {
       setUserInitial('S');
       setUserInfo({ fullName: 'Unknown Student', email: '' });
+      setTeamMembers([]);
     }
   }, [navigate, location.state]);
 
@@ -61,14 +105,83 @@ const ProjectRegistration = () => {
     setTechStack((prev) => prev.filter((item) => item !== itemToRemove));
   };
 
+  const addTeamMember = async () => {
+    const normalizedEmail = String(memberEmailInput || '').trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setMemberError('Vui long nhap email thanh vien.');
+      return;
+    }
+
+    if (!GMAIL_REGEX.test(normalizedEmail)) {
+      setMemberError('Email phai co duoi @gmail.com hoac @gmail.edu.vn.');
+      return;
+    }
+
+    const duplicate = teamMembers.some((member) => member.email === normalizedEmail);
+    if (duplicate) {
+      setMemberError('Email nay da co trong nhom.');
+      return;
+    }
+
+    try {
+      setMemberLoading(true);
+      setMemberError('');
+      const lookupResult = await lookupUserByEmail(normalizedEmail);
+
+      if (!lookupResult?.exists || !lookupResult?.user) {
+        setMemberError('Email nay chua dang ky tai khoan.');
+        return;
+      }
+
+      if (lookupResult.user.role !== 'student') {
+        setMemberError('Chi co the them tai khoan sinh vien vao nhom.');
+        return;
+      }
+
+      const normalized = normalizeMember(lookupResult.user);
+      if (!normalized) {
+        setMemberError('Khong the them thanh vien nay.');
+        return;
+      }
+
+      setTeamMembers((prev) => [...prev, normalized]);
+      setMemberEmailInput('');
+    } catch (lookupError) {
+      setMemberError(lookupError?.message || 'Khong kiem tra duoc email thanh vien.');
+    } finally {
+      setMemberLoading(false);
+    }
+  };
+
+  const removeTeamMember = (emailToRemove) => {
+    const ownerEmail = String(userInfo.email || '').trim().toLowerCase();
+    if (emailToRemove === ownerEmail) {
+      setMemberError('Khong the xoa truong nhom khoi du an.');
+      return;
+    }
+
+    setMemberError('');
+    setTeamMembers((prev) => prev.filter((member) => member.email !== emailToRemove));
+  };
+
   const handleSubmitForApproval = () => {
     if (!projectName.trim() || !description.trim()) {
       setError('Project Name and Description are required.');
       return;
     }
 
+    if (teamMembers.length === 0) {
+      setError('Du an phai co it nhat 1 thanh vien.');
+      return;
+    }
+
     const normalizedTechStack = techStack
       .map((item) => String(item).trim())
+      .filter(Boolean);
+
+    const normalizedMembers = teamMembers
+      .map(normalizeMember)
       .filter(Boolean);
 
     let current = [];
@@ -90,6 +203,7 @@ const ProjectRegistration = () => {
             projectTitle: projectName.trim(),
             description: description.trim(),
             techStack: normalizedTechStack,
+            teamMembers: normalizedMembers,
             updatedAt: new Date().toISOString()
           };
         }
@@ -103,6 +217,7 @@ const ProjectRegistration = () => {
         projectTitle: projectName.trim(),
         description: description.trim(),
         techStack: normalizedTechStack,
+        teamMembers: normalizedMembers,
         studentName: userInfo.fullName,
         studentEmail: userInfo.email,
         submittedAt: new Date().toISOString(),
@@ -193,6 +308,71 @@ const ProjectRegistration = () => {
                   }
                 }}
               />
+            </div>
+
+            <div className="form-group">
+              <label>Team Members</label>
+              <p className="members-help-text">
+                Them hoac xoa thanh vien bang email da dang ky tai khoan.
+              </p>
+              <div className="member-input-row">
+                <input
+                  type="email"
+                  value={memberEmailInput}
+                  onChange={(event) => {
+                    setMemberEmailInput(event.target.value);
+                    setMemberError('');
+                  }}
+                  placeholder="member@gmail.com"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      if (!memberLoading) {
+                        addTeamMember();
+                      }
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="member-add-btn"
+                  onClick={addTeamMember}
+                  disabled={memberLoading}
+                >
+                  {memberLoading ? 'Dang them...' : '+ Add Member'}
+                </button>
+              </div>
+
+              {memberError && <div className="project-form-error">{memberError}</div>}
+
+              <div className="member-list">
+                {teamMembers.length === 0 ? (
+                  <div className="member-empty">Chua co thanh vien trong nhom.</div>
+                ) : (
+                  teamMembers.map((member) => {
+                    const ownerEmail = String(userInfo.email || '').trim().toLowerCase();
+                    const isOwner = member.email === ownerEmail;
+
+                    return (
+                      <div className="member-item" key={member.email}>
+                        <div className="member-meta">
+                          <div className="member-name">{member.fullName}</div>
+                          <div className="member-email">{member.email}</div>
+                        </div>
+                        <button
+                          type="button"
+                          className="member-remove-btn"
+                          disabled={isOwner}
+                          onClick={() => removeTeamMember(member.email)}
+                          title={isOwner ? 'Truong nhom khong the bi xoa' : 'Xoa thanh vien'}
+                        >
+                          {isOwner ? 'Owner' : 'Remove'}
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
 
             <div className="project-note-box">

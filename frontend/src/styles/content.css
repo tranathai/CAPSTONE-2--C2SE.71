@@ -351,6 +351,7 @@
   background: #fff;
   border: 1px solid #dbe4f0;
   border-radius: 14px;
+  overflow: hidden;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
@@ -359,10 +360,12 @@
   width: 100%;
   border: 0;
   background: transparent;
-  padding: 14px 16px;
+  appearance: none;
+  font: inherit;
+  padding: 16px 24px 16px 18px;
+  min-height: 64px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   text-align: left;
   text-decoration: none;
@@ -375,16 +378,51 @@
   background: #f8fbff;
 }
 
+.submission-link-static {
+  cursor: default;
+}
+
+.submission-link-static:hover {
+  background: transparent;
+}
+
+.submission-link-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+}
+
 .submission-link-title {
+  display: block;
   font-size: 16px;
+  line-height: 1.35;
   font-weight: 700;
   color: #0f172a;
 }
 
 .submission-link-meta {
-  font-size: 13px;
+  margin-left: auto;
+  margin-right: 28px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  min-height: 0;
+  max-width: calc(100% - 24px);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #eef4ff;
+  border: 1px solid #d9e6ff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
   color: #4f6485;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .feedback-item {
@@ -949,7 +987,12 @@
   }
 
   .submission-link,
-  .submission-link-button,
+  .submission-link-button {
+    flex-direction: column;
+    align-items: start;
+    padding: 14px 16px;
+  }
+
   .feedback-head {
     flex-direction: column;
     align-items: flex-start;
@@ -958,6 +1001,15 @@
   .submission-link-meta,
   .feedback-date {
     white-space: normal;
+  }
+
+  .submission-link-meta {
+    margin-left: 0;
+    margin-right: 0;
+    align-self: start;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .pm-card {

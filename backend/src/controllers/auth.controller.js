@@ -106,3 +106,31 @@ export async function getMe(req, res) {
 
   return res.status(200).json({ success: true, user: sanitizeUser(user) });
 }
+
+export async function lookupUserByEmail(req, res) {
+  const normalizedEmail = String(req.query?.email || "").trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    return res.status(400).json({
+      success: false,
+      message: "Email khong duoc de trong",
+    });
+  }
+
+  const user = users.find((item) => item.email === normalizedEmail);
+
+  if (!user) {
+    return res.status(200).json({
+      success: true,
+      data: { exists: false },
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      exists: true,
+      user: sanitizeUser(user),
+    },
+  });
+}

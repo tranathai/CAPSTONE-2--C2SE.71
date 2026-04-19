@@ -1149,21 +1149,31 @@ const Dashboard = () => {
         <nav className="sidebar-nav">
           <div 
             className={`nav-item ${activeMenuItem === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveMenuItem('dashboard')}
+            onClick={() => {
+              setActiveMenuItem('dashboard');
+              setSelectedTeamId(null);
+              navigate('/dashboard');
+            }}
           >
             <span className="nav-icon">📊</span>
             <span className="nav-text">Dashboard</span>
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'project' ? 'active' : ''}`}
-            onClick={() => navigate('/myproject')}
+            onClick={() => {
+              setActiveMenuItem('project');
+              navigate('/myproject');
+            }}
           >
             <span className="nav-icon">📁</span>
             <span className="nav-text">My Project</span>
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'reports' ? 'active' : ''}`}
-            onClick={() => navigate('/student/feedback')}
+            onClick={() => {
+              setActiveMenuItem('reports');
+              navigate('/student/feedback');
+            }}
           >
             <span className="nav-icon">💬</span>
             <span className="nav-text">Feedback</span>
