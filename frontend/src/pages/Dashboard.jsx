@@ -1155,7 +1155,7 @@ const Dashboard = () => {
               navigate('/dashboard');
             }}
           >
-            <span className="nav-icon">📊</span>
+            <span className="nav-icon"></span>
             <span className="nav-text">Dashboard</span>
           </div>
           <div 
@@ -1166,7 +1166,7 @@ const Dashboard = () => {
               navigate('/myproject');
             }}
           >
-            <span className="nav-icon">📁</span>
+            <span className="nav-icon"></span>
             <span className="nav-text">My Project</span>
           </div>
           <div 
@@ -1176,21 +1176,21 @@ const Dashboard = () => {
               navigate('/student/feedback');
             }}
           >
-            <span className="nav-icon">💬</span>
+            <span className="nav-icon"></span>
             <span className="nav-text">Feedback</span>
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'team' ? 'active' : ''}`}
             onClick={() => setActiveMenuItem('team')}
           >
-            <span className="nav-icon">👥</span>
+            <span className="nav-icon"></span>
             <span className="nav-text">Team</span>
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'profile' ? 'active' : ''}`}
             onClick={() => setActiveMenuItem('profile')}
           >
-            <span className="nav-icon">👤</span>
+            <span className="nav-icon"></span>
             <span className="nav-text">Profile</span>
           </div>
         </nav>

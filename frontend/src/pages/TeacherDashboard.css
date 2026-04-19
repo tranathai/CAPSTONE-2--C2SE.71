@@ -367,10 +367,13 @@
 .review-modal {
   width: 100%;
   max-width: 760px;
+  max-height: calc(100vh - 40px);
   background: #ffffff;
   border-radius: 14px;
   border: 1px solid var(--line);
   box-shadow: 0 24px 56px rgba(29, 42, 64, 0.22);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -403,6 +406,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .review-field {
@@ -424,6 +429,7 @@
   color: var(--text-main);
   line-height: 1.5;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .review-tech-list {
@@ -433,12 +439,15 @@
 }
 
 .review-tech-chip {
+  max-width: 100%;
   padding: 6px 10px;
   border-radius: 999px;
   background: #e0f2fe;
   color: #075985;
   font-size: 12px;
   font-weight: 700;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .review-member-list {
@@ -466,6 +475,7 @@
 .review-member-item span {
   font-size: 13px;
   color: var(--text-soft);
+  overflow-wrap: anywhere;
 }
 
 .review-milestone-grid {
@@ -529,6 +539,7 @@
   justify-content: flex-end;
   padding: 16px 20px 20px;
   border-top: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 .decision-btn {
