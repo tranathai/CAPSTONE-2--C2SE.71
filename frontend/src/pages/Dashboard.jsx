@@ -260,6 +260,25 @@ const extractTechStack = (submission) => {
   return [];
 };
 
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+
+const isUserInSubmission = (submission, email) => {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return false;
+  }
+
+  if (normalizeEmail(submission?.studentEmail) === normalizedEmail) {
+    return true;
+  }
+
+  if (!Array.isArray(submission?.teamMembers)) {
+    return false;
+  }
+
+  return submission.teamMembers.some((member) => normalizeEmail(member?.email) === normalizedEmail);
+};
+
 // Profile Content Component
 const ProfileContent = ({ user, handleLogout }) => {
   const [profileData, setProfileData] = useState({
@@ -514,11 +533,24 @@ const DashboardContent = ({ user }) => {
   const isInstructor = user?.role === 'teacher';
   const [instructorSubmissions, setInstructorSubmissions] = useState([]);
   const [studentSubmissions, setStudentSubmissions] = useState([]);
+  const [participatedSubmissions, setParticipatedSubmissions] = useState([]);
   const [selectedSubmissionKey, setSelectedSubmissionKey] = useState('');
   const [activeReview, setActiveReview] = useState(null);
   const [decisionReason, setDecisionReason] = useState('');
   const [reviewError, setReviewError] = useState('');
   const [showRoadmapDetails, setShowRoadmapDetails] = useState(false);
+
+  const totalParticipatedProjects = useMemo(() => {
+    const projectKeys = participatedSubmissions.map((item, index) => {
+      if (item?.id) {
+        return String(item.id);
+      }
+
+      return `${item?.projectTitle || item?.projectName || 'untitled'}-${item?.submittedAt || index}`;
+    });
+
+    return new Set(projectKeys).size;
+  }, [participatedSubmissions]);
 
   const sortedStudentSubmissions = useMemo(() => {
     if (isInstructor) {
@@ -571,10 +603,13 @@ const DashboardContent = ({ user }) => {
       const allSubmissions = readProjectSubmissions();
       const pendingOnly = allSubmissions.filter((item) => normalizeSubmissionStatus(item.status) === 'pending');
       setInstructorSubmissions(pendingOnly.slice(0, 6));
+      setParticipatedSubmissions([]);
     } else {
       const allSubmissions = readProjectSubmissions();
       const mySubmissions = allSubmissions.filter((item) => item.studentEmail === user?.email);
+      const myParticipatedSubmissions = allSubmissions.filter((item) => isUserInSubmission(item, user?.email));
       setStudentSubmissions(mySubmissions);
+      setParticipatedSubmissions(myParticipatedSubmissions);
     }
   }, [isInstructor, user?.email]);
 
@@ -677,16 +712,16 @@ const DashboardContent = ({ user }) => {
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-header">
-            <span className="stat-label">Project Status</span>
-            <span className={`stat-icon ${isInstructor ? 'success' : studentStatusCard.iconClassName}`}>
-              {isInstructor ? '✓' : studentStatusCard.icon}
+            <span className="stat-label">{isInstructor ? 'Project Status' : 'Total Project'}</span>
+            <span className={`stat-icon ${isInstructor ? 'success' : ''}`}>
+              {isInstructor ? '✓' : '📁'}
             </span>
           </div>
-          <div className="stat-value">{isInstructor ? 'Approved' : studentStatusCard.value}</div>
+          <div className="stat-value">{isInstructor ? 'Approved' : totalParticipatedProjects}</div>
           <div className="stat-footer">
-            <span className={`badge ${isInstructor ? 'success' : studentStatusCard.badgeClassName}`}>
-              {isInstructor ? '✓ Fully validated' : studentStatusCard.badgeText}
-            </span>
+            {isInstructor ? (
+              <span className="badge success">✓ Fully validated</span>
+            ) : null}
           </div>
         </div>
 
