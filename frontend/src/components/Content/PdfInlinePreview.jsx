@@ -47,5 +47,7 @@ export function PdfInlinePreview({ fileUrl, title = "PDF Viewer" }) {
   if (!src) {
     return <div className="review-status">Đang tải bản xem trước...</div>;
   }
-  return <iframe className="review-pdf-frame" src={src} title={title} />;
+  const viewerSrc = `${src}#toolbar=0&navpanes=0&scrollbar=1&zoom=page-width`;
+
+  return <iframe className="review-pdf-frame" src={viewerSrc} title={title} />;
 }

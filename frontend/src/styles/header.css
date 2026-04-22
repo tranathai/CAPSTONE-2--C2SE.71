@@ -1,36 +1,78 @@
 .header {
-  height: 60px;
-  background: white;
+  height: 78px;
+  background: #fff;
   display: flex;
   justify-content: space-between;
-  padding: 0 20px;
   align-items: center;
-  border-bottom: 1px solid #eee;
+  gap: 16px;
+  padding: 0 18px;
+  border-bottom: 1px solid #e5eaf3;
 }
 
 .search {
-  width: 350px;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+  width: min(560px, 100%);
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #e5eaf3;
+  background: #fff;
+  font-size: 14px;
+  color: #1d2a40;
+}
+
+.search::placeholder {
+  color: #94a3b8;
 }
 
 .header-right {
   display: flex;
-  gap: 15px;
+  gap: 10px;
   align-items: center;
+  flex-shrink: 0;
 }
 
-.role-select {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 6px 10px;
+.header-icon-btn,
+.header-logout-btn {
+  border: 1px solid #e5eaf3;
+  border-radius: 12px;
   background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #0f172a;
+  cursor: pointer;
 }
 
-.avatar {
-  background: #2563eb;
-  color: white;
-  padding: 8px;
-  border-radius: 50%;
+.header-icon-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+}
+
+.header-logout-btn {
+  height: 42px;
+  padding: 0 14px;
+}
+
+.header-icon-btn:hover,
+.header-logout-btn:hover {
+  background: #f8fafc;
+}
+
+@media (max-width: 768px) {
+  .header {
+    height: auto;
+    padding: 14px 16px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search {
+    width: 100%;
+  }
+
+  .header-right {
+    justify-content: flex-end;
+  }
 }

@@ -6,6 +6,7 @@ import submissionRouter from "./routes/submission.routes.js";
 import feedbackRouter from "./routes/feedback.routes.js";
 import teamRouter from "./routes/team.routes.js";
 import milestoneRouter from "./routes/milestone.routes.js";
+import authRouter from "./routes/auth.routes.js";
 import { checkDbConnection } from "./config/db.js";
 
 const app = express();
@@ -29,6 +30,7 @@ app.use("/api/submissions", submissionRouter);
 app.use("/api/feedbacks", feedbackRouter);
 app.use("/api/teams", teamRouter);
 app.use("/api/milestones", milestoneRouter);
+app.use("/api/auth", authRouter);
 
 app.use((req, res) => {
   res.status(404).json({

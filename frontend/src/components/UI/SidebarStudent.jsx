@@ -14,6 +14,7 @@ function SidebarStudent() {
   const { pathname } = useLocation();
   const normalizedPath = pathname.toLowerCase();
   const isMyProjectActive =
+    normalizedPath.startsWith("/myproject") ||
     normalizedPath.startsWith("/student/submissions") ||
     normalizedPath.startsWith("/student/project-management/");
 
@@ -50,7 +51,7 @@ function SidebarStudent() {
           </NavLink>
           <NavLink
             className={() => `sb-item ${isMyProjectActive ? "active" : ""}`}
-            to="/student/submissions"
+            to="/myproject"
             end
           >
             <FileText size={18} />
@@ -76,10 +77,10 @@ function SidebarStudent() {
       </div>
 
       <div className="sb-footer">
-        <button className="sb-new-project" type="button">
+        <NavLink className="sb-new-project" to="/project/ProjectRegistration">
           <Plus size={16} />
           New Project
-        </button>
+        </NavLink>
       </div>
     </div>
   );

@@ -66,3 +66,12 @@ export async function getFeedbacks(submissionVersionId) {
   const body = assertSuccess(data);
   return body.data;
 }
+
+export async function lookupUserByEmail(email) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const { data } = await jsonClient.get("/auth/lookup", {
+    params: { email: normalizedEmail },
+  });
+  const body = assertSuccess(data);
+  return body.data;
+}

@@ -1,0 +1,367 @@
+.project-registration-page {
+  min-height: 100vh;
+  background: #f3f5f9;
+}
+
+.project-topbar {
+  height: 72px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px;
+}
+
+.project-brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 190px;
+}
+
+.project-brand-icon {
+  font-size: 20px;
+}
+
+.project-brand-text {
+  font-size: 34px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.project-top-search {
+  flex: 1;
+  max-width: 620px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f4f7fb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.project-top-search input {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.project-top-search input::placeholder {
+  color: #9ca3af;
+}
+
+.project-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.project-icon-btn {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.project-icon-btn:hover {
+  background: #f3f4f6;
+}
+
+.project-user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1976d2, #64b5f6);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.project-main-content {
+  padding: 30px 18px 44px;
+}
+
+.project-form-shell {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.back-dashboard-link {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 10px;
+}
+
+.project-form-shell h1 {
+  margin: 0;
+  font-size: 62px;
+  line-height: 1.02;
+  color: #111827;
+  font-weight: 800;
+}
+
+.project-subtitle {
+  margin: 10px 0 20px;
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.project-form-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.project-registration-page .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-registration-page .form-group label {
+  color: #111827;
+  font-size: 38px;
+  line-height: 1.05;
+  font-weight: 700;
+}
+
+.project-registration-page .form-group input,
+.project-registration-page .form-group textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 16px;
+  color: #111827;
+  outline: none;
+  font-family: inherit;
+}
+
+.project-registration-page .form-group input:focus,
+.project-registration-page .form-group textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.project-registration-page .form-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.tech-chip-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tech-chip,
+.add-tech-chip {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tech-chip {
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.add-tech-chip {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+}
+
+.project-note-box {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  border-radius: 10px;
+  padding: 12px;
+  color: #1e40af;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.project-form-error {
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.members-help-text {
+  margin: -4px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.member-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.member-add-btn {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.member-add-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.member-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #f9fafb;
+}
+
+.member-meta {
+  min-width: 0;
+}
+
+.member-name {
+  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.member-email {
+  color: #6b7280;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.member-remove-btn {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #b91c1c;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.member-remove-btn:disabled {
+  border-color: #d1d5db;
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.member-empty {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.project-action-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.project-registration-page .submit-btn {
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 12px 22px;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.project-registration-page .submit-btn:hover {
+  background: #1d4ed8;
+}
+
+.project-registration-page .draft-btn {
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .project-topbar {
+    padding: 0 12px;
+  }
+
+  .project-brand-text {
+    font-size: 24px;
+  }
+
+  .project-top-search {
+    max-width: 320px;
+  }
+
+  .project-form-shell h1 {
+    font-size: 44px;
+  }
+
+  .project-registration-page .form-group label {
+    font-size: 30px;
+  }
+
+  .project-registration-page .submit-btn,
+  .project-registration-page .draft-btn {
+    font-size: 16px;
+  }
+
+  .member-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .member-add-btn {
+    width: 100%;
+  }
+}

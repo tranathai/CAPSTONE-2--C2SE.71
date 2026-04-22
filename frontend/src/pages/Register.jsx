@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import axios from '../utils/axios';
 import './Register.css';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -15,22 +17,6 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const getApiErrorMessage = (err) => {
-    if (!err.response) {
-      return 'Khong the ket noi backend. Hay chay backend o cong 5000.';
-    }
-
-    if (err.response?.data?.message) {
-      return err.response.data.message;
-    }
-
-    if (err.response.status >= 500) {
-      return 'Backend dang loi (500). Vui long kiem tra terminal backend.';
-    }
-
-    return 'Da co loi xay ra';
-  };
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@(gmail\.com|gmail\.edu\.vn)$/;
@@ -85,20 +71,28 @@ const Register = () => {
     }
 
     try {
-      const response = await axios.post('/api/auth/register', {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
         email: formData.email,
         password: formData.password,
-        fullName: formData.fullName,
+        name: formData.fullName,
         role
       });
 
       if (response.data.success) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        navigate('/dashboard');
+        const registeredRole = response.data.user?.role || role;
+        navigate(registeredRole === 'teacher' ? '/teacher-dashboard' : '/dashboard');
       }
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      const validationMessage = err.response?.data?.errors?.[0]?.msg;
+      const backendMessage = err.response?.data?.message;
+
+      if (err.response?.status === 504) {
+        setError('Không kết nối được backend. Hãy chạy backend ở cổng 5000 rồi thử lại.');
+      } else {
+        setError(validationMessage || backendMessage || 'Đã có lỗi xảy ra');
+      }
     } finally {
       setLoading(false);
     }
