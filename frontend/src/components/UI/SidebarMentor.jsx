@@ -1,11 +1,9 @@
-import {
-  GraduationCap,
+﻿import {
   LayoutDashboard,
   FolderKanban,
   FileText,
   Users,
   Settings,
-  Plus,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import "../../styles/sidebar.css";
@@ -21,29 +19,27 @@ function SidebarMentor() {
     <div className="sidebar">
       <div>
         <div className="sb-brand">
-          <div className="sb-brand-icon" aria-hidden="true">
-            <GraduationCap size={18} color="#fff" />
-          </div>
+          <div className="sb-brand-icon" aria-hidden="true" />
           <div className="sb-brand-text">MentorAI Grad</div>
         </div>
 
         <div className="sb-profile">
-          <img
-            className="sb-profile-img"
-            src="https://i.pravatar.cc/80?img=13"
-            alt="Dr. Smith"
-          />
+          <div className="sb-profile-avatar" aria-hidden="true">H</div>
           <div className="sb-profile-meta">
-            <div className="sb-profile-name">Dr. Smith</div>
+            <div className="sb-profile-name">henny4</div>
             <div className="sb-profile-role">Senior Instructor</div>
           </div>
         </div>
 
         <nav className="sb-nav" aria-label="Mentor Sidebar">
-          <button className="sb-item" type="button">
+          <NavLink
+            className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}
+            to="/teacher-dashboard"
+            end
+          >
             <LayoutDashboard size={18} />
             Dashboard
-          </button>
+          </NavLink>
           <button className="sb-item" type="button">
             <FolderKanban size={18} />
             Projects
@@ -65,13 +61,6 @@ function SidebarMentor() {
             Settings
           </button>
         </nav>
-      </div>
-
-      <div className="sb-footer">
-        <button className="sb-new-project" type="button">
-          <Plus size={16} />
-          New Project
-        </button>
       </div>
     </div>
   );

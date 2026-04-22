@@ -2,15 +2,19 @@ import { useEffect } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import StudentLayout from "./components/UI/StudentLayout";
 import MentorLayout from "./components/UI/MentorLayout";
+import RoleSelection from "./pages/RoleSelection";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import TeacherDashboard from "./pages/TeacherDashboardClean";
+import ProjectRegistration from "./pages/ProjectRegistration";
 import ReviewPage from "./components/Content/Mentor/ReviewPage";
 import SubmissionsPage from "./components/Content/Student/SubmissionsPage";
 import ProjectManagement from "./components/Content/Student/ProjectManagement";
-import MyProjectsPage from "./components/Content/Student/MyProjectsPage";
 import DashboardPage from "./components/Content/Student/DashboardPage";
 import FeedbackPage from "./components/Content/Student/FeedbackPage";
 import StudentReviewPage from "./components/Content/Student/StudentReviewPage";
 import { setRuntimeRole, useRuntimeRole } from "./config/runtimeRole";
-
 function HomeRedirect({ role }) {
   return (
     <Navigate
@@ -42,9 +46,18 @@ function App() {
 
   return (
     <Routes>
+      <Route path="/" element={<RoleSelection />} />
+      <Route path="/login/:role" element={<Login />} />
+      <Route path="/register/:role" element={<Register />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/myproject/*" element={<Dashboard />} />
+      <Route path="/student/feedback" element={<Dashboard />} />
+      <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+      <Route path="/project/ProjectRegistration" element={<ProjectRegistration />} />
+
       <Route path="/role/:role" element={<RoleSwitchRedirect />} />
       <Route path="/r/:role" element={<RoleSwitchRedirect />} />
-      <Route path="/" element={<HomeRedirect role={role} />} />
+      <Route path="/home" element={<HomeRedirect role={role} />} />
 
       <Route
         path="/student"
@@ -56,8 +69,8 @@ function App() {
           )
         }
       >
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="submissions" element={<MyProjectsPage />} />
+        <Route path="dashboard" element={<Navigate to="/dashboard" replace />} />
+        <Route path="submissions" element={<Navigate to="/myproject" replace />} />
         <Route path="project-management/:teamId" element={<ProjectManagement />} />
         <Route path="review/:submissionId" element={<StudentReviewPage />} />
         <Route path="feedback" element={<FeedbackPage />} />
@@ -77,7 +90,7 @@ function App() {
         <Route path="review/:submissionId" element={<ReviewPage />} />
       </Route>
 
-      <Route path="*" element={<HomeRedirect role={role} />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

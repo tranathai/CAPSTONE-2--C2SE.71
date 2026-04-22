@@ -1,7 +1,283 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './Dashboard.css';
-import Reports from './Reports';
+import MyProjectsPage from '../components/Content/Student/MyProjectsPage';
+import FeedbackPage from '../components/Content/Student/FeedbackPage';
+import ProjectManagement from '../components/Content/Student/ProjectManagement';
+
+const PROJECT_SUBMISSIONS_KEY = 'mentorai_project_submissions';
+
+const readProjectSubmissions = () => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PROJECT_SUBMISSIONS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+};
+
+const writeProjectSubmissions = (submissions) => {
+  localStorage.setItem(PROJECT_SUBMISSIONS_KEY, JSON.stringify(submissions));
+};
+
+const ROADMAP_MILESTONE_TEMPLATE = [
+  { id: 'proposal', title: 'Đề cương', weeksFromStart: 2 },
+  { id: 'midterm', title: 'Giữa kỳ', weeksFromStart: 6 },
+  { id: 'final', title: 'Cuối kỳ', weeksFromStart: 10 }
+];
+
+const ROADMAP_DOCUMENT_SECTIONS = [
+  {
+    title: 'Milestone 1 - Proposal',
+    documents: [
+      'Tài liệu đề xuất Dự án (Proposal)',
+      'Kế hoạch dự án (Project Plan, Sprint plan)'
+    ]
+  },
+  {
+    title: 'Milestone 2 - Giữa kỳ',
+    documents: [
+      'Tài liệu yêu cầu (SRS / User Stories)',
+      'Tài liệu kiến trúc hệ thống (Architecture Design)',
+      'Tài liệu thiết kế UI (UI Design)'
+    ]
+  },
+  {
+    title: 'Milestone 3 - Cuối kỳ',
+    documents: [
+      'Test Plan',
+      'Test Cases / Test Data',
+      'Test Report / Bug Report',
+      'Management Documents (meeting, evidence)',
+      'Code Standards',
+      'Reflection / Peer evaluation',
+      'Technical Report',
+      'Source Code'
+    ]
+  }
+];
+
+const formatShortDate = (dateIso) => {
+  if (!dateIso) {
+    return 'Unknown date';
+  }
+
+  return new Date(dateIso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
+const formatTimeAgo = (dateIso) => {
+  if (!dateIso) {
+    return 'Chưa có thời gian nhận xét';
+  }
+
+  const targetTime = new Date(dateIso).getTime();
+  if (Number.isNaN(targetTime)) {
+    return 'Chưa có thời gian nhận xét';
+  }
+
+  const diffMs = Date.now() - targetTime;
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+  if (diffMinutes < 1) {
+    return 'Vừa xong';
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} phút trước`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} giờ trước`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) {
+    return `${diffDays} ngày trước`;
+  }
+
+  return formatShortDate(dateIso);
+};
+
+const addWeeksToDate = (dateIso, weeks) => {
+  const base = new Date(dateIso);
+  if (Number.isNaN(base.getTime())) {
+    return null;
+  }
+
+  const result = new Date(base);
+  result.setDate(result.getDate() + weeks * 7);
+  return result.toISOString();
+};
+
+const createRoadmapMilestones = (startDateIso) => {
+  return ROADMAP_MILESTONE_TEMPLATE
+    .map((item) => {
+      const deadline = addWeeksToDate(startDateIso, item.weeksFromStart);
+      if (!deadline) {
+        return null;
+      }
+
+      return {
+        id: item.id,
+        title: item.title,
+        weeksFromStart: item.weeksFromStart,
+        deadline
+      };
+    })
+    .filter(Boolean);
+};
+
+const getSubmissionRoadmap = (submission) => {
+  if (!submission) {
+    return [];
+  }
+
+  if (Array.isArray(submission.roadmapMilestones) && submission.roadmapMilestones.length > 0) {
+    return submission.roadmapMilestones;
+  }
+
+  const startDate = submission.startDate || submission.reviewedAt || submission.submittedAt;
+  if (!startDate) {
+    return [];
+  }
+
+  return createRoadmapMilestones(startDate);
+};
+
+const normalizeSubmissionStatus = (rawStatus) => {
+  const value = String(rawStatus || '').trim().toLowerCase();
+
+  if (['accepted', 'approve', 'approved', 'access'].includes(value)) {
+    return 'accepted';
+  }
+
+  if (['deny', 'denied', 'reject', 'rejected', 'at risk', 'at-risk'].includes(value)) {
+    return 'deny';
+  }
+
+  return 'pending';
+};
+
+const getSubmissionStatusLabel = (status) => {
+  if (status === 'accepted') {
+    return 'Approved';
+  }
+
+  if (status === 'deny') {
+    return 'Declined';
+  }
+
+  return 'Pending';
+};
+
+const getSubmissionActionLabel = (status) => {
+  if (status === 'accepted') {
+    return 'View Details';
+  }
+
+  if (status === 'deny') {
+    return 'View Feedback';
+  }
+
+  return 'Review';
+};
+
+const getStudentStatusCardConfig = (status) => {
+  if (status === 'new') {
+    return {
+      value: 'New',
+      icon: '🆕',
+      iconClassName: 'neutral',
+      badgeClassName: 'neutral',
+      badgeText: 'Create your first project submission'
+    };
+  }
+
+  if (status === 'accepted') {
+    return {
+      value: 'Approved',
+      icon: '✓',
+      iconClassName: 'success',
+      badgeClassName: 'success',
+      badgeText: '✓ Approved by instructor'
+    };
+  }
+
+  if (status === 'deny') {
+    return {
+      value: 'Declined',
+      icon: '✕',
+      iconClassName: 'danger',
+      badgeClassName: 'danger',
+      badgeText: '✕ Please revise and resubmit'
+    };
+  }
+
+  return {
+    value: 'Pending',
+    icon: '⏳',
+    iconClassName: 'warning',
+    badgeClassName: 'pending',
+    badgeText: '⏳ Waiting for review'
+  };
+};
+
+const buildSubmissionKey = (item, index = 0) => {
+  if (item?.id) {
+    return String(item.id);
+  }
+
+  return `${item?.studentName || 'unknown'}-${item?.projectTitle || item?.projectName || 'untitled'}-${item?.submittedAt || index}`;
+};
+
+const getSubmissionSelectionKey = (item) => {
+  if (item?.id) {
+    return String(item.id);
+  }
+
+  return `${item?.studentEmail || 'unknown'}-${item?.projectTitle || item?.projectName || 'untitled'}-${item?.submittedAt || 'unknown'}`;
+};
+
+const extractTechStack = (submission) => {
+  const raw = submission?.techStack ?? submission?.technologyStack ?? submission?.technologies;
+
+  if (Array.isArray(raw)) {
+    return raw.map((item) => String(item).trim()).filter(Boolean);
+  }
+
+  if (typeof raw === 'string') {
+    return raw
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+
+const isUserInSubmission = (submission, email) => {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return false;
+  }
+
+  if (normalizeEmail(submission?.studentEmail) === normalizedEmail) {
+    return true;
+  }
+
+  if (!Array.isArray(submission?.teamMembers)) {
+    return false;
+  }
+
+  return submission.teamMembers.some((member) => normalizeEmail(member?.email) === normalizedEmail);
+};
 
 // Profile Content Component
 const ProfileContent = ({ user, handleLogout }) => {
@@ -253,26 +529,199 @@ const ProfileContent = ({ user, handleLogout }) => {
 
 // Dashboard Content Component
 const DashboardContent = ({ user }) => {
+  const navigate = useNavigate();
+  const isInstructor = user?.role === 'teacher';
+  const [instructorSubmissions, setInstructorSubmissions] = useState([]);
+  const [studentSubmissions, setStudentSubmissions] = useState([]);
+  const [participatedSubmissions, setParticipatedSubmissions] = useState([]);
+  const [selectedSubmissionKey, setSelectedSubmissionKey] = useState('');
+  const [activeReview, setActiveReview] = useState(null);
+  const [decisionReason, setDecisionReason] = useState('');
+  const [reviewError, setReviewError] = useState('');
+  const [showRoadmapDetails, setShowRoadmapDetails] = useState(false);
+
+  const totalParticipatedProjects = useMemo(() => {
+    const projectKeys = participatedSubmissions.map((item, index) => {
+      if (item?.id) {
+        return String(item.id);
+      }
+
+      return `${item?.projectTitle || item?.projectName || 'untitled'}-${item?.submittedAt || index}`;
+    });
+
+    return new Set(projectKeys).size;
+  }, [participatedSubmissions]);
+
+  const sortedStudentSubmissions = useMemo(() => {
+    if (isInstructor) {
+      return [];
+    }
+
+    return [...studentSubmissions].sort((a, b) => {
+      const aTime = new Date(a.updatedAt || a.submittedAt || 0).getTime();
+      const bTime = new Date(b.updatedAt || b.submittedAt || 0).getTime();
+      return bTime - aTime;
+    });
+  }, [isInstructor, studentSubmissions]);
+
+  const selectedSubmission = !isInstructor
+    ? (sortedStudentSubmissions.find((item) => getSubmissionSelectionKey(item) === selectedSubmissionKey)
+      || sortedStudentSubmissions[0]
+      || null)
+    : null;
+
+  const selectedStudentStatus = selectedSubmission
+    ? normalizeSubmissionStatus(selectedSubmission.status)
+    : 'new';
+  const studentStatusCard = getStudentStatusCardConfig(selectedStudentStatus);
+
+  const latestFeedbackContent = !isInstructor
+    ? (selectedSubmission?.reviewReason || 'Chưa có nhận xét từ giảng viên')
+    : 'Review Received';
+  const latestFeedbackTime = !isInstructor
+    ? formatTimeAgo(selectedSubmission?.reviewedAt)
+    : '2h ago';
+  const latestFeedbackAuthor = !isInstructor
+    ? (selectedSubmission?.reviewedBy || 'Giảng viên')
+    : 'Dr. Sarah Smith';
+
+  const studentRoadmapMilestones = selectedSubmission && selectedStudentStatus === 'accepted'
+    ? getSubmissionRoadmap(selectedSubmission)
+    : [];
+
+  const upcomingMilestone = studentRoadmapMilestones.find((item) => new Date(item.deadline).getTime() >= Date.now())
+    || studentRoadmapMilestones[studentRoadmapMilestones.length - 1]
+    || null;
+
+  const activeMilestoneIndex = studentRoadmapMilestones.findIndex((item) => new Date(item.deadline).getTime() >= Date.now());
+  const resolvedActiveMilestoneIndex = activeMilestoneIndex === -1
+    ? Math.max(studentRoadmapMilestones.length - 1, 0)
+    : activeMilestoneIndex;
+
+  useEffect(() => {
+    if (isInstructor) {
+      const allSubmissions = readProjectSubmissions();
+      const pendingOnly = allSubmissions.filter((item) => normalizeSubmissionStatus(item.status) === 'pending');
+      setInstructorSubmissions(pendingOnly.slice(0, 6));
+      setParticipatedSubmissions([]);
+    } else {
+      const allSubmissions = readProjectSubmissions();
+      const mySubmissions = allSubmissions.filter((item) => item.studentEmail === user?.email);
+      const myParticipatedSubmissions = allSubmissions.filter((item) => isUserInSubmission(item, user?.email));
+      setStudentSubmissions(mySubmissions);
+      setParticipatedSubmissions(myParticipatedSubmissions);
+    }
+  }, [isInstructor, user?.email]);
+
+  useEffect(() => {
+    if (isInstructor) {
+      return;
+    }
+
+    if (sortedStudentSubmissions.length === 0) {
+      setSelectedSubmissionKey('');
+      return;
+    }
+
+    const hasSelected = sortedStudentSubmissions.some(
+      (item) => getSubmissionSelectionKey(item) === selectedSubmissionKey
+    );
+
+    if (!hasSelected) {
+      setSelectedSubmissionKey(getSubmissionSelectionKey(sortedStudentSubmissions[0]));
+    }
+  }, [isInstructor, selectedSubmissionKey, sortedStudentSubmissions]);
+
+  const openReviewModal = (submission, index) => {
+    setActiveReview({
+      ...submission,
+      reviewKey: buildSubmissionKey(submission, index)
+    });
+    setDecisionReason(submission.reviewReason || '');
+    setReviewError('');
+  };
+
+  const closeReviewModal = () => {
+    setActiveReview(null);
+    setDecisionReason('');
+    setReviewError('');
+  };
+
+  const submitReviewDecision = (nextStatus) => {
+    const reason = decisionReason.trim();
+
+    if (!reason) {
+      setReviewError('Vui long nhap ly do khi duyet hoac tu choi.');
+      return;
+    }
+
+    const currentSubmissions = readProjectSubmissions();
+    const reviewTime = new Date().toISOString();
+    const updatedSubmissions = currentSubmissions.map((item, index) => {
+      const itemKey = buildSubmissionKey(item, index);
+
+      if (itemKey !== activeReview.reviewKey) {
+        return item;
+      }
+
+      const shouldCreateRoadmap = normalizeSubmissionStatus(nextStatus) === 'accepted';
+      const startDate = shouldCreateRoadmap ? (item.startDate || reviewTime) : item.startDate;
+
+      return {
+        ...item,
+        status: nextStatus,
+        reviewReason: reason,
+        reviewedAt: reviewTime,
+        startDate,
+        roadmapMilestones: shouldCreateRoadmap ? createRoadmapMilestones(startDate) : item.roadmapMilestones,
+        reviewedBy: user?.fullName || 'Instructor'
+      };
+    });
+
+    writeProjectSubmissions(updatedSubmissions);
+    setInstructorSubmissions(updatedSubmissions.slice(0, 6));
+    closeReviewModal();
+  };
+
+  const handleSubmitUpdate = () => {
+    if (!isInstructor && studentSubmissions.length > 0) {
+      const pendingSubmission = studentSubmissions.find((item) => normalizeSubmissionStatus(item.status) === 'pending');
+      if (pendingSubmission) {
+        navigate('/project/ProjectRegistration', { state: { editSubmissionId: pendingSubmission.id, editSubmission: pendingSubmission } });
+        return;
+      }
+    }
+    navigate('/project/ProjectRegistration');
+  };
+
   return (
     <>
       <div className="content-header">
         <div>
           <h1>Dashboard Overview</h1>
-          <p className="subtitle">Welcome back, {user?.fullName?.split(' ')[0] || 'Alex'}. Your project is on track.</p>
+          <p className="subtitle">
+            {isInstructor
+              ? 'Manage and monitor your assigned capstone projects.'
+              : `Welcome back, ${user?.fullName?.split(' ')[0] || 'Alex'}. Your project is on track.`}
+          </p>
         </div>
-        <button className="submit-update-btn">+ Submit Update</button>
+        <button className="submit-update-btn" onClick={handleSubmitUpdate}>+ Submit Update</button>
       </div>
 
       {/* Stats Cards */}
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-header">
-            <span className="stat-label">Project Status</span>
-            <span className="stat-icon success">✓</span>
+            <span className="stat-label">{isInstructor ? 'Project Status' : 'Total Project'}</span>
+            <span className={`stat-icon ${isInstructor ? 'success' : ''}`}>
+              {isInstructor ? '✓' : '📁'}
+            </span>
           </div>
-          <div className="stat-value">Approved</div>
+          <div className="stat-value">{isInstructor ? 'Approved' : totalParticipatedProjects}</div>
           <div className="stat-footer">
-            <span className="badge success">✓ Fully validated</span>
+            {isInstructor ? (
+              <span className="badge success">✓ Fully validated</span>
+            ) : null}
           </div>
         </div>
 
@@ -294,20 +743,28 @@ const DashboardContent = ({ user }) => {
             <span className="stat-label">Next Deadline</span>
             <span className="stat-icon warning">📅</span>
           </div>
-          <div className="stat-value">Oct 20</div>
+          <div className="stat-value">
+            {isInstructor
+              ? 'Oct 20'
+              : (upcomingMilestone ? formatShortDate(upcomingMilestone.deadline) : 'TBD')}
+          </div>
           <div className="stat-footer">
-            <span className="badge">Final Draft Submission</span>
+            <span className="badge">
+              {isInstructor
+                ? 'Final Draft Submission'
+                : (upcomingMilestone ? upcomingMilestone.title : 'Auto after approval')}
+            </span>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="stat-header">
-            <span className="stat-label">Latest Feedback</span>
+            <span className="stat-label">{isInstructor ? 'Latest Feedback' : 'Giảng viên nhận xét'}</span>
             <span className="stat-icon">💬</span>
           </div>
-          <div className="stat-value">Review Received</div>
+          <div className="stat-value">{latestFeedbackContent}</div>
           <div className="stat-footer">
-            <span className="feedback-text">Dr. Sarah Smith • 2h ago</span>
+            <span className="feedback-text">{latestFeedbackAuthor} • {latestFeedbackTime}</span>
           </div>
         </div>
       </div>
@@ -316,89 +773,344 @@ const DashboardContent = ({ user }) => {
       <div className="section-card">
         <div className="section-header">
           <h2>Project Roadmap</h2>
-          <a href="#" className="view-details">View All Details</a>
+          <button type="button" className="view-details" onClick={() => setShowRoadmapDetails((prev) => !prev)}>{showRoadmapDetails ? 'Hide All Details' : 'View All Details'}</button>
         </div>
-        <div className="roadmap">
-          <div className="roadmap-step completed">
-            <div className="step-icon">✓</div>
-            <div className="step-info">
-              <div className="step-title">Proposal</div>
-              <div className="step-date">Completed Sep 05</div>
+        {isInstructor ? (
+          <div className="roadmap">
+            <div className="roadmap-step completed">
+              <div className="step-icon">✓</div>
+              <div className="step-info">
+                <div className="step-title">Proposal</div>
+                <div className="step-date">Completed Sep 05</div>
+              </div>
+            </div>
+            <div className="roadmap-connector completed"></div>
+
+            <div className="roadmap-step completed">
+              <div className="step-icon">✓</div>
+              <div className="step-info">
+                <div className="step-title">Research</div>
+                <div className="step-date">Completed Sep 28</div>
+              </div>
+            </div>
+            <div className="roadmap-connector active"></div>
+
+            <div className="roadmap-step active">
+              <div className="step-icon">▶</div>
+              <div className="step-info">
+                <div className="step-title">Development</div>
+                <div className="step-date">In Progress</div>
+              </div>
+            </div>
+            <div className="roadmap-connector"></div>
+
+            <div className="roadmap-step">
+              <div className="step-icon">⏱️</div>
+              <div className="step-info">
+                <div className="step-title">Final Draft</div>
+                <div className="step-date">Target Oct 20</div>
+              </div>
+            </div>
+            <div className="roadmap-connector"></div>
+
+            <div className="roadmap-step">
+              <div className="step-icon">🎯</div>
+              <div className="step-info">
+                <div className="step-title">Defense</div>
+                <div className="step-date">Target Nov 15</div>
+              </div>
             </div>
           </div>
-          <div className="roadmap-connector completed"></div>
-          
-          <div className="roadmap-step completed">
-            <div className="step-icon">✓</div>
-            <div className="step-info">
-              <div className="step-title">Research</div>
-              <div className="step-date">Completed Sep 28</div>
+        ) : (
+          studentRoadmapMilestones.length === 0 ? (
+            <div className="submission-empty">
+              Roadmap milestones are generated automatically after your project is approved.
             </div>
-          </div>
-          <div className="roadmap-connector active"></div>
-          
-          <div className="roadmap-step active">
-            <div className="step-icon">▶</div>
-            <div className="step-info">
-              <div className="step-title">Development</div>
-              <div className="step-date">In Progress</div>
+          ) : (
+            <div className="roadmap">
+              {studentRoadmapMilestones.map((milestone, index) => {
+                const isCompleted = index < resolvedActiveMilestoneIndex;
+                const isActive = index === resolvedActiveMilestoneIndex;
+                const stepClassName = isCompleted ? 'completed' : (isActive ? 'active' : '');
+
+                const connectorClassName = index < resolvedActiveMilestoneIndex - 1
+                  ? 'completed'
+                  : (index === resolvedActiveMilestoneIndex - 1 ? 'active' : '');
+
+                return (
+                  <React.Fragment key={milestone.id || `${milestone.title}-${index}`}>
+                    <div className={`roadmap-step ${stepClassName}`}>
+                      <div className="step-icon">
+                        {isCompleted ? '✓' : (isActive ? '▶' : '⏱️')}
+                      </div>
+                      <div className="step-info">
+                        <div className="step-title">{milestone.title}</div>
+                        <div className="step-date">Deadline {formatShortDate(milestone.deadline)}</div>
+                      </div>
+                    </div>
+                    {index < studentRoadmapMilestones.length - 1 && (
+                      <div className={`roadmap-connector ${connectorClassName}`}></div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
+          )
+        )}
+
+        {showRoadmapDetails && (
+          <div className="roadmap-details-panel">
+            {ROADMAP_DOCUMENT_SECTIONS.map((section) => (
+              <div className="roadmap-detail-group" key={section.title}>
+                <h3>{section.title}</h3>
+                <ul>
+                  {section.documents.map((document) => (
+                    <li key={document}>{document}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-          <div className="roadmap-connector"></div>
-          
-          <div className="roadmap-step">
-            <div className="step-icon">⏱️</div>
-            <div className="step-info">
-              <div className="step-title">Final Draft</div>
-              <div className="step-date">Target Oct 20</div>
-            </div>
-          </div>
-          <div className="roadmap-connector"></div>
-          
-          <div className="roadmap-step">
-            <div className="step-icon">🎯</div>
-            <div className="step-info">
-              <div className="step-title">Defense</div>
-              <div className="step-date">Target Nov 15</div>
-            </div>
-          </div>
-        </div>
+        )}
+
+
       </div>
 
       {/* Recent Submissions */}
       <div className="section-card">
         <div className="section-header">
           <h2>Recent Submissions</h2>
-          <span className="time-badge">Past 30 days</span>
+          <span className="time-badge">Latest project proposals</span>
         </div>
-        <div className="submissions-list">
-          <div className="submission-item">
-            <div className="submission-icon">📄</div>
-            <div className="submission-info">
-              <div className="submission-name">Literature_Review_v2.pdf</div>
-              <div className="submission-meta">Submitted Oct 02 • 4.2 MB</div>
-            </div>
-            <div className="submission-status accepted">ACCEPTED</div>
+        {isInstructor ? (
+          <div className="submissions-table-wrapper">
+            {instructorSubmissions.length === 0 ? (
+              <div className="submission-empty">
+                No submissions yet. Projects submitted from New Project will appear here.
+              </div>
+            ) : (
+              <table className="submissions-table">
+                <thead>
+                  <tr>
+                    <th>STUDENT NAME</th>
+                    <th>PROJECT TITLE</th>
+                    <th>STATUS</th>
+                    <th>DATE SUBMITTED</th>
+                    <th>ACTION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {instructorSubmissions.map((item, index) => {
+                    const status = normalizeSubmissionStatus(item.status);
+                    const studentName = item.studentName || item.submittedBy || 'Unknown Student';
+                    const projectTitle = item.projectTitle || item.projectName || 'Untitled Project';
+
+                    return (
+                      <tr key={buildSubmissionKey(item, index)}>
+                        <td>
+                          <div className="student-cell">
+                            <span className="student-avatar">{studentName.charAt(0).toUpperCase()}</span>
+                            <span>{studentName}</span>
+                          </div>
+                        </td>
+                        <td>{projectTitle}</td>
+                        <td>
+                          <span className={`table-status ${status}`}>• {getSubmissionStatusLabel(status)}</span>
+                        </td>
+                        <td>{formatShortDate(item.submittedAt)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="table-action-btn"
+                            onClick={() => openReviewModal(item, index)}
+                          >
+                            {getSubmissionActionLabel(status)}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
-          
-          <div className="submission-item">
-            <div className="submission-icon">💻</div>
-            <div className="submission-info">
-              <div className="submission-name">Initial_Prototype_Source.zip</div>
-              <div className="submission-meta">Submitted Sep 24 • 12.8 MB</div>
-            </div>
-            <div className="submission-status reviewed">REVIEWED</div>
+        ) : (
+          <div className="submissions-list">
+            {sortedStudentSubmissions.length === 0 ? (
+              <div className="submission-empty">
+                No projects yet. Click "+ New Project" to create your first project submission.
+              </div>
+            ) : (
+              sortedStudentSubmissions.map((item, index) => {
+                const status = normalizeSubmissionStatus(item.status);
+                const projectTitle = item.projectTitle || item.projectName || 'Untitled Project';
+                const currentSelectionKey = getSubmissionSelectionKey(item);
+                const isSelected = currentSelectionKey === getSubmissionSelectionKey(selectedSubmission || {});
+
+                return (
+                  <div key={buildSubmissionKey(item, index)}>
+                    <button
+                      type="button"
+                      className={`submission-item ${isSelected ? 'active' : ''}`}
+                      onClick={() => setSelectedSubmissionKey(currentSelectionKey)}
+                    >
+                      <div className="submission-icon">📋</div>
+                      <div className="submission-info">
+                        <div className="submission-name">{projectTitle}</div>
+                        <div className="submission-meta">
+                          Submitted {formatShortDate(item.submittedAt)}
+                          {item.description && ` • ${item.description.substring(0, 50)}...`}
+                        </div>
+                      </div>
+                      <div className="submission-status-container">
+                        <div className="submission-status-label">Status</div>
+                        <span className={`submission-status ${status}`}>
+                          {status === 'pending' && '⏳ Pending'}
+                          {status === 'accepted' && '✓ Approved'}
+                          {status === 'deny' && '✕ Declined'}
+                        </span>
+                      </div>
+                    </button>
+                    
+                    {isSelected && (
+                      <div className="project-detail-panel">
+                        <div className="project-detail-header">
+                          <h3>{projectTitle}</h3>
+                          <span className={`submission-status ${normalizeSubmissionStatus(item.status)}`}>
+                            {normalizeSubmissionStatus(item.status) === 'pending' && '⏳ Pending'}
+                            {normalizeSubmissionStatus(item.status) === 'accepted' && '✓ Approved'}
+                            {normalizeSubmissionStatus(item.status) === 'deny' && '✕ Declined'}
+                          </span>
+                        </div>
+
+                        <p className="project-detail-description">
+                          {item.description || 'No project description provided.'}
+                        </p>
+
+                        <div className="project-detail-meta">
+                          <div><strong>Submitted:</strong> {formatShortDate(item.submittedAt)}</div>
+                          <div><strong>Updated:</strong> {formatShortDate(item.updatedAt || item.submittedAt)}</div>
+                          {item.reviewedBy && (
+                            <div><strong>Reviewed by:</strong> {item.reviewedBy}</div>
+                          )}
+                        </div>
+
+                        <div className="project-comment-box">
+                          <div className="project-comment-title">Giảng viên nhận xét</div>
+                          <div className="project-comment-content">
+                            {item.reviewReason || 'Chưa có nhận xét từ giảng viên cho project này.'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
-        </div>
+        )}
       </div>
+
+      {isInstructor && activeReview && (
+        <div className="review-modal-overlay" onClick={closeReviewModal}>
+          <div className="review-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="review-modal-header">
+              <h3>Review Project Submission</h3>
+              <button type="button" className="review-close-btn" onClick={closeReviewModal}>x</button>
+            </div>
+
+            <div className="review-modal-body">
+              <div className="review-field">
+                <span className="review-label">Project Name</span>
+                <div className="review-value">{activeReview.projectTitle || activeReview.projectName || 'Untitled Project'}</div>
+              </div>
+
+              <div className="review-field">
+                <span className="review-label">Description</span>
+                <div className="review-value">{activeReview.description || 'No description provided.'}</div>
+              </div>
+
+              <div className="review-field">
+                <span className="review-label">Technology Stack</span>
+                <div className="review-tech-list">
+                  {extractTechStack(activeReview).length > 0 ? (
+                    extractTechStack(activeReview).map((tech) => (
+                      <span className="review-tech-chip" key={tech}>{tech}</span>
+                    ))
+                  ) : (
+                    <span className="review-value">No technology stack provided.</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="review-field">
+                <span className="review-label">Ly do</span>
+                <textarea
+                  rows={4}
+                  className="review-reason-input"
+                  placeholder="Nhap ly do duyet hoac tu choi..."
+                  value={decisionReason}
+                  onChange={(event) => setDecisionReason(event.target.value)}
+                />
+                {reviewError && <div className="review-error">{reviewError}</div>}
+              </div>
+            </div>
+
+            <div className="review-modal-actions">
+              <button
+                type="button"
+                className="decision-btn accept"
+                onClick={() => submitReviewDecision('access')}
+              >
+                Duyet (accept)
+              </button>
+              <button
+                type="button"
+                className="decision-btn deny"
+                onClick={() => submitReviewDecision('deny')}
+              >
+                Tu choi (deny)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
 
 const Dashboard = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [activeMenuItem, setActiveMenuItem] = useState('dashboard');
+  const [selectedProjectItem, setSelectedProjectItem] = useState(null);
+
+  useEffect(() => {
+    const normalizedPath = location.pathname.toLowerCase();
+
+    if (normalizedPath.startsWith('/myproject')) {
+      setActiveMenuItem('project');
+      if (normalizedPath === '/myproject') {
+        setSelectedProjectItem(null);
+      }
+      return;
+    }
+
+    if (normalizedPath === '/student/feedback') {
+      setActiveMenuItem('reports');
+      return;
+    }
+
+    if (normalizedPath === '/student/submissions') {
+      setActiveMenuItem('project');
+      return;
+    }
+
+    if (normalizedPath === '/dashboard') {
+      setActiveMenuItem('dashboard');
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -412,7 +1124,7 @@ const Dashboard = () => {
     const parsedUser = JSON.parse(userData);
 
     if (parsedUser?.role === 'teacher') {
-      navigate('/teacher-dashboard');
+      navigate('/teacher-dashboard', { replace: true });
       return;
     }
 
@@ -427,11 +1139,28 @@ const Dashboard = () => {
 
   const renderContent = () => {
     switch (activeMenuItem) {
+      case 'project':
+        if (selectedProjectItem) {
+          return (
+            <div className="pm-shell">
+              <button
+                type="button"
+                className="pm-back-btn"
+                onClick={() => setSelectedProjectItem(null)}
+              >
+                ← Quay lại My Project
+              </button>
+              <ProjectManagement projectItem={selectedProjectItem} />
+            </div>
+          );
+        }
+        return <MyProjectsPage onProjectSelect={setSelectedProjectItem} />;
+      case 'reports':
+        return <FeedbackPage />;
+      case 'dashboard':
+        return <DashboardContent user={user} />;
       case 'profile':
         return <ProfileContent user={user} handleLogout={handleLogout} />;
-      case "reports":
-        return <Reports />;
-      case 'dashboard':
       default:
         return <DashboardContent user={user} />;
     }
@@ -447,7 +1176,7 @@ const Dashboard = () => {
       <div className="sidebar">
         <div className="sidebar-header">
           <div className="logo">
-            <div className="brand-mark">■</div>
+            <span className="logo-icon">🎓</span>
             <span className="logo-text">MentorAI Grad</span>
           </div>
         </div>
@@ -455,43 +1184,54 @@ const Dashboard = () => {
         <nav className="sidebar-nav">
           <div 
             className={`nav-item ${activeMenuItem === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveMenuItem('dashboard')}
+            onClick={() => {
+              setActiveMenuItem('dashboard');
+              setSelectedProjectItem(null);
+              navigate('/dashboard');
+            }}
           >
-            <span className="nav-icon">📊</span>
+            <span className="nav-icon"></span>
             <span className="nav-text">Dashboard</span>
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'project' ? 'active' : ''}`}
-            onClick={() => setActiveMenuItem('project')}
+            onClick={() => {
+              setActiveMenuItem('project');
+              setSelectedProjectItem(null);
+              navigate('/myproject');
+            }}
           >
-            <span className="nav-icon">📁</span>
+            <span className="nav-icon"></span>
             <span className="nav-text">My Project</span>
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'reports' ? 'active' : ''}`}
-            onClick={() => setActiveMenuItem('reports')}
+            onClick={() => {
+              setActiveMenuItem('reports');
+              navigate('/student/feedback');
+            }}
           >
-            <span className="nav-icon">📈</span>
-            <span className="nav-text">Reports</span>
+            <span className="nav-icon"></span>
+            <span className="nav-text">Feedback</span>
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'team' ? 'active' : ''}`}
             onClick={() => setActiveMenuItem('team')}
           >
-            <span className="nav-icon">👥</span>
+            <span className="nav-icon"></span>
             <span className="nav-text">Team</span>
           </div>
           <div 
             className={`nav-item ${activeMenuItem === 'profile' ? 'active' : ''}`}
             onClick={() => setActiveMenuItem('profile')}
           >
-            <span className="nav-icon">👤</span>
+            <span className="nav-icon"></span>
             <span className="nav-text">Profile</span>
           </div>
         </nav>
 
         <div className="sidebar-footer">
-          <button className="new-project-btn">
+          <button className="student-new-project-btn" onClick={() => navigate('/project/ProjectRegistration')}>
             <span>+</span> New Project
           </button>
         </div>
@@ -528,3 +1268,8 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+
+
+
+
