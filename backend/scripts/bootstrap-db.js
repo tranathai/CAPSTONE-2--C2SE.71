@@ -3,57 +3,241 @@ import mysql from "mysql2/promise";
 async function run() {
   const conn = await mysql.createConnection({
     host: "localhost",
-    port: 3306,
     user: "root",
     password: "123456",
-    database: "mentor_ai_grad",
+    multipleStatements: true,
   });
 
-  const statements = [
-    "CREATE TABLE IF NOT EXISTS roles (id INT PRIMARY KEY, name VARCHAR(50) NOT NULL)",
-    "CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY, full_name VARCHAR(120) NOT NULL, email VARCHAR(190) NOT NULL, role_id INT NOT NULL)",
-    "CREATE TABLE IF NOT EXISTS teams (id INT PRIMARY KEY, name VARCHAR(190) NOT NULL)",
-    "CREATE TABLE IF NOT EXISTS team_members (team_id INT NOT NULL, user_id INT NOT NULL, is_leader TINYINT(1) NOT NULL DEFAULT 0, PRIMARY KEY (team_id, user_id))",
-    "CREATE TABLE IF NOT EXISTS milestones (id INT PRIMARY KEY, name VARCHAR(190) NOT NULL)",
-    "CREATE TABLE IF NOT EXISTS submissions (id INT AUTO_INCREMENT PRIMARY KEY, team_id INT NOT NULL, milestone_id INT NULL, title VARCHAR(255) NOT NULL)",
-    "CREATE TABLE IF NOT EXISTS submission_versions (id INT AUTO_INCREMENT PRIMARY KEY, submission_id INT NOT NULL, version_number INT NOT NULL, file_path VARCHAR(500) NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)",
-    "CREATE TABLE IF NOT EXISTS feedbacks (id INT AUTO_INCREMENT PRIMARY KEY, submission_version_id INT NOT NULL, supervisor_id INT NOT NULL, content TEXT NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)",
-  ];
+  await conn.query(`CREATE DATABASE IF NOT EXISTS mentor_ai_grad`);
+  await conn.query(`USE mentor_ai_grad`);
 
-  for (const sql of statements) {
-    await conn.query(sql);
-  }
+  const sql = `
+  SET FOREIGN_KEY_CHECKS = 0;
 
-  await conn.query(
-    "INSERT INTO roles (id, name) VALUES (1, 'student'), (2, 'supervisor') ON DUPLICATE KEY UPDATE name = VALUES(name)",
-  );
-  await conn.query(
-    "INSERT INTO users (id, full_name, email, role_id) VALUES (1, 'Alex Smith', 'alex@example.com', 1), (2, 'Dr. Smith', 'dr.smith@example.com', 2) ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), email = VALUES(email), role_id = VALUES(role_id)",
-  );
-  await conn.query(
-    "INSERT INTO teams (id, name) VALUES (1, 'CS-401 Senior Capstone') ON DUPLICATE KEY UPDATE name = VALUES(name)",
-  );
-  await conn.query(
-    "INSERT INTO team_members (team_id, user_id, is_leader) VALUES (1, 1, 1) ON DUPLICATE KEY UPDATE is_leader = VALUES(is_leader)",
-  );
-  await conn.query(
-    "INSERT INTO milestones (id, name) VALUES (1, 'Proposal'), (2, 'Mid-term report'), (3, 'Final report') ON DUPLICATE KEY UPDATE name = VALUES(name)",
-  );
-  await conn.query(
-    "INSERT INTO submissions (id, team_id, milestone_id, title) VALUES (1, 1, 3, 'Final Technical Report') ON DUPLICATE KEY UPDATE team_id = VALUES(team_id), milestone_id = VALUES(milestone_id), title = VALUES(title)",
-  );
-  await conn.query(
-    "INSERT INTO submission_versions (id, submission_id, version_number, file_path, created_at) VALUES (1, 1, 1, '/uploads/reports/final-report-v1.pdf', NOW() - INTERVAL 7 DAY), (2, 1, 2, '/uploads/reports/final-report-v2.pdf', NOW() - INTERVAL 1 DAY) ON DUPLICATE KEY UPDATE submission_id = VALUES(submission_id), version_number = VALUES(version_number), file_path = VALUES(file_path), created_at = VALUES(created_at)",
-  );
-  await conn.query(
-    "INSERT INTO feedbacks (id, submission_version_id, supervisor_id, content, created_at) VALUES (1, 2, 2, 'Cau truc bao cao tot. Can bo sung API edge-case.', NOW() - INTERVAL 10 HOUR), (2, 2, 2, 'Phan benchmark ro rang, da cai thien.', NOW() - INTERVAL 2 HOUR) ON DUPLICATE KEY UPDATE submission_version_id = VALUES(submission_version_id), supervisor_id = VALUES(supervisor_id), content = VALUES(content), created_at = VALUES(created_at)",
+  DROP TABLE IF EXISTS topic_technologies;
+  DROP TABLE IF EXISTS technologies;
+  DROP TABLE IF EXISTS risk_flags;
+  DROP TABLE IF EXISTS risk_levels;
+  DROP TABLE IF EXISTS ai_summaries;
+  DROP TABLE IF EXISTS messages;
+  DROP TABLE IF EXISTS conversation_members;
+  DROP TABLE IF EXISTS conversations;
+  DROP TABLE IF EXISTS notifications;
+  DROP TABLE IF EXISTS system_logs;
+  DROP TABLE IF EXISTS topic_reviews;
+  DROP TABLE IF EXISTS topic_status;
+  DROP TABLE IF EXISTS topics;
+  DROP TABLE IF EXISTS feedbacks;
+  DROP TABLE IF EXISTS submission_versions;
+  DROP TABLE IF EXISTS submissions;
+  DROP TABLE IF EXISTS milestones;
+  DROP TABLE IF EXISTS team_members;
+  DROP TABLE IF EXISTS teams;
+  DROP TABLE IF EXISTS users;
+  DROP TABLE IF EXISTS roles;
+
+  SET FOREIGN_KEY_CHECKS = 1;
+
+  -- ROLES
+  CREATE TABLE roles (
+    id INT PRIMARY KEY,
+    name VARCHAR(50),
+    display_name VARCHAR(100)
   );
 
+  -- USERS
+  CREATE TABLE users (
+    id INT PRIMARY KEY,
+    email VARCHAR(255),
+    password VARCHAR(255),
+    name VARCHAR(255),
+    phone VARCHAR(20),
+    avatar VARCHAR(255),
+    role_id INT,
+    status ENUM('active','inactive') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+  );
+
+  -- TEAMS
+  CREATE TABLE teams (
+    id INT PRIMARY KEY,
+    name VARCHAR(255),
+    invite_code VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- TEAM MEMBERS
+  CREATE TABLE team_members (
+    team_id INT,
+    user_id INT,
+    is_leader TINYINT(1),
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (team_id, user_id),
+    FOREIGN KEY (team_id) REFERENCES teams(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  -- MILESTONES
+  CREATE TABLE milestones (
+    id INT PRIMARY KEY,
+    name VARCHAR(100),
+    description TEXT,
+    start_date DATE,
+    end_date DATE
+  );
+
+  -- SUBMISSIONS
+  CREATE TABLE submissions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    team_id INT,
+    milestone_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id),
+    FOREIGN KEY (milestone_id) REFERENCES milestones(id)
+  );
+
+  -- SUBMISSION VERSIONS
+  CREATE TABLE submission_versions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submission_id INT,
+    file_path VARCHAR(255),
+    version_number INT,
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('pending','approved','rejected'),
+    FOREIGN KEY (submission_id) REFERENCES submissions(id)
+  );
+
+  -- FEEDBACKS
+  CREATE TABLE feedbacks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submission_version_id INT,
+    supervisor_id INT,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (submission_version_id) REFERENCES submission_versions(id),
+    FOREIGN KEY (supervisor_id) REFERENCES users(id)
+  );
+
+  -- TOPICS
+  CREATE TABLE topics (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    team_id INT,
+    title VARCHAR(255),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id)
+  );
+
+  -- TOPIC STATUS
+  CREATE TABLE topic_status (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50)
+  );
+
+  -- TOPIC REVIEWS
+  CREATE TABLE topic_reviews (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    topic_id INT,
+    supervisor_id INT,
+    status_id INT,
+    reason TEXT,
+    reviewed_at TIMESTAMP,
+    FOREIGN KEY (topic_id) REFERENCES topics(id),
+    FOREIGN KEY (supervisor_id) REFERENCES users(id),
+    FOREIGN KEY (status_id) REFERENCES topic_status(id)
+  );
+
+  -- CHAT
+  CREATE TABLE conversations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE conversation_members (
+    conversation_id INT,
+    user_id INT,
+    PRIMARY KEY (conversation_id, user_id),
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id INT,
+    sender_id INT,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id),
+    FOREIGN KEY (sender_id) REFERENCES users(id)
+  );
+
+  -- NOTIFICATIONS
+  CREATE TABLE notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    type VARCHAR(50),
+    title VARCHAR(255),
+    message TEXT,
+    is_read TINYINT(1),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  -- SYSTEM LOGS
+  CREATE TABLE system_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    action VARCHAR(255),
+    ip_address VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  -- AI SUMMARIES
+  CREATE TABLE ai_summaries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    entity_type ENUM('submission','feedback','topic'),
+    entity_id INT,
+    summary TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- RISK
+  CREATE TABLE risk_levels (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50)
+  );
+
+  CREATE TABLE risk_flags (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    team_id INT,
+    risk_level_id INT,
+    reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id),
+    FOREIGN KEY (risk_level_id) REFERENCES risk_levels(id)
+  );
+
+  -- TECHNOLOGIES
+  CREATE TABLE technologies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100)
+  );
+
+  CREATE TABLE topic_technologies (
+    topic_id INT,
+    tech_id INT,
+    PRIMARY KEY (topic_id, tech_id),
+    FOREIGN KEY (topic_id) REFERENCES topics(id),
+    FOREIGN KEY (tech_id) REFERENCES technologies(id)
+  );
+  `;
+
+  await conn.query(sql);
+
+  console.log("🔥 DONE: Full database created giống ERD 100%");
   await conn.end();
-  console.log("Bootstrap DB complete.");
 }
 
-run().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+run().catch(console.error);
