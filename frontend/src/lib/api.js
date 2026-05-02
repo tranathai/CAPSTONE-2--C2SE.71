@@ -9,10 +9,38 @@ export const API_ORIGIN = (
   "http://localhost:3000"
 ).replace(/\/$/, "");
 
+// ✅ axios instance
 const jsonClient = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
+
+// ✅ AUTO GẮN TOKEN
+jsonClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+// ✅ HANDLE 401
+jsonClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      console.error("Unauthorized - Token invalid hoặc hết hạn");
+
+      // 👉 nếu muốn auto logout thì mở cái này
+      // localStorage.removeItem("token");
+      // window.location.href = "/login";
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 function assertSuccess(body) {
   if (body && body.success === false) {
@@ -21,48 +49,73 @@ function assertSuccess(body) {
   return body;
 }
 
+/* ================= SUBMISSION ================= */
+
 export async function getSubmission(submissionId) {
   const { data } = await jsonClient.get(`/submissions/${submissionId}`);
-  const body = assertSuccess(data);
-  return body.data;
+  return assertSuccess(data).data;
 }
 
 export async function listSubmissions(params = {}) {
   const { data } = await jsonClient.get("/submissions", { params });
-  const body = assertSuccess(data);
-  return body.data;
+  return assertSuccess(data).data;
 }
 
 export async function uploadSubmission(formData) {
+  const token = localStorage.getItem("token");
+
   const { data } = await axios.post(
     `${API_BASE_URL}/submissions/upload`,
     formData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
   );
-  const body = assertSuccess(data);
-  return body.data;
+
+  return assertSuccess(data).data;
 }
+
+/* ================= TEAMS ================= */
 
 export async function getTeams() {
   const { data } = await jsonClient.get("/teams");
-  const body = assertSuccess(data);
-  return body.data;
+  return assertSuccess(data).data;
 }
+
+/* ================= TEAM MANAGEMENT (FIX CHUẨN) ================= */
+
+export async function getTeamManagement(params = {}, role = "student") {
+  const endpoint =
+    role === "supervisor"
+      ? "/team-management/mentor"
+      : "/team-management/management";
+
+  const { data } = await jsonClient.get(endpoint, {
+    params,
+  });
+
+  return assertSuccess(data).data;
+}
+
+/* ================= MILESTONE ================= */
 
 export async function getMilestones() {
   const { data } = await jsonClient.get("/milestones");
-  const body = assertSuccess(data);
-  return body.data;
+  return assertSuccess(data).data;
 }
+
+/* ================= FEEDBACK ================= */
 
 export async function createFeedback(payload) {
   const { data } = await jsonClient.post("/feedbacks", payload);
-  const body = assertSuccess(data);
-  return body.data;
+  return assertSuccess(data).data;
 }
+
 export async function getFeedbacks(submissionVersionId) {
   const { data } = await jsonClient.get(
     `/feedbacks/${submissionVersionId}`
   );
-  const body = assertSuccess(data);
-  return body.data;
+  return assertSuccess(data).data;
 }

@@ -1,0 +1,157 @@
+/* src/styles/teamManager.css */
+
+.team-container {
+  padding: 30px;
+  background: #f4f6f9;
+  min-height: 100vh;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+/* FILTER */
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.filter-bar input {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  outline: none;
+}
+
+.filter-bar input:focus {
+  border-color: #3b82f6;
+}
+
+/* TABLE */
+.team-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.team-table th {
+  background: #f1f5f9;
+  padding: 12px;
+  font-size: 13px;
+}
+
+.team-table td {
+  padding: 12px;
+  border-top: 1px solid #eee;
+  text-align: center;
+}
+
+.team-table tr:hover {
+  background: #f9fafb;
+}
+
+/* PROGRESS */
+.progress-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.progress-bar {
+  width: 100px;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 10px;
+}
+
+.progress-fill.low {
+  background: #ef4444;
+}
+
+.progress-fill.medium {
+  background: #f59e0b;
+}
+
+.progress-fill.high {
+  background: #10b981;
+}
+
+/* STATUS */
+.status {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status.done {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status.ontrack {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status.behind {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* EMPTY TEXT */
+.empty {
+  color: #9ca3af;
+}
+
+/* PAGINATION */
+.pagination {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.pagination button {
+  margin: 0 5px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #e5e7eb;
+  cursor: pointer;
+}
+
+.pagination button.active {
+  background: #3b82f6;
+  color: white;
+}
+
+/* STATES */
+.loading {
+  text-align: center;
+}
+
+.error {
+  color: red;
+  text-align: center;
+}
+.link-project {
+  color: #2563eb;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.link-project:hover {
+  text-decoration: underline;
+}

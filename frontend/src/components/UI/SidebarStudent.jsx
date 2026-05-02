@@ -64,14 +64,22 @@ function SidebarStudent() {
             <BarChart3 size={18} />
             Feedback
           </NavLink>
-          <button className="sb-item" type="button">
+          {/* Chuyển button Team thành NavLink */}
+          <NavLink
+            className="sb-item"
+            to="/student/team"  // Đảm bảo đường dẫn đúng
+          >
             <Users size={18} />
             Team
-          </button>
-          <button className="sb-item" type="button">
+          </NavLink>
+          {/* Chuyển button Profile thành NavLink */}
+          <NavLink
+            className="sb-item"
+            to="/student/profile"  // Đảm bảo đường dẫn đúng
+          >
             <User size={18} />
             Profile
-          </button>
+          </NavLink>
         </nav>
       </div>
 

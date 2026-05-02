@@ -56,10 +56,13 @@ function SidebarMentor() {
             <FileText size={18} />
             Submissions
           </NavLink>
-          <button className="sb-item" type="button">
+          <NavLink
+            className="sb-item"
+            to="/mentor/team"  // Đảm bảo đường dẫn đúng
+          >
             <Users size={18} />
-            Teams
-          </button>
+            Team
+          </NavLink>
           <button className="sb-item" type="button">
             <Settings size={18} />
             Settings
