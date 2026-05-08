@@ -9,6 +9,7 @@ import feedbackRouter from "./routes/feedback.routes.js";
 import teamRouter from "./routes/team.routes.js";
 import milestoneRouter from "./routes/milestone.routes.js";
 import teamManagerRoutes from "./routes/teamManager.routes.js";
+import groupRoutes from "./routes/groupManagement.route.js";
 
 import { checkDbConnection } from "./config/db.js";
 
@@ -38,8 +39,7 @@ app.use("/api/feedbacks", feedbackRouter);
 app.use("/api/teams", teamRouter);
 app.use("/api/milestones", milestoneRouter);
 app.use("/api/team-management", teamManagerRoutes); // ✅ đúng
-
-// 404 handler
+app.use("/api/group-management", groupRoutes);// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,

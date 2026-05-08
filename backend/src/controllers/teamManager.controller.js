@@ -8,7 +8,7 @@ export async function getTeamManagement(req, res, next) {
   const { studentName, teamName } = req.query;
 
   try {
-    const currentUserId = req.user?.id || 1; // demo student
+    const currentUserId = req.user?.id || 10; // demo student
 
     const data = await getTeamManagementData({
       studentName,
@@ -28,7 +28,7 @@ export async function getTeamManagementMentor(req, res, next) {
   const { studentName, teamName } = req.query;
 
   try {
-    const currentUserId = req.user?.id || 5; // demo mentor
+    const currentUserId = req.user?.id || 1; // demo mentor
 
     const data = await getTeamManagementForMentor({
       studentName,
