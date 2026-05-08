@@ -10,6 +10,7 @@ import DashboardPage from "./components/Content/Student/DashboardPage";
 import FeedbackPage from "./components/Content/Student/FeedbackPage"; 
 import StudentReviewPage from "./components/Content/Student/StudentReviewPage"; 
 import TeamManagementPage from "./components/Content/Student/TeamManagementPage";  // Đảm bảo import đúng TeamManagementPage
+import GroupManagementPage from "./components/Content/Admin/GroupManagementPage.jsx";
 import { setRuntimeRole, useRuntimeRole } from "./config/runtimeRole";  
 
 // Chuyển hướng trang mặc định
@@ -85,6 +86,7 @@ function App() {
         <Route path="submissions" element={<SubmissionsPage />} />
         <Route path="review/:submissionId" element={<ReviewPage />} />
         <Route path="team" element={<TeamManagementPage />} />
+        <Route path="group" element={<GroupManagementPage />} />
       </Route>
 
       {/* Route catch-all cho các đường dẫn không hợp lệ */}

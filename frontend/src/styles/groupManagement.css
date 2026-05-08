@@ -1,0 +1,416 @@
+/* ================= PAGE ================= */
+
+.gm-container {
+  padding: 30px;
+  background: #f3f4f6;
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+}
+
+/* ================= HEADER ================= */
+
+.gm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.gm-header h1 {
+  font-size: 30px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.gm-header p {
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* ================= CREATE BUTTON ================= */
+
+.gm-create-btn {
+  border: none;
+  background: #4f46e5;
+  color: white;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 12px 18px;
+  border-radius: 12px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.gm-create-btn:hover {
+  background: #4338ca;
+}
+
+/* ================= GRID ================= */
+
+.gm-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(340px, 1fr)
+  );
+  gap: 22px;
+}
+
+/* ================= CARD ================= */
+
+.gm-card {
+  background: white;
+  border-radius: 22px;
+
+  padding: 22px;
+
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.04),
+    0 12px 24px rgba(0,0,0,0.05);
+
+  transition: 0.2s;
+}
+
+.gm-card:hover {
+  transform: translateY(-4px);
+}
+
+/* ================= CARD HEADER ================= */
+
+.gm-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 18px;
+}
+
+.gm-card-header h2 {
+  font-size: 21px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.gm-card-header div {
+  display: flex;
+  gap: 14px;
+}
+
+/* ================= ICONS ================= */
+
+.edit {
+  color: #2563eb;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.edit:hover {
+  transform: scale(1.15);
+}
+
+.delete {
+  color: #ef4444;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.delete:hover {
+  transform: scale(1.15);
+}
+
+/* ================= INFO ================= */
+
+.gm-topic,
+.gm-mentor,
+.gm-leader {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: #374151;
+}
+
+/* ================= MEMBERS ================= */
+
+.gm-members {
+  margin-top: 20px;
+}
+
+.gm-member-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  margin-bottom: 14px;
+
+  color: #111827;
+}
+
+.gm-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gm-member-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+
+  border-radius: 12px;
+
+  padding: 12px;
+
+  font-size: 14px;
+  color: #111827;
+
+  transition: 0.2s;
+}
+
+.gm-member-item:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+/* ================= MODAL ================= */
+
+.gm-modal {
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0,0,0,0.45);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 999;
+}
+
+/* ================= MODAL BOX ================= */
+
+.gm-modal-box {
+  width: 520px;
+  max-width: 95%;
+
+  background: white;
+
+  border-radius: 24px;
+
+  padding: 28px;
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.15);
+
+  animation: modalShow 0.2s ease;
+}
+
+@keyframes modalShow {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================= MODAL TITLE ================= */
+
+.gm-modal-box h3 {
+  margin-top: 0;
+  margin-bottom: 24px;
+
+  font-size: 24px;
+  font-weight: 700;
+
+  color: #111827;
+}
+
+/* ================= LABEL ================= */
+
+.gm-modal-box label {
+  display: block;
+
+  margin-bottom: 8px;
+  margin-top: 14px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #111827;
+}
+
+/* ================= INPUT ================= */
+
+.gm-modal-box input,
+.gm-modal-box select,
+.gm-modal-box textarea {
+  width: 100%;
+
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+
+  padding: 12px 14px;
+
+  font-size: 14px;
+
+  outline: none;
+
+  box-sizing: border-box;
+
+  transition: 0.2s;
+}
+
+.gm-modal-box input:focus,
+.gm-modal-box select:focus,
+.gm-modal-box textarea:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+}
+
+/* ================= TEXTAREA ================= */
+
+.gm-modal-box textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* ================= SMALL TEXT ================= */
+
+.gm-modal-box small {
+  display: block;
+
+  margin-top: 8px;
+
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* ================= STUDENT BUTTON ================= */
+
+.gm-show-students {
+  margin-top: 16px;
+
+  border: none;
+  background: #eef2ff;
+
+  color: #4338ca;
+
+  padding: 10px 14px;
+
+  border-radius: 10px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.gm-show-students:hover {
+  background: #e0e7ff;
+}
+
+/* ================= STUDENT LIST ================= */
+
+.gm-student-list-box {
+  margin-top: 14px;
+
+  background: #f9fafb;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+
+  padding: 14px;
+
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.gm-student-list-box div {
+  padding: 10px 12px;
+
+  border-radius: 10px;
+
+  font-size: 14px;
+
+  transition: 0.2s;
+}
+
+.gm-student-list-box div:hover {
+  background: #eef2ff;
+}
+
+/* ================= ACTIONS ================= */
+
+.gm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+
+  margin-top: 26px;
+}
+
+.gm-modal-actions button {
+  border: none;
+
+  padding: 11px 18px;
+
+  border-radius: 12px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+/* SAVE BUTTON */
+
+.gm-modal-actions button:first-child {
+  background: #4f46e5;
+  color: white;
+}
+
+.gm-modal-actions button:first-child:hover {
+  background: #4338ca;
+}
+
+/* CANCEL BUTTON */
+
+.gm-modal-actions button:last-child {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.gm-modal-actions button:last-child:hover {
+  background: #d1d5db;
+}
+
+/* ================= EMPTY ================= */
+
+.gm-empty {
+  background: white;
+  padding: 40px;
+
+  border-radius: 20px;
+
+  text-align: center;
+
+  color: #6b7280;
+}
