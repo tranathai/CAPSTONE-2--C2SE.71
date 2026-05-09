@@ -46,9 +46,11 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<RoleSelection />} />
+      <Route path="/" element={<Login />} />
+      <Route path="/login" element={<Login />} />
       <Route path="/login/:role" element={<Login />} />
       <Route path="/register/:role" element={<Register />} />
+      <Route path="/choose-role" element={<RoleSelection />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/myproject/*" element={<Dashboard />} />
       <Route path="/student/feedback" element={<Dashboard />} />
@@ -90,7 +92,7 @@ function App() {
         <Route path="review/:submissionId" element={<ReviewPage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }

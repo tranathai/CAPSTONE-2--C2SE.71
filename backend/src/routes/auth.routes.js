@@ -24,7 +24,7 @@ const registerValidation = [
     .matches(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/)
     .withMessage("Mat khau phai co ky tu dac biet"),
   body("fullName").notEmpty().withMessage("Ho ten khong duoc de trong"),
-  body("role").isIn(["student", "teacher"]).withMessage("Vai tro khong hop le"),
+  body("role").isIn(["student", "teacher", "mentor"]).withMessage("Vai tro khong hop le"),
 ];
 
 const loginValidation = [
@@ -34,7 +34,7 @@ const loginValidation = [
     .matches(/^[^\s@]+@(gmail\.com|gmail\.edu\.vn)$/)
     .withMessage("Gmail khong dung dinh dang vui long nhap lai"),
   body("password").notEmpty().withMessage("Mat khau khong duoc de trong"),
-  body("role").isIn(["student", "teacher"]).withMessage("Vai tro khong hop le"),
+  body("role").optional().isIn(["student", "teacher", "mentor"]).withMessage("Vai tro khong hop le"),
 ];
 
 router.post("/register", registerValidation, register);

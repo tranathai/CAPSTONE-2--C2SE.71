@@ -6,6 +6,7 @@ import './Register.css';
 const Register = () => {
   const navigate = useNavigate();
   const { role } = useParams();
+  const normalizedRole = role === 'mentor' ? 'teacher' : role;
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -15,6 +16,34 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const getLoginPath = () => {
+    if (normalizedRole === 'teacher') {
+      return '/login/teacher';
+    }
+
+    if (normalizedRole === 'student') {
+      return '/login/student';
+    }
+
+    return '/login';
+  };
+
+  const getDashboardPath = (accountRole) => {
+    return accountRole === 'teacher' ? '/mentor/submissions' : '/dashboard';
+  };
+
+  const getRoleTitle = () => {
+    if (normalizedRole === 'student') {
+      return 'Sinh viên';
+    }
+
+    if (normalizedRole === 'teacher') {
+      return 'Giảng viên';
+    }
+
+    return 'Tài khoản';
+  };
 
   const getApiErrorMessage = (err) => {
     if (!err.response) {
@@ -89,23 +118,20 @@ const Register = () => {
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
-        role
+        role: normalizedRole
       });
 
       if (response.data.success) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        navigate(role === 'teacher' ? '/teacher-dashboard' : '/dashboard');
+        const accountRole = response.data.user?.role || normalizedRole || 'student';
+        navigate(getDashboardPath(accountRole), { replace: true });
       }
     } catch (err) {
       setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  };
-
-  const getRoleTitle = () => {
-    return role === 'student' ? 'Sinh viên' : 'Giảng viên';
   };
 
   return (
@@ -119,7 +145,7 @@ const Register = () => {
           <a href="#home">Home</a>
           <a href="#about">About</a>
           <a href="#support">Support</a>
-          <Link to={`/login/${role}`}>
+          <Link to={getLoginPath()}>
             <button className="login-btn">Login</button>
           </Link>
         </div>
@@ -213,11 +239,11 @@ const Register = () => {
           </form>
 
           <div className="login-link">
-            Already have an account? <Link to={`/login/${role}`}>Sign in</Link>
+            Already have an account? <Link to={getLoginPath()}>Sign in</Link>
           </div>
 
           <div className="back-link">
-            <Link to="/">← Quay lại chọn vai trò</Link>
+            <Link to="/choose-role">← Chọn vai trò</Link>
           </div>
         </div>
       </div>
