@@ -64,6 +64,6 @@ Write-Host ""
 Write-Host "2. Start Frontend (in terminal 2):" -ForegroundColor Yellow
 Write-Host "   cd frontend" -ForegroundColor White
 Write-Host "   npm start" -ForegroundColor White
-Write-Host "   Frontend will run at: http://localhost:3000" -ForegroundColor Gray
+Write-Host "   Frontend will run at: http://localhost:5000" -ForegroundColor Gray
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan

@@ -1,80 +1,35 @@
-import {
-  GraduationCap,
-  LayoutDashboard,
-  FolderKanban,
-  FileText,
-  Users,
-  Settings,
-  Plus,
-} from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
-import "../../styles/sidebar.css";
+import { NavLink } from "react-router-dom";
+import Icon from "./Icon.jsx";
+import "./Sidebar.css";
 
-function SidebarMentor() {
-  const { pathname } = useLocation();
-  const normalizedPath = pathname.toLowerCase();
-  const isReviewContext =
-    normalizedPath.startsWith("/mentor/review/") ||
-    normalizedPath.startsWith("/mentor/submissions");
+const navItems = [
+  { to: "/supervisor/dashboard", icon: "Dashboard", label: "Dashboard" },
+  { to: "/supervisor/topics", icon: "FactCheck", label: "Duyệt đề tài" },
+  { to: "/supervisor/submissions", icon: "Upload", label: "Bài nộp" },
+  { to: "/supervisor/teams", icon: "Groups", label: "Nhóm" },
+  { to: "/supervisor/meetings", icon: "Calendar", label: "Lịch họp" },
+  { to: "/supervisor/messages", icon: "Chat", label: "Nhắn tin" },
+];
 
+export default function SidebarMentor() {
   return (
-    <div className="sidebar">
-      <div>
-        <div className="sb-brand">
-          <div className="sb-brand-icon" aria-hidden="true">
-            <GraduationCap size={18} color="#fff" />
-          </div>
-          <div className="sb-brand-text">MentorAI Grad</div>
-        </div>
-
-        <div className="sb-profile">
-          <img
-            className="sb-profile-img"
-            src="https://i.pravatar.cc/80?img=13"
-            alt="Dr. Smith"
-          />
-          <div className="sb-profile-meta">
-            <div className="sb-profile-name">Dr. Smith</div>
-            <div className="sb-profile-role">Senior Instructor</div>
-          </div>
-        </div>
-
-        <nav className="sb-nav" aria-label="Mentor Sidebar">
-          <button className="sb-item" type="button">
-            <LayoutDashboard size={18} />
-            Dashboard
-          </button>
-          <button className="sb-item" type="button">
-            <FolderKanban size={18} />
-            Projects
-          </button>
+    <aside className="sidebar">
+      <div className="sidebar-brand">
+        <Icon name="School" size={22} sx={{ color: "#fff" }} />
+        <span>MentorAI Grad</span>
+      </div>
+      <nav className="sidebar-nav">
+        {navItems.map((item) => (
           <NavLink
-            className={({ isActive }) => `sb-item ${isActive || isReviewContext ? "active" : ""}`}
-            to="/mentor/submissions"
-            end
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
           >
-            <FileText size={18} />
-            Submissions
+            <Icon name={item.icon} size={20} />
+            <span>{item.label}</span>
           </NavLink>
-          <button className="sb-item" type="button">
-            <Users size={18} />
-            Teams
-          </button>
-          <button className="sb-item" type="button">
-            <Settings size={18} />
-            Settings
-          </button>
-        </nav>
-      </div>
-
-      <div className="sb-footer">
-        <button className="sb-new-project" type="button">
-          <Plus size={16} />
-          New Project
-        </button>
-      </div>
-    </div>
+        ))}
+      </nav>
+    </aside>
   );
 }
-
-export default SidebarMentor;
