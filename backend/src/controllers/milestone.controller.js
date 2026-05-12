@@ -10,6 +10,7 @@ import {
   updateGraduationBatch,
   deleteGraduationBatch,
   findDefaultGraduationBatchId,
+  findGraduationBatchIdByNormalizedName,
 } from "../models/milestone.model.js";
 
 export async function getMilestones(req, res, next) {
@@ -136,8 +137,16 @@ export async function createBatch(req, res, next) {
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: "Tên Đợt tốt nghiệp không được để trống" });
     }
+    const trimmedName = name.trim();
+    const dupId = await findGraduationBatchIdByNormalizedName(trimmedName, {});
+    if (dupId) {
+      return res.status(400).json({
+        success: false,
+        message: "Tên đợt tốt nghiệp đã tồn tại. Vui lòng chọn tên khác.",
+      });
+    }
     const id = await createGraduationBatch({
-      name: name.trim(),
+      name: trimmedName,
       description,
       startDate: start_date || null,
       endDate: end_date || null,
@@ -152,8 +161,25 @@ export async function updateBatch(req, res, next) {
   try {
     const id = Number(req.params.id);
     const { name, description, start_date, end_date } = req.body;
+
+    let nameForUpdate = null;
+    if (name !== undefined && name !== null) {
+      const trimmed = String(name).trim();
+      if (!trimmed) {
+        return res.status(400).json({ success: false, message: "Tên Đợt tốt nghiệp không được để trống" });
+      }
+      const dupId = await findGraduationBatchIdByNormalizedName(trimmed, { excludeId: id });
+      if (dupId) {
+        return res.status(400).json({
+          success: false,
+          message: "Tên đợt tốt nghiệp đã tồn tại. Vui lòng chọn tên khác.",
+        });
+      }
+      nameForUpdate = trimmed;
+    }
+
     await updateGraduationBatch(id, {
-      name,
+      name: nameForUpdate,
       description,
       startDate: start_date || null,
       endDate: end_date || null,

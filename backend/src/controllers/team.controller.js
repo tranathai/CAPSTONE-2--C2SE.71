@@ -8,6 +8,7 @@ import {
   createTeam,
   updateTeam,
   deleteTeam,
+  findTeamIdByNormalizedName,
   addTeamMember,
   removeTeamMember,
   userBelongsToTeam,
@@ -105,8 +106,17 @@ export async function createNewTeam(req, res, next) {
       return res.status(400).json({ success: false, message: "Tên nhóm không được để trống" });
     }
 
+    const trimmedName = name.trim();
+    const dupId = await findTeamIdByNormalizedName(trimmedName, {});
+    if (dupId) {
+      return res.status(400).json({
+        success: false,
+        message: "Tên nhóm đã tồn tại. Vui lòng chọn tên khác.",
+      });
+    }
+
     const teamId = await createTeam({
-      name: name.trim(),
+      name: trimmedName,
       description,
       semester,
       leaderUserId: leader_user_id,
@@ -128,8 +138,24 @@ export async function updateExistingTeam(req, res, next) {
     const teamId = Number(req.params.id);
     const { name, description, semester, leader_user_id, supervisor_user_id } = req.body;
 
+    let nameForUpdate;
+    if (name !== undefined && name !== null) {
+      const trimmed = String(name).trim();
+      if (!trimmed) {
+        return res.status(400).json({ success: false, message: "Tên nhóm không được để trống" });
+      }
+      const dupId = await findTeamIdByNormalizedName(trimmed, { excludeTeamId: teamId });
+      if (dupId) {
+        return res.status(400).json({
+          success: false,
+          message: "Tên nhóm đã tồn tại. Vui lòng chọn tên khác.",
+        });
+      }
+      nameForUpdate = trimmed;
+    }
+
     await updateTeam(teamId, {
-      name,
+      name: nameForUpdate ?? null,
       description,
       semester,
       leaderUserId: leader_user_id,

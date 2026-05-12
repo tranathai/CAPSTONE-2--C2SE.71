@@ -44,7 +44,7 @@ export default function StudentFeedback() {
     }
   };
 
-  const visibleFeedbacks = history.filter((s) => s.has_final_feedback);
+  const visibleFeedbacks = history.filter((s) => s.has_final_feedback || s.has_feedback);
 
   return (
     <div className="page-container">
@@ -58,8 +58,8 @@ export default function StudentFeedback() {
       {visibleFeedbacks.length === 0 ? (
         <div className="card empty-state">
           <Icon name="MessageSquare" size={48} sx={{ opacity: 0.3 }} />
-          <h3>Chưa có phản hồi chính thức</h3>
-          <p>Phản hồi sẽ hiển thị sau khi giảng viên gửi feedback cuối cùng</p>
+          <h3>Chưa có phản hồi nào</h3>
+          <p>Phản hồi sẽ hiển thị khi giảng viên gửi góp ý cho bài nộp</p>
         </div>
       ) : (
         visibleFeedbacks.map((s) => (

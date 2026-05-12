@@ -152,6 +152,9 @@ export const messages = {
   conversation: (userId, params) => client.get(`/messages/conversation/${userId}`, { params }).then((r) => body(r.data)),
   unreadCount: () => client.get("/messages/unread-count").then((r) => body(r.data)),
   send: (data) => client.post("/messages", data).then((r) => body(r.data)),
+  groups: () => client.get("/messages/groups").then((r) => body(r.data)),
+  groupMessages: (teamId, params) => client.get(`/messages/groups/${teamId}`, { params }).then((r) => body(r.data)),
+  sendGroup: (data) => client.post("/messages/groups/send", data).then((r) => body(r.data)),
   topics: () => client.get("/messages/topics").then((r) => body(r.data)),
   topicMessages: (topicId, params) => client.get(`/messages/topics/${topicId}`, { params }).then((r) => body(r.data)),
 };

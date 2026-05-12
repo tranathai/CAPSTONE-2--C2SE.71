@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Icon from "../../components/UI/Icon.jsx";
+import ConfirmModal from "../../components/UI/ConfirmModal.jsx";
 import { submissions, milestones, teams, topics } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +20,7 @@ export default function StudentSubmissions() {
   const [versionUploadSubmissionId, setVersionUploadSubmissionId] = useState(null);
   const [uploadingVersionForId, setUploadingVersionForId] = useState(null);
   const versionFileRef = useRef(null);
+  const [deleteVersionId, setDeleteVersionId] = useState(null);
   const { toast, showToast } = useToast();
   const navigate = useNavigate();
 
@@ -107,15 +109,18 @@ export default function StudentSubmissions() {
     }
   };
 
-  const handleDeleteVersion = async (versionId) => {
-    if (!confirm("Bạn có chắc muốn xóa phiên bản này?")) return;
+  const executeDeleteVersion = async () => {
+    if (deleteVersionId == null) return;
+    const vid = deleteVersionId;
     try {
-      await submissions.deleteVersion(versionId);
+      await submissions.deleteVersion(vid);
       showToast("Xóa thành công!", "success");
+      setDeleteVersionId(null);
       const subs = await submissions.my();
       setHistory(subs);
     } catch (err) {
-      showToast(err.message || "Xóa thất bại", "error");
+      const msg = err.response?.data?.message || err.message || "Xóa thất bại";
+      showToast(msg, "error");
     }
   };
 
@@ -194,6 +199,17 @@ export default function StudentSubmissions() {
         onChange={handleVersionFileChange}
       />
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
+
+      <ConfirmModal
+        open={deleteVersionId != null}
+        title="Xóa phiên bản nộp"
+        message="Bạn có chắc muốn xóa phiên bản tệp này? Không thể hoàn tác."
+        confirmLabel="Xóa phiên bản"
+        cancelLabel="Hủy"
+        danger
+        onCancel={() => setDeleteVersionId(null)}
+        onConfirm={executeDeleteVersion}
+      />
 
       <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
@@ -409,7 +425,7 @@ export default function StudentSubmissions() {
                           <Icon name="Edit" size={14} />
                         </button>
                         {Number(s.version_number) > 1 && (
-                          <button className="btn btn-sm btn-danger" onClick={() => handleDeleteVersion(s.version_id)}>
+                          <button className="btn btn-sm btn-danger" onClick={() => setDeleteVersionId(s.version_id)}>
                             <Icon name="Trash" size={14} />
                           </button>
                         )}

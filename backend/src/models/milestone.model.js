@@ -18,7 +18,7 @@ function mapMilestoneRow(r) {
 
 export async function findAllMilestones({ graduationBatchId } = {}) {
   let sql = `SELECT m.id, m.name, m.description, m.start_date, m.end_date, m.deadline_type, m.display_order, m.required_documents,
-            m.graduation_batch_id, gb.name AS graduation_batch_name
+            m.created_at, m.graduation_batch_id, gb.name AS graduation_batch_name
      FROM milestones m
      LEFT JOIN graduation_batches gb ON gb.id = m.graduation_batch_id`;
   const params = [];
@@ -37,6 +37,21 @@ export async function findAllGraduationBatches() {
      FROM graduation_batches ORDER BY id DESC`,
   );
   return rows;
+}
+
+/** Trùng tên đợt: không phân biệt hoa thường, trim. excludeId: khi cập nhật đợt. */
+export async function findGraduationBatchIdByNormalizedName(trimmedName, { excludeId } = {}) {
+  const key = String(trimmedName || "").trim();
+  if (!key) return null;
+  let sql = `SELECT id FROM graduation_batches WHERE LOWER(TRIM(name)) = LOWER(?)`;
+  const params = [key];
+  if (excludeId) {
+    sql += ` AND id <> ?`;
+    params.push(excludeId);
+  }
+  sql += ` LIMIT 1`;
+  const [rows] = await pool.query(sql, params);
+  return rows[0]?.id ?? null;
 }
 
 export async function createGraduationBatch({ name, description, startDate, endDate }) {

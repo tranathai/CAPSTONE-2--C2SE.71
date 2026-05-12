@@ -230,11 +230,147 @@ textarea.form-input { resize: vertical; min-height: 100px; }
 
 .modal h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 16px; color: #0f172a; }
 
+.modal.team-detail-modal {
+  max-width: 920px;
+  position: relative;
+  padding: 28px 28px 26px;
+  border: 1px solid rgba(99, 102, 241, 0.12);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.modal.team-detail-modal h3.team-detail-modal__title {
+  margin: 0 48px 18px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.team-detail-modal__close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.team-detail-modal__close:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+  transform: scale(1.04);
+}
+
+.team-detail-modal__close:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .modal-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
   margin-top: 20px;
+}
+
+.modal.import-report-modal {
+  max-width: 880px;
+  position: relative;
+  padding-top: 24px;
+}
+
+.import-report-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.import-report-close:hover {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+  transform: scale(1.04);
+}
+
+.import-report-sections {
+  max-height: min(58vh, 520px);
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.import-report-section + .import-report-section {
+  margin-top: 12px;
+}
+
+.import-report-section__title {
+  display: flex;
+  align-items: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.import-report-list {
+  list-style: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.import-report-list li {
+  padding: 8px 10px;
+  font-size: 0.84rem;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  line-height: 1.4;
+}
+
+.import-report-list li:last-child {
+  border-bottom: none;
+}
+
+.import-report-list--danger li strong {
+  color: #b91c1c;
+}
+
+.import-report-list--warning li strong {
+  color: #a16207;
+}
+
+.import-report-list--success li strong {
+  color: #166534;
+}
+
+.import-report-pager {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #64748b;
 }
 
 /* ── Toasts ───────────────────────────────────────── */
@@ -310,6 +446,50 @@ textarea.form-input { resize: vertical; min-height: 100px; }
   font-weight: 800;
   color: #0f172a;
   line-height: 1;
+}
+
+.admin-dash-stat-grid {
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.admin-dash-stat-card {
+  border-radius: 16px;
+  padding: 22px 20px 20px;
+  border: 1px solid rgba(99, 102, 241, 0.1);
+  background: linear-gradient(165deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 4px 22px rgba(15, 23, 42, 0.07);
+}
+
+.admin-dash-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 36px rgba(49, 46, 129, 0.12);
+}
+
+.admin-dash-stat-card--students::before {
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
+}
+
+.admin-dash-stat-card--supervisors::before {
+  background: linear-gradient(90deg, #7c3aed, #c084fc);
+}
+
+.admin-dash-stat-card--teams::before {
+  background: linear-gradient(90deg, #0d9488, #2dd4bf);
+}
+
+.admin-dash-stat-card--milestones::before {
+  background: linear-gradient(90deg, #db2777, #fb7185);
+}
+
+.admin-dash-stat-card .stat-value {
+  font-size: 2.35rem;
+  letter-spacing: -0.02em;
+}
+
+.admin-dash-stat-card .stat-label {
+  font-weight: 600;
+  color: #475569;
 }
 
 /* ── Empty state ──────────────────────────────────── */

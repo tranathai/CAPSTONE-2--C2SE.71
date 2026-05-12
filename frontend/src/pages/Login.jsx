@@ -74,7 +74,6 @@ export default function Login() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Nhập mật khẩu (có thể để trống)"
                 autoComplete="current-password"
               />
               <button type="button" className="toggle-pw" onClick={() => setShowPassword((v) => !v)}>
@@ -89,9 +88,6 @@ export default function Login() {
         </form>
 
         <div className="login-footer">
-          <p className="login-hint">
-            Tài khoản do quản trị viên tạo. Sinh viên và giảng viên không đăng ký tự do.
-          </p>
           <div className="login-credentials">
             <p><strong>Demo Admin:</strong> admin@mentorai.edu / admin123</p>
             <p><strong>Demo Sinh viên:</strong> nguyen.van.a@student.edu.vn / student123</p>

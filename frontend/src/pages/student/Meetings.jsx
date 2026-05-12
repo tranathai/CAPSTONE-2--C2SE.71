@@ -8,7 +8,7 @@ export default function StudentMeetings() {
   const { toast, showToast } = useToast();
   const [meetingList, setMeetingList] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [supervisors, setSupervisors] = useState([]);
+  const [topicInfo, setTopicInfo] = useState(null);
   const [tab, setTab] = useState("meetings");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ supervisor_id: "", title: "", reason: "", proposed_at: "" });
@@ -18,15 +18,24 @@ export default function StudentMeetings() {
     Promise.all([
       meetings.list(),
       meetings.studentRequests(),
-    ]).then(([ml, req]) => {
+      topics.myTopic(),
+    ]).then(([ml, req, topic]) => {
       setMeetingList(ml);
       setRequests(req);
+      setTopicInfo(topic || null);
+      if (topic?.supervisor_id) {
+        setForm((f) => ({ ...f, supervisor_id: String(topic.supervisor_id) }));
+      }
     }).catch(() => {});
   }, []);
 
   const handleRequest = async (e) => {
     e.preventDefault();
-    if (!form.supervisor_id || !form.title || !form.proposed_at) {
+    if (!form.supervisor_id) {
+      showToast("Nhóm chưa có giảng viên hướng dẫn. Hãy chờ đề tài được duyệt trước khi gửi yêu cầu họp.", "error");
+      return;
+    }
+    if (!form.title || !form.proposed_at) {
       showToast("Vui lòng điền đầy đủ thông tin", "error"); return;
     }
     setSubmitting(true);
@@ -34,6 +43,7 @@ export default function StudentMeetings() {
       await meetings.request(form);
       showToast("Gửi yêu cầu thành công!", "success");
       setShowForm(false);
+      setForm((f) => ({ ...f, title: "", reason: "", proposed_at: "" }));
       const req = await meetings.studentRequests();
       setRequests(req);
     } catch (err) {
@@ -85,6 +95,14 @@ export default function StudentMeetings() {
         <div className="card">
           <div className="card-title">Gửi yêu cầu họp</div>
           <form onSubmit={handleRequest}>
+            <div className="form-group">
+              <label>Giảng viên nhận yêu cầu</label>
+              <input
+                className="form-input"
+                value={topicInfo?.supervisor_name || "Chưa có giảng viên hướng dẫn"}
+                disabled
+              />
+            </div>
             <div className="form-group">
               <label>Tiêu đề cuộc họp *</label>
               <input className="form-input" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="VD: Họp tiến độ dự án" />

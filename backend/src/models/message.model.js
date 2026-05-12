@@ -1,30 +1,126 @@
 import pool from "../config/db.js";
 
-export async function findConversation(userId1, userId2, topicId = null, { limit = 50, offset = 0 } = {}) {
-  let sql = `SELECT m.id, m.content, m.is_read, m.created_at, m.topic_id,
+export async function canAccessTeamChat(teamId, userId) {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM teams t
+     WHERE t.id = ?
+       AND (
+         EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = ?)
+         OR t.supervisor_user_id = ?
+       )
+     LIMIT 1`,
+    [teamId, userId, userId],
+  );
+  return rows.length > 0;
+}
+
+export async function findUserChatGroups(userId) {
+  const [rows] = await pool.query(
+    `SELECT t.id, t.name,
+            (SELECT MAX(m.created_at) FROM messages m WHERE m.team_id = t.id) AS last_message_at,
+            (SELECT m2.content
+             FROM messages m2
+             WHERE m2.team_id = t.id
+             ORDER BY m2.created_at DESC
+             LIMIT 1) AS last_message,
+            (SELECT COUNT(*)
+             FROM messages m3
+             WHERE m3.team_id = t.id AND m3.receiver_id = ? AND m3.is_read = 0) AS unread_count
+     FROM teams t
+     WHERE EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = t.id AND tm.user_id = ?)
+        OR t.supervisor_user_id = ?
+     ORDER BY t.name ASC`,
+    [userId, userId, userId],
+  );
+  return rows;
+}
+
+export async function findGroupMessages(teamId, { limit = 100, offset = 0 } = {}) {
+  const [rows] = await pool.query(
+    `SELECT MIN(m.id) AS id,
+            m.content,
+            MIN(m.is_read) AS is_read,
+            MIN(m.created_at) AS created_at,
+            m.team_id,
+            s.full_name AS sender_name,
+            m.sender_id
+     FROM messages m
+     INNER JOIN users s ON s.id = m.sender_id
+     WHERE m.team_id = ?
+     GROUP BY m.team_id, m.sender_id, m.content, DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i:%s')
+     ORDER BY created_at ASC
+     LIMIT ? OFFSET ?`,
+    [teamId, limit, offset],
+  );
+  return rows;
+}
+
+export async function sendGroupMessage({ senderId, teamId, content }) {
+  const [memberRows] = await pool.query(
+    `SELECT DISTINCT u.id
+     FROM users u
+     WHERE (
+       EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = ? AND tm.user_id = u.id)
+       OR EXISTS (SELECT 1 FROM teams t WHERE t.id = ? AND t.supervisor_user_id = u.id)
+     )
+       AND u.id <> ?`,
+    [teamId, teamId, senderId],
+  );
+
+  // Group chat: only persist one row per message.
+  const [result] = await pool.query(
+    `INSERT INTO messages (sender_id, receiver_id, content, team_id) VALUES (?, ?, ?, ?)`,
+    [senderId, senderId, content, teamId],
+  );
+  return { insertedId: result.insertId, receivers: memberRows.map((r) => r.id) };
+}
+
+export async function markGroupMessagesRead(teamId, userId) {
+  await pool.query(
+    `UPDATE messages SET is_read = 1
+     WHERE team_id = ? AND receiver_id = ? AND is_read = 0`,
+    [teamId, userId],
+  );
+}
+
+export async function canUsersMessageEachOther(userId1, userId2) {
+  const [rows] = await pool.query(
+    `SELECT 1
+     FROM teams t
+     WHERE (
+       EXISTS (SELECT 1 FROM team_members tm1 WHERE tm1.team_id = t.id AND tm1.user_id = ?)
+       AND EXISTS (SELECT 1 FROM team_members tm2 WHERE tm2.team_id = t.id AND tm2.user_id = ?)
+     )
+     OR (
+       EXISTS (SELECT 1 FROM team_members tm1 WHERE tm1.team_id = t.id AND tm1.user_id = ?)
+       AND t.supervisor_user_id = ?
+     )
+     OR (
+       EXISTS (SELECT 1 FROM team_members tm2 WHERE tm2.team_id = t.id AND tm2.user_id = ?)
+       AND t.supervisor_user_id = ?
+     )
+     LIMIT 1`,
+    [userId1, userId2, userId1, userId2, userId2, userId1],
+  );
+  return rows.length > 0;
+}
+
+export async function findConversation(userId1, userId2, { limit = 50, offset = 0 } = {}) {
+  const [rows] = await pool.query(
+    `SELECT m.id, m.content, m.is_read, m.created_at, m.topic_id,
             s.full_name AS sender_name, s.id AS sender_id,
-            r.full_name AS receiver_name, r.id AS receiver_id,
-            t.title AS topic_title
+            r.full_name AS receiver_name, r.id AS receiver_id
      FROM messages m
      INNER JOIN users s ON s.id = m.sender_id
      INNER JOIN users r ON r.id = m.receiver_id
-     LEFT JOIN topics t ON t.id = m.topic_id
      WHERE ((m.sender_id = ? AND m.receiver_id = ?)
-        OR (m.sender_id = ? AND m.receiver_id = ?))`;
-  
-  const params = [userId1, userId2, userId2, userId1];
-  
-  if (topicId) {
-    sql += ` AND m.topic_id = ?`;
-    params.push(topicId);
-  } else {
-    sql += ` AND m.topic_id IS NULL`; // Messages chung không thuộc topic nào
-  }
-  
-  sql += ` ORDER BY m.created_at ASC LIMIT ? OFFSET ?`;
-  params.push(limit, offset);
-  
-  const [rows] = await pool.query(sql, params);
+        OR (m.sender_id = ? AND m.receiver_id = ?))
+       AND m.topic_id IS NULL
+     ORDER BY m.created_at ASC
+     LIMIT ? OFFSET ?`,
+    [userId1, userId2, userId2, userId1, limit, offset],
+  );
   return rows;
 }
 
@@ -43,13 +139,26 @@ export async function findContactList(userId) {
      FROM users u
      INNER JOIN roles r ON r.id = u.role_id
      WHERE u.id != ?
-       AND EXISTS (
-         SELECT 1 FROM messages m4
-         WHERE (m4.sender_id = ? AND m4.receiver_id = u.id)
-            OR (m4.sender_id = u.id AND m4.receiver_id = ?)
+       AND (
+         EXISTS (
+           SELECT 1
+           FROM teams t
+           WHERE (
+             EXISTS (SELECT 1 FROM team_members tm1 WHERE tm1.team_id = t.id AND tm1.user_id = ?)
+             AND EXISTS (SELECT 1 FROM team_members tm2 WHERE tm2.team_id = t.id AND tm2.user_id = u.id)
+           )
+           OR (
+             EXISTS (SELECT 1 FROM team_members tm1 WHERE tm1.team_id = t.id AND tm1.user_id = ?)
+             AND t.supervisor_user_id = u.id
+           )
+           OR (
+             EXISTS (SELECT 1 FROM team_members tm2 WHERE tm2.team_id = t.id AND tm2.user_id = u.id)
+             AND t.supervisor_user_id = ?
+           )
+         )
        )
-     ORDER BY last_message_at DESC`,
-    [userId, userId, userId, userId, userId, userId, userId, userId],
+     ORDER BY (last_message_at IS NULL), last_message_at DESC, u.full_name ASC`,
+    [userId, userId, userId, userId, userId, userId, userId, userId, userId],
   );
   return rows;
 }

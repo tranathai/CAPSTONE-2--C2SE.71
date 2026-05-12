@@ -177,21 +177,34 @@ export async function importUsersFromCsv(req, res, next) {
       const password = String(row.password || "").trim();
 
       if (!fullName || !email || !roleName) {
-        results.push({ line: lineNumber, email, status: "failed", message: "Thiếu họ tên/email/vai trò hợp lệ" });
+        results.push({
+          line: lineNumber, mssv, email, status: "failed", message: "Thiếu họ tên/email/vai trò hợp lệ",
+        });
         continue;
       }
       if (!USER_CODE_REGEX.test(mssv)) {
-        results.push({ line: lineNumber, email, status: "failed", message: "ID phải gồm đúng 11 chữ số" });
-        continue;
-      }
-      if (await isUserCodeExists(mssv)) {
-        results.push({ line: lineNumber, email, status: "failed", message: "ID đã tồn tại" });
+        results.push({
+          line: lineNumber, mssv, email, status: "failed", message: "ID phải gồm đúng 11 chữ số",
+        });
         continue;
       }
 
-      const exists = await findUserByEmail(email);
-      if (exists) {
-        results.push({ line: lineNumber, email, status: "failed", message: "Email đã tồn tại" });
+      const [codeExists, emailExists] = await Promise.all([
+        isUserCodeExists(mssv),
+        findUserByEmail(email),
+      ]);
+      if (codeExists && emailExists) {
+        results.push({
+          line: lineNumber, mssv, email, status: "failed", message: "ID và Email đã tồn tại",
+        });
+        continue;
+      }
+      if (codeExists) {
+        results.push({ line: lineNumber, mssv, email, status: "failed", message: "ID đã tồn tại" });
+        continue;
+      }
+      if (emailExists) {
+        results.push({ line: lineNumber, mssv, email, status: "failed", message: "Email đã tồn tại" });
         continue;
       }
 
@@ -215,10 +228,12 @@ export async function importUsersFromCsv(req, res, next) {
 
         await conn.commit();
         created += 1;
-        results.push({ line: lineNumber, email, status: "created" });
+        results.push({ line: lineNumber, mssv, email, status: "created" });
       } catch (e) {
         await conn.rollback();
-        results.push({ line: lineNumber, email, status: "failed", message: e?.message || "Tạo tài khoản thất bại" });
+        results.push({
+          line: lineNumber, mssv, email, status: "failed", message: e?.message || "Tạo tài khoản thất bại",
+        });
       } finally {
         conn.release();
       }

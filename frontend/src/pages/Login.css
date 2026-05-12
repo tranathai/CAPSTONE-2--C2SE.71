@@ -150,12 +150,6 @@
   text-align: center;
 }
 
-.login-hint {
-  font-size: 0.8rem;
-  color: #64748b;
-  margin: 0 0 12px;
-}
-
 .login-credentials {
   background: #f8fafc;
   border: 1px solid #e2e8f0;

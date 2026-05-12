@@ -144,6 +144,20 @@ async function ensureMessagingTopicsColumns(conn) {
   `);
 }
 
+async function ensureMessagingTeamsColumn(conn) {
+  const db = process.env.DB_NAME || "mentorai_grad";
+  const [cols] = await conn.query(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'messages' AND COLUMN_NAME = 'team_id'`,
+    [db],
+  );
+  if (cols.length > 0) return;
+
+  await conn.query(`ALTER TABLE messages ADD COLUMN team_id INT UNSIGNED NULL`);
+  await conn.query(`
+    ALTER TABLE messages ADD CONSTRAINT fk_messages_team_id FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+  `);
+}
+
 /**
  * Auto-create database + all tables if they don't exist.
  * Safe to run on every startup — uses CREATE TABLE IF NOT EXISTS.
@@ -421,14 +435,17 @@ export async function bootstrapDatabase() {
         content TEXT NOT NULL,
         is_read TINYINT(1) NOT NULL DEFAULT 0,
         topic_id INT UNSIGNED DEFAULT NULL,
+        team_id INT UNSIGNED DEFAULT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE SET NULL
+        FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE SET NULL,
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
       )
     `);
 
     await ensureMessagingTopicsColumns(conn);
+    await ensureMessagingTeamsColumn(conn);
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS notifications (

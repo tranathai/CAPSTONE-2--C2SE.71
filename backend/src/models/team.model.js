@@ -87,10 +87,16 @@ export async function findTeamMembers(teamId) {
 }
 
 export async function findAllTeams({ search } = {}) {
-  let sql = `SELECT t.id, t.name, t.semester, t.description, t.leader_user_id, t.supervisor_user_id,
+  let sql = `SELECT t.id, t.name, t.semester, t.description, t.created_at, t.updated_at, t.leader_user_id, t.supervisor_user_id,
                     u.full_name AS leader_name,
                     su.full_name AS supervisor_name, su.email AS supervisor_email,
-                    (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) AS member_count
+                    (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) AS member_count,
+                    (SELECT MIN(tm2.joined_at) FROM team_members tm2 WHERE tm2.team_id = t.id) AS members_joined_earliest,
+                    COALESCE(
+                      t.created_at,
+                      t.updated_at,
+                      (SELECT MIN(tm3.joined_at) FROM team_members tm3 WHERE tm3.team_id = t.id)
+                    ) AS chart_timestamp
              FROM teams t
              LEFT JOIN users u ON u.id = t.leader_user_id
              LEFT JOIN users su ON su.id = t.supervisor_user_id
@@ -100,6 +106,21 @@ export async function findAllTeams({ search } = {}) {
   sql += ` ORDER BY t.id DESC`;
   const [rows] = await pool.query(sql, params);
   return rows;
+}
+
+/** Trùng tên: so sánh không phân biệt hoa thường, bỏ khoảng đầu/cuối. excludeTeamId: bỏ qua khi đổi tên nhóm. */
+export async function findTeamIdByNormalizedName(trimmedName, { excludeTeamId } = {}) {
+  const key = String(trimmedName || "").trim();
+  if (!key) return null;
+  let sql = `SELECT id FROM teams WHERE LOWER(TRIM(name)) = LOWER(?)`;
+  const params = [key];
+  if (excludeTeamId) {
+    sql += ` AND id <> ?`;
+    params.push(excludeTeamId);
+  }
+  sql += ` LIMIT 1`;
+  const [rows] = await pool.query(sql, params);
+  return rows[0]?.id ?? null;
 }
 
 export async function createTeam({ name, description, semester, leaderUserId, supervisorUserId }) {

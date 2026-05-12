@@ -1,8 +1,39 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Icon from "../../components/UI/Icon.jsx";
+import ConfirmModal from "../../components/UI/ConfirmModal.jsx";
 import { milestones } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
+
+const BATCH_PAGE_SIZE = 10;
+
+/** Trả về mảng số trang và "ellipsis" để hiển thị < 1 2 … 5 > */
+function buildPageList(totalPages, current) {
+  if (totalPages < 1) return [];
+  if (totalPages === 1) return [1];
+  const set = new Set([1, totalPages, current]);
+  for (let d = -2; d <= 2; d += 1) {
+    const p = current + d;
+    if (p >= 1 && p <= totalPages) set.add(p);
+  }
+  const sorted = [...set].sort((a, b) => a - b);
+  const out = [];
+  for (let i = 0; i < sorted.length; i += 1) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.push("ellipsis");
+    out.push(sorted[i]);
+  }
+  return out;
+}
+
+function formatDdMmYyyy(value) {
+  if (!value) return "—";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
 
 export default function AdminMilestones() {
   const { toast, showToast } = useToast();
@@ -13,8 +44,11 @@ export default function AdminMilestones() {
   const [list, setList] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [batchForm, setBatchForm] = useState({ name: "", description: "", start_date: "", end_date: "" });
+  const [batchForm, setBatchForm] = useState({ name: "", description: "" });
+  /** Giống Tạo mốc mới: datetime-local (YYYY-MM-DDTHH:mm) */
+  const [batchRange, setBatchRange] = useState({ start: "", end: "" });
   const [batchSubmitting, setBatchSubmitting] = useState(false);
+  const [batchPage, setBatchPage] = useState(1);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -25,6 +59,8 @@ export default function AdminMilestones() {
     required_documents_text: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [deleteBatchId, setDeleteBatchId] = useState(null);
+  const [deleteMilestoneId, setDeleteMilestoneId] = useState(null);
 
   const loadBatches = async () => {
     const rows = await milestones.batchList();
@@ -52,6 +88,20 @@ export default function AdminMilestones() {
     () => batches.find((b) => Number(b.id) === Number(selectedBatchId)) || null,
     [batches, selectedBatchId],
   );
+  const batchTotalPages = Math.max(1, Math.ceil(batches.length / BATCH_PAGE_SIZE));
+  const safeBatchPage = Math.min(batchPage, batchTotalPages);
+  const pagedBatches = useMemo(() => {
+    const start = (safeBatchPage - 1) * BATCH_PAGE_SIZE;
+    return batches.slice(start, start + BATCH_PAGE_SIZE);
+  }, [batches, safeBatchPage]);
+  const batchPageItems = useMemo(
+    () => buildPageList(batchTotalPages, safeBatchPage),
+    [batchTotalPages, safeBatchPage],
+  );
+
+  useEffect(() => {
+    if (batchPage > batchTotalPages) setBatchPage(batchTotalPages);
+  }, [batchPage, batchTotalPages]);
 
   useEffect(() => {
     if (selectedBatchId && batches.length > 0 && !selectedBatch) {
@@ -89,30 +139,50 @@ export default function AdminMilestones() {
       showToast("Tên Đợt tốt nghiệp không được trống", "error");
       return;
     }
+    const batchKey = batchForm.name.trim().toLowerCase();
+    if (batches.some((b) => String(b.name || "").trim().toLowerCase() === batchKey)) {
+      showToast("Tên đợt tốt nghiệp đã tồn tại. Vui lòng chọn tên khác.", "error");
+      return;
+    }
+    const start_date = batchRange.start || "";
+    const end_date = batchRange.end || "";
+    if (start_date && end_date) {
+      const a = new Date(start_date);
+      const b = new Date(end_date);
+      if (a > b) {
+        showToast("Ngày kết thúc phải sau hoặc trùng ngày bắt đầu.", "error");
+        return;
+      }
+    }
     setBatchSubmitting(true);
     try {
-      await milestones.createBatch(batchForm);
+      await milestones.createBatch({ ...batchForm, start_date, end_date });
       showToast("Đã tạo Đợt tốt nghiệp", "success");
-      setBatchForm({ name: "", description: "", start_date: "", end_date: "" });
+      setBatchForm({ name: "", description: "" });
+      setBatchRange({ start: "", end: "" });
       await loadBatches();
     } catch (err) {
-      showToast(err.message || "Tạo Đợt tốt nghiệp thất bại", "error");
+      const msg = err.response?.data?.message || err.message || "Tạo Đợt tốt nghiệp thất bại";
+      showToast(msg, "error");
     } finally {
       setBatchSubmitting(false);
     }
   };
 
-  const handleDeleteBatch = async (id) => {
-    if (!confirm("Xóa Đợt tốt nghiệp này? (các mốc đang gắn sẽ mất liên kết)")) return;
+  const executeDeleteBatch = async () => {
+    if (deleteBatchId == null) return;
+    const id = deleteBatchId;
     try {
       await milestones.removeBatch(id);
       showToast("Đã xóa Đợt tốt nghiệp", "success");
+      setDeleteBatchId(null);
       await loadBatches();
       if (Number(id) === Number(selectedBatchId)) {
         navigate("/admin/milestones", { replace: true });
       }
     } catch (err) {
-      showToast(err.message || "Xóa Đợt tốt nghiệp thất bại", "error");
+      const msg = err.response?.data?.message || err.message || "Xóa Đợt tốt nghiệp thất bại";
+      showToast(msg, "error");
     }
   };
 
@@ -120,6 +190,10 @@ export default function AdminMilestones() {
     e.preventDefault();
     if (!selectedBatchId) { showToast("Vui lòng chọn Đợt tốt nghiệp", "error"); return; }
     if (!form.name || !form.start_date || !form.end_date) { showToast("Điền đầy đủ thông tin", "error"); return; }
+    if (new Date(form.start_date) > new Date(form.end_date)) {
+      showToast("Thời gian kết thúc phải sau thời gian bắt đầu.", "error");
+      return;
+    }
     setSubmitting(true);
     try {
       const required_documents = form.required_documents_text
@@ -163,18 +237,44 @@ export default function AdminMilestones() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Xóa mốc thời gian này?")) return;
+  const executeDeleteMilestone = async () => {
+    if (deleteMilestoneId == null) return;
+    const id = deleteMilestoneId;
     try {
       await milestones.remove(id);
       showToast("Đã xóa", "success");
+      setDeleteMilestoneId(null);
       await loadMilestones();
-    } catch (err) { showToast(err.message, "error"); }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Xóa thất bại";
+      showToast(msg, "error");
+    }
   };
 
   return (
     <div className="page-container">
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
+
+      <ConfirmModal
+        open={deleteBatchId != null}
+        title="Xóa đợt tốt nghiệp"
+        message="Xóa đợt này? Các mốc thời gian đang gắn với đợt có thể mất liên kết đợt."
+        confirmLabel="Xóa đợt"
+        cancelLabel="Hủy"
+        danger
+        onCancel={() => setDeleteBatchId(null)}
+        onConfirm={executeDeleteBatch}
+      />
+      <ConfirmModal
+        open={deleteMilestoneId != null}
+        title="Xóa mốc thời gian"
+        message="Xóa mốc này? Hành động không thể hoàn tác."
+        confirmLabel="Xóa mốc"
+        cancelLabel="Hủy"
+        danger
+        onCancel={() => setDeleteMilestoneId(null)}
+        onConfirm={executeDeleteMilestone}
+      />
 
       {!selectedBatchId ? (
         <>
@@ -186,12 +286,37 @@ export default function AdminMilestones() {
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="card-title">Tạo Đợt tốt nghiệp</div>
             <form onSubmit={handleCreateBatch}>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12 }}>
-                <input className="form-input" value={batchForm.name} onChange={(e) => setBatchForm((f) => ({ ...f, name: e.target.value }))} placeholder="Tên đợt (VD: Đợt tốt nghiệp K28)" />
-                <input type="date" className="form-input" value={batchForm.start_date} onChange={(e) => setBatchForm((f) => ({ ...f, start_date: e.target.value }))} />
-                <input type="date" className="form-input" value={batchForm.end_date} onChange={(e) => setBatchForm((f) => ({ ...f, end_date: e.target.value }))} />
+              <div className="form-group" style={{ marginBottom: 12 }}>
+                <label>Tên đợt *</label>
+                <input
+                  className="form-input"
+                  value={batchForm.name}
+                  onChange={(e) => setBatchForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="VD: Đợt tốt nghiệp K28"
+                />
               </div>
-              <textarea className="form-input" rows={2} style={{ marginTop: 8 }} value={batchForm.description} onChange={(e) => setBatchForm((f) => ({ ...f, description: e.target.value }))} placeholder="Mô tả đợt..." />
+              <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#374151", margin: "0 0 8px 0" }}>Khung thời gian</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div className="form-group">
+                  <label>Ngày bắt đầu</label>
+                  <input
+                    type="datetime-local"
+                    className="form-input"
+                    value={batchRange.start}
+                    onChange={(e) => setBatchRange((r) => ({ ...r, start: e.target.value }))}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Ngày kết thúc</label>
+                  <input
+                    type="datetime-local"
+                    className="form-input"
+                    value={batchRange.end}
+                    onChange={(e) => setBatchRange((r) => ({ ...r, end: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <textarea className="form-input" rows={2} style={{ marginTop: 4 }} value={batchForm.description} onChange={(e) => setBatchForm((f) => ({ ...f, description: e.target.value }))} placeholder="Mô tả đợt..." />
               <div style={{ marginTop: 8 }}>
                 <button className="btn btn-primary" disabled={batchSubmitting}>{batchSubmitting ? "Đang tạo..." : "Tạo Đợt tốt nghiệp"}</button>
               </div>
@@ -208,17 +333,17 @@ export default function AdminMilestones() {
                   <tr><th>Tên đợt</th><th>Bắt đầu</th><th>Kết thúc</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {batches.map((b) => (
+                  {pagedBatches.map((b) => (
                     <tr key={b.id}>
                       <td><strong>{b.name}</strong></td>
-                      <td>{b.start_date ? new Date(b.start_date).toLocaleDateString("vi-VN") : "—"}</td>
-                      <td>{b.end_date ? new Date(b.end_date).toLocaleDateString("vi-VN") : "—"}</td>
+                      <td>{formatDdMmYyyy(b.start_date)}</td>
+                      <td>{formatDdMmYyyy(b.end_date)}</td>
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
                           <button className="btn btn-sm btn-primary" onClick={() => openBatchDetail(b.id)}>
                             <Icon name="OpenInNew" size={12} /> Quản lý mốc
                           </button>
-                          <button className="btn btn-sm btn-danger" onClick={() => handleDeleteBatch(b.id)}>
+                          <button className="btn btn-sm btn-danger" onClick={() => setDeleteBatchId(b.id)}>
                             <Icon name="Delete" size={12} />
                           </button>
                         </div>
@@ -227,6 +352,37 @@ export default function AdminMilestones() {
                   ))}
                 </tbody>
               </table>
+            )}
+            {batches.length > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, flexWrap: "wrap", gap: 10 }}>
+                <small style={{ color: "#64748b" }}>
+                  Hiển thị {(safeBatchPage - 1) * BATCH_PAGE_SIZE + 1}–{Math.min(safeBatchPage * BATCH_PAGE_SIZE, batches.length)} / {batches.length} đợt
+                  {" · "}
+                  <strong>Trang {safeBatchPage} / {batchTotalPages}</strong>
+                </small>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  <button type="button" className="btn btn-sm btn-secondary" disabled={safeBatchPage <= 1} onClick={() => setBatchPage((p) => Math.max(1, p - 1))} aria-label="Trang trước">
+                    &lt;
+                  </button>
+                  {batchPageItems.map((item, idx) =>
+                    item === "ellipsis" ? (
+                      <span key={`e-${idx}`} style={{ padding: "0 4px", color: "#94a3b8", userSelect: "none" }}>…</span>
+                    ) : (
+                      <button
+                        key={item}
+                        type="button"
+                        className={`btn btn-sm ${item === safeBatchPage ? "btn-primary" : "btn-secondary"}`}
+                        onClick={() => setBatchPage(item)}
+                      >
+                        {item}
+                      </button>
+                    ),
+                  )}
+                  <button type="button" className="btn btn-sm btn-secondary" disabled={safeBatchPage >= batchTotalPages} onClick={() => setBatchPage((p) => Math.min(batchTotalPages, p + 1))} aria-label="Trang sau">
+                    &gt;
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </>
@@ -301,14 +457,14 @@ export default function AdminMilestones() {
                 {list.map((m) => (
                   <tr key={m.id}>
                     <td><strong>{m.name}</strong></td>
-                    <td>{new Date(m.start_date).toLocaleDateString("vi-VN")}</td>
-                    <td>{new Date(m.end_date).toLocaleDateString("vi-VN")}</td>
+                    <td>{formatDdMmYyyy(m.start_date)}</td>
+                    <td>{formatDdMmYyyy(m.end_date)}</td>
                     <td><span className={`badge ${m.deadline_type === "hard" ? "badge-danger" : "badge-warning"}`}>{m.deadline_type === "hard" ? "Cứng" : "Mềm"}</span></td>
                     <td>{m.display_order}</td>
                     <td>
                       <div style={{ display: "flex", gap: 4 }}>
                         <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(m)}><Icon name="Edit" size={13} /></button>
-                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(m.id)}><Icon name="Delete" size={13} /></button>
+                        <button className="btn btn-sm btn-danger" onClick={() => setDeleteMilestoneId(m.id)}><Icon name="Delete" size={13} /></button>
                       </div>
                     </td>
                   </tr>

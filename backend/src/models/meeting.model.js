@@ -24,9 +24,16 @@ export async function findMeetingsByUserId(userId) {
      INNER JOIN users u ON u.id = m.host_id
      LEFT JOIN teams t ON t.id = m.team_id
      LEFT JOIN meeting_participants mp ON mp.meeting_id = m.id
-     WHERE m.host_id = ? OR mp.user_id = ?
+     WHERE m.host_id = ?
+        OR mp.user_id = ?
+        OR EXISTS (
+          SELECT 1
+          FROM team_members tm
+          WHERE tm.team_id = m.team_id
+            AND tm.user_id = ?
+        )
      ORDER BY m.scheduled_at DESC`,
-    [userId, userId],
+    [userId, userId, userId],
   );
   return rows;
 }
@@ -39,11 +46,20 @@ export async function findUpcomingMeetings(userId, limit = 5) {
      INNER JOIN users u ON u.id = m.host_id
      LEFT JOIN teams t ON t.id = m.team_id
      LEFT JOIN meeting_participants mp ON mp.meeting_id = m.id
-     WHERE (m.host_id = ? OR mp.user_id = ?)
+     WHERE (
+       m.host_id = ?
+       OR mp.user_id = ?
+       OR EXISTS (
+         SELECT 1
+         FROM team_members tm
+         WHERE tm.team_id = m.team_id
+           AND tm.user_id = ?
+       )
+     )
        AND m.scheduled_at > NOW()
        AND m.status = 'scheduled'
      ORDER BY m.scheduled_at ASC LIMIT ?`,
-    [userId, userId, limit],
+    [userId, userId, userId, limit],
   );
   return rows;
 }

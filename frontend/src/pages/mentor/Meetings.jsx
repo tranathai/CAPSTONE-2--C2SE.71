@@ -14,6 +14,8 @@ export default function MentorMeetings() {
   const [submitting, setSubmitting] = useState(false);
   const [approveForm, setApproveForm] = useState(null);
   const [approveData, setApproveData] = useState({});
+  const [selectedMeetingId, setSelectedMeetingId] = useState(null);
+  const selectedMeeting = meetingList.find((m) => Number(m.id) === Number(selectedMeetingId)) || null;
 
   useEffect(() => {
     Promise.all([meetings.list(), meetings.supervisorRequests(), teams.supervisees()]).then(([ml, req, tl]) => {
@@ -118,12 +120,61 @@ export default function MentorMeetings() {
         </button>
       </div>
 
+      {selectedMeeting && (
+        <div className="modal-overlay" role="presentation" onClick={() => setSelectedMeetingId(null)}>
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="meeting-detail-title"
+            style={{ position: "relative", paddingTop: 24 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="import-report-close"
+              aria-label="Đóng"
+              onClick={() => setSelectedMeetingId(null)}
+            >
+              <Icon name="Close" size={16} />
+            </button>
+            <h3 id="meeting-detail-title" style={{ marginBottom: 8 }}>{selectedMeeting.title || "Chi tiết cuộc họp"}</h3>
+            <div style={{ display: "grid", gap: 8, color: "#334155", fontSize: "0.9rem", lineHeight: 1.5 }}>
+              <div><strong>Thời gian:</strong> {selectedMeeting.duration_minutes || 0} phút</div>
+              <div><strong>Ngày/giờ:</strong> {new Date(selectedMeeting.scheduled_at).toLocaleString("vi-VN")}</div>
+              <div>
+                <strong>Nhóm tham gia:</strong>{" "}
+                {selectedMeeting.team_name || teamList.find((t) => Number(t.id) === Number(selectedMeeting.team_id))?.name || "Chưa gán nhóm"}
+              </div>
+              <div>
+                <strong>Link họp:</strong>{" "}
+                {selectedMeeting.meeting_url ? (
+                  <a href={selectedMeeting.meeting_url} target="_blank" rel="noreferrer" style={{ color: "#2563eb" }}>
+                    {selectedMeeting.meeting_url}
+                  </a>
+                ) : (
+                  "Chưa có"
+                )}
+              </div>
+              {selectedMeeting.location && (
+                <div><strong>Địa điểm:</strong> {selectedMeeting.location}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {tab === "meetings" && (
         <>
           {meetingList.length === 0 ? (
             <div className="card empty-state"><Icon name="CalendarToday" size={48} sx={{ opacity: 0.3 }} /><h3>Chưa có cuộc họp nào</h3></div>
           ) : meetingList.map((m) => (
-            <div key={m.id} className="card" style={{ marginBottom: 10 }}>
+            <div
+              key={m.id}
+              className="card"
+              style={{ marginBottom: 10, cursor: "pointer" }}
+              onClick={() => setSelectedMeetingId(m.id)}
+            >
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <div>
                   <strong>{m.title}</strong>

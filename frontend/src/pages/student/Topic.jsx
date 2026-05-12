@@ -1,9 +1,33 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import Icon from "../../components/UI/Icon.jsx";
+import ConfirmModal from "../../components/UI/ConfirmModal.jsx";
 import { topics, teams } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
 import "./Topic.css";
+
+function TopicStatusBadge({ topic }) {
+  if (!topic) return null;
+  if (topic.status === "approved") {
+    return (
+      <span className="badge badge-success">
+        <Icon name="CheckCircle" size={12} /> Đã duyệt
+      </span>
+    );
+  }
+  if (topic.status === "rejected") {
+    return (
+      <span className="badge badge-danger">
+        <Icon name="XCircle" size={12} /> Từ chối
+      </span>
+    );
+  }
+  return (
+    <span className="badge badge-warning">
+      <Icon name="Clock" size={12} /> Chờ duyệt
+    </span>
+  );
+}
 
 export default function StudentTopic() {
   const [topic, setTopic] = useState(null);
@@ -18,6 +42,7 @@ export default function StudentTopic() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { toast, showToast } = useToast();
 
   const loadTopic = useCallback(() => {
@@ -88,11 +113,11 @@ export default function StudentTopic() {
 
   const handleDeleteTopic = async () => {
     if (!topic) return;
-    if (!confirm("Bạn chắc chắn muốn xóa đề tài hiện tại?")) return;
     setDeleting(true);
     try {
       await topics.removeMyTopic();
       showToast("Đã xóa đề tài", "success");
+      setShowDeleteConfirm(false);
       await loadTopic();
     } catch (err) {
       showToast(err.message || "Xóa đề tài thất bại", "error");
@@ -118,29 +143,6 @@ export default function StudentTopic() {
     return "";
   }, [topic]);
 
-  const StatusBadge = () => {
-    if (!topic) return null;
-    if (topic.status === "approved") {
-      return (
-        <span className="badge badge-success">
-          <Icon name="CheckCircle" size={12} /> Đã duyệt
-        </span>
-      );
-    }
-    if (topic.status === "rejected") {
-      return (
-        <span className="badge badge-danger">
-          <Icon name="XCircle" size={12} /> Từ chối
-        </span>
-      );
-    }
-    return (
-      <span className="badge badge-warning">
-        <Icon name="Clock" size={12} /> Chờ duyệt
-      </span>
-    );
-  };
-
   if (loading) {
     return (
       <div className="loading-screen">
@@ -154,6 +156,18 @@ export default function StudentTopic() {
   return (
     <div className="page-container">
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
+
+      <ConfirmModal
+        open={showDeleteConfirm}
+        title="Xóa đề tài"
+        message="Bạn chắc chắn muốn xóa đề tài hiện tại? Hành động này không thể hoàn tác."
+        confirmLabel="Xóa đề tài"
+        cancelLabel="Hủy"
+        danger
+        busy={deleting}
+        onCancel={() => !deleting && setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteTopic}
+      />
 
       <div className="student-topic-toolbar">
         <div className="page-header student-topic-heading">
@@ -181,7 +195,7 @@ export default function StudentTopic() {
             <button
               type="button"
               className="btn btn-danger"
-              onClick={handleDeleteTopic}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={deleting}
               style={{ marginLeft: 8 }}
             >
@@ -207,7 +221,7 @@ export default function StudentTopic() {
                 Nhóm: {topic.team_name}
               </p>
             </div>
-            <StatusBadge />
+            <TopicStatusBadge topic={topic} />
           </div>
           {topic.description && (
             <div style={{ marginBottom: 12 }}>

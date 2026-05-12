@@ -3,6 +3,7 @@ import {
   findMeetingsByUserId,
   findUpcomingMeetings,
   createMeeting,
+  addMeetingParticipant,
   updateMeeting,
   deleteMeeting,
   findRequestById,
@@ -76,6 +77,7 @@ export async function create(req, res, next) {
         [team_id, hostId],
       );
       for (const m of memberRows) {
+        await addMeetingParticipant(id, m.user_id);
         await createNotification({
           userId: m.user_id,
           title: "Cuộc họp mới được tạo",
@@ -186,6 +188,14 @@ export async function approveMeetingRequest(req, res, next) {
       meetingUrl: meeting_url,
       location,
     });
+
+    const [memberRows] = await pool.query(
+      `SELECT user_id FROM team_members WHERE team_id = ? AND user_id != ?`,
+      [request.team_id, req.user.id],
+    );
+    for (const m of memberRows) {
+      await addMeetingParticipant(meetingId, m.user_id);
+    }
 
     await createNotification({
       userId: request.requester_id,

@@ -1,11 +1,34 @@
 import { useMemo, useState, useEffect } from "react";
 import Icon from "../../components/UI/Icon.jsx";
+import ConfirmModal from "../../components/UI/ConfirmModal.jsx";
 import { teams, users } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
+
+const PAGE_SIZE = 10;
+
+function buildPageList(totalPages, current) {
+  if (totalPages < 1) return [];
+  if (totalPages === 1) return [1];
+  const set = new Set([1, totalPages, current]);
+  for (let d = -2; d <= 2; d += 1) {
+    const p = current + d;
+    if (p >= 1 && p <= totalPages) set.add(p);
+  }
+  const sorted = [...set].sort((a, b) => a - b);
+  const out = [];
+  for (let i = 0; i < sorted.length; i += 1) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.push("ellipsis");
+    out.push(sorted[i]);
+  }
+  return out;
+}
 
 export default function AdminTeams() {
   const { toast, showToast } = useToast();
   const [teamList, setTeamList] = useState([]);
+  const [teamListPage, setTeamListPage] = useState(1);
+  const [deleteTeamId, setDeleteTeamId] = useState(null);
+  const [removeMemberTarget, setRemoveMemberTarget] = useState(null);
   const [userList, setUserList] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", semester: "", leader_user_id: "", supervisor_user_id: "" });
@@ -19,20 +42,29 @@ export default function AdminTeams() {
   const [memberActionLoading, setMemberActionLoading] = useState(false);
   const [memberSearchValue, setMemberSearchValue] = useState("");
   const [supervisorSearchValue, setSupervisorSearchValue] = useState("");
-  const PAGE_SIZE = 10;
 
   useEffect(() => {
     teams.list().then(setTeamList).catch(() => {});
     users.list().then(setUserList).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    setMemberPage(1);
-  }, [memberSearch, memberRoleFilter]);
+  const teamTotalPages = Math.max(1, Math.ceil(teamList.length / PAGE_SIZE));
+  const teamSafePage = Math.min(teamListPage, teamTotalPages);
+  const pagedTeamList = useMemo(() => {
+    const start = (teamSafePage - 1) * PAGE_SIZE;
+    return teamList.slice(start, start + PAGE_SIZE);
+  }, [teamList, teamSafePage]);
+
+  const teamPageItems = useMemo(() => buildPageList(teamTotalPages, teamSafePage), [teamTotalPages, teamSafePage]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!form.name) { showToast("Tên nhóm không được trống", "error"); return; }
+    const key = form.name.trim().toLowerCase();
+    if (teamList.some((t) => String(t.name || "").trim().toLowerCase() === key)) {
+      showToast("Tên nhóm đã tồn tại. Vui lòng chọn tên khác.", "error");
+      return;
+    }
     const selectedStudentIds = new Set(members);
     if (form.leader_user_id) {
       const leader = userList.find((u) => String(u.id) === String(form.leader_user_id));
@@ -53,17 +85,29 @@ export default function AdminTeams() {
       setForm({ name: "", semester: "", leader_user_id: "", supervisor_user_id: "" });
       setMembers([]);
       teams.list().then(setTeamList).catch(() => {});
-    } catch (err) { showToast(err.message, "error"); }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Tạo nhóm thất bại";
+      showToast(msg, "error");
+    }
     finally { setCreating(false); }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Xóa nhóm này?")) return;
+  const requestDeleteTeam = (id) => {
+    setDeleteTeamId(id);
+  };
+
+  const executeDeleteTeam = async () => {
+    if (deleteTeamId == null) return;
+    const id = deleteTeamId;
     try {
       await teams.remove(id);
       showToast("Đã xóa nhóm", "success");
+      setDeleteTeamId(null);
       teams.list().then(setTeamList).catch(() => {});
-    } catch (err) { showToast(err.message, "error"); }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Xóa nhóm thất bại";
+      showToast(msg, "error");
+    }
   };
 
   const openTeamDetail = async (teamId) => {
@@ -83,22 +127,28 @@ export default function AdminTeams() {
     setSelectedTeamDetail(detail);
   };
 
-  const handleRemoveMemberFromDetail = async (userId) => {
+  const requestRemoveMember = (userId) => {
     if (!selectedTeamDetail?.id) return;
     const target = (selectedTeamDetail.members || []).find((m) => m.id === userId);
     if (target?.is_leader) {
       showToast("Không thể xóa trưởng nhóm. Hãy đổi trưởng nhóm trước.", "error");
       return;
     }
-    if (!confirm("Xóa thành viên này khỏi nhóm?")) return;
+    setRemoveMemberTarget({ userId });
+  };
+
+  const executeRemoveMember = async () => {
+    if (!selectedTeamDetail?.id || !removeMemberTarget) return;
     setMemberActionLoading(true);
     try {
-      await teams.removeMember(selectedTeamDetail.id, userId);
+      await teams.removeMember(selectedTeamDetail.id, removeMemberTarget.userId);
       await reloadTeamDetail(selectedTeamDetail.id);
       teams.list().then(setTeamList).catch(() => {});
       showToast("Đã xóa thành viên khỏi nhóm", "success");
+      setRemoveMemberTarget(null);
     } catch (err) {
-      showToast(err.message || "Xóa thành viên thất bại", "error");
+      const msg = err.response?.data?.message || err.message || "Xóa thành viên thất bại";
+      showToast(msg, "error");
     } finally {
       setMemberActionLoading(false);
     }
@@ -220,6 +270,28 @@ export default function AdminTeams() {
     <div className="page-container">
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
 
+      <ConfirmModal
+        open={deleteTeamId != null}
+        title="Xóa nhóm"
+        message="Xóa nhóm này? Hành động không thể hoàn tác."
+        confirmLabel="Xóa nhóm"
+        cancelLabel="Hủy"
+        danger
+        onCancel={() => setDeleteTeamId(null)}
+        onConfirm={executeDeleteTeam}
+      />
+      <ConfirmModal
+        open={!!removeMemberTarget}
+        title="Xóa thành viên"
+        message="Xóa thành viên này khỏi nhóm?"
+        confirmLabel="Xóa"
+        cancelLabel="Hủy"
+        danger
+        busy={memberActionLoading}
+        onCancel={() => !memberActionLoading && setRemoveMemberTarget(null)}
+        onConfirm={executeRemoveMember}
+      />
+
       <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1>Quản lý nhóm</h1>
@@ -252,12 +324,12 @@ export default function AdminTeams() {
                   className="form-input"
                   placeholder="Tìm theo họ tên hoặc email..."
                   value={memberSearch}
-                  onChange={(e) => setMemberSearch(e.target.value)}
+                  onChange={(e) => { setMemberPage(1); setMemberSearch(e.target.value); }}
                 />
                 <select
                   className="form-input"
                   value={memberRoleFilter}
-                  onChange={(e) => setMemberRoleFilter(e.target.value)}
+                  onChange={(e) => { setMemberPage(1); setMemberRoleFilter(e.target.value); }}
                 >
                   <option value="">Tất cả vai trò</option>
                   <option value="student">Sinh viên</option>
@@ -358,7 +430,7 @@ export default function AdminTeams() {
             <tr><th>Tên nhóm</th><th>Học kỳ</th><th>Trưởng nhóm</th><th>Giảng viên</th><th>Thành viên</th><th></th></tr>
           </thead>
           <tbody>
-            {teamList.map((t) => (
+            {pagedTeamList.map((t) => (
               <tr key={t.id} style={{ cursor: "pointer" }} onClick={() => openTeamDetail(t.id)}>
                 <td><strong>{t.name}</strong></td>
                 <td>{t.semester || "—"}</td>
@@ -366,7 +438,7 @@ export default function AdminTeams() {
                 <td>{t.supervisor_name || "—"}</td>
                 <td>{t.member_count}</td>
                 <td>
-                  <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}>
+                  <button className="btn btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); requestDeleteTeam(t.id); }}>
                     <Icon name="Delete" size={13} />
                   </button>
                 </td>
@@ -375,12 +447,52 @@ export default function AdminTeams() {
           </tbody>
         </table>
         {teamList.length === 0 && <p style={{ textAlign: "center", color: "#94a3b8", padding: 24 }}>Chưa có nhóm nào</p>}
+        {teamList.length > 0 && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, flexWrap: "wrap", gap: 10 }}>
+            <small style={{ color: "#64748b" }}>
+              Hiển thị {(teamSafePage - 1) * PAGE_SIZE + 1}–{Math.min(teamSafePage * PAGE_SIZE, teamList.length)} / {teamList.length} nhóm
+              {" · "}
+              <strong>Trang {teamSafePage} / {teamTotalPages}</strong>
+            </small>
+            <div className="admin-page-pager" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+              <button type="button" className="btn btn-sm btn-secondary" disabled={teamSafePage <= 1} onClick={() => setTeamListPage((p) => Math.max(1, p - 1))} aria-label="Trang trước">
+                &lt;
+              </button>
+              {teamPageItems.map((item, idx) =>
+                item === "ellipsis" ? (
+                  <span key={`te-${idx}`} style={{ padding: "0 4px", color: "#94a3b8", userSelect: "none" }}>…</span>
+                ) : (
+                  <button
+                    key={item}
+                    type="button"
+                    className={`btn btn-sm ${item === teamSafePage ? "btn-primary" : "btn-secondary"}`}
+                    onClick={() => setTeamListPage(item)}
+                  >
+                    {item}
+                  </button>
+                ),
+              )}
+              <button type="button" className="btn btn-sm btn-secondary" disabled={teamSafePage >= teamTotalPages} onClick={() => setTeamListPage((p) => Math.min(teamTotalPages, p + 1))} aria-label="Trang sau">
+                &gt;
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {(detailLoading || selectedTeamDetail) && (
         <div className="modal-overlay" onClick={() => !detailLoading && setSelectedTeamDetail(null)}>
-          <div className="modal" style={{ maxWidth: 900 }} onClick={(e) => e.stopPropagation()}>
-            <h3>Chi tiết nhóm</h3>
+          <div className="modal team-detail-modal" style={{ maxWidth: 900 }} onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="team-detail-modal__close"
+              aria-label="Đóng"
+              disabled={detailLoading}
+              onClick={() => setSelectedTeamDetail(null)}
+            >
+              <Icon name="Close" size={22} />
+            </button>
+            <h3 className="team-detail-modal__title">Chi tiết nhóm</h3>
             {detailLoading ? (
               <p style={{ color: "#64748b" }}>Đang tải dữ liệu...</p>
             ) : (
@@ -452,7 +564,7 @@ export default function AdminTeams() {
                               type="button"
                               className="btn btn-sm btn-danger"
                               disabled={memberActionLoading || !!m.is_leader}
-                              onClick={() => handleRemoveMemberFromDetail(m.id)}
+                              onClick={() => requestRemoveMember(m.id)}
                               title={m.is_leader ? "Không thể xóa trưởng nhóm" : "Xóa thành viên"}
                             >
                               <Icon name="Delete" size={13} />
@@ -497,9 +609,6 @@ export default function AdminTeams() {
                 </div>
               </>
             )}
-            <div className="modal-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => setSelectedTeamDetail(null)} disabled={detailLoading}>Đóng</button>
-            </div>
           </div>
         </div>
       )}
