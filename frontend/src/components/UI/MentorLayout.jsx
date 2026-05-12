@@ -1,26 +1,18 @@
-import { Outlet, useLocation } from "react-router-dom";
-import SidebarMentor from "./SidebarMentor";
-import Header from "./Header";
-import RightPanel from "./RightPanel";
-import "../../styles/layout.css";
+import { Outlet } from "react-router-dom";
+import SidebarMentor from "./SidebarMentor.jsx";
+import Header from "./Header.jsx";
+import "./Sidebar.css";
 
-function MentorLayout() {
-  const { pathname } = useLocation();
-  const showRightPanel = pathname.toLowerCase().startsWith("/mentor/review/");
-  const layoutClassName = showRightPanel ? "layout layout--with-right" : "layout";
-
+export default function MentorLayout() {
   return (
-    <div className={layoutClassName}>
+    <div className="main-layout">
       <SidebarMentor />
-      <div className="main">
+      <div className="main-content">
         <Header />
-        <div className="content">
+        <div className="main-page">
           <Outlet />
         </div>
       </div>
-      {showRightPanel ? <RightPanel /> : null}
     </div>
   );
 }
-
-export default MentorLayout;

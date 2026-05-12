@@ -1,45 +1,11 @@
 import { Router } from "express";
-import { body } from "express-validator";
-import {
-  getMe,
-  login,
-  lookupUserByEmail,
-  register,
-} from "../controllers/auth.controller.js";
-import { protect } from "../middleware/auth.middleware.js";
+import { login, getMe, logout } from "../controllers/auth.controller.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
 
-const registerValidation = [
-  body("email")
-    .isEmail()
-    .withMessage("Gmail khong dung dinh dang vui long nhap lai")
-    .matches(/^[^\s@]+@(gmail\.com|gmail\.edu\.vn)$/)
-    .withMessage("Gmail khong dung dinh dang vui long nhap lai"),
-  body("password")
-    .isLength({ min: 6 })
-    .withMessage("Mat khau toi thieu 6 ky tu")
-    .matches(/[A-Z]/)
-    .withMessage("Mat khau phai co chu in hoa")
-    .matches(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/)
-    .withMessage("Mat khau phai co ky tu dac biet"),
-  body("fullName").notEmpty().withMessage("Ho ten khong duoc de trong"),
-  body("role").isIn(["student", "teacher", "mentor"]).withMessage("Vai tro khong hop le"),
-];
-
-const loginValidation = [
-  body("email")
-    .isEmail()
-    .withMessage("Gmail khong dung dinh dang vui long nhap lai")
-    .matches(/^[^\s@]+@(gmail\.com|gmail\.edu\.vn)$/)
-    .withMessage("Gmail khong dung dinh dang vui long nhap lai"),
-  body("password").notEmpty().withMessage("Mat khau khong duoc de trong"),
-  body("role").optional().isIn(["student", "teacher", "mentor"]).withMessage("Vai tro khong hop le"),
-];
-
-router.post("/register", registerValidation, register);
-router.post("/login", loginValidation, login);
-router.get("/me", protect, getMe);
-router.get("/lookup", lookupUserByEmail);
+router.post("/login", login);
+router.get("/me", requireAuth, getMe);
+router.post("/logout", requireAuth, logout);
 
 export default router;

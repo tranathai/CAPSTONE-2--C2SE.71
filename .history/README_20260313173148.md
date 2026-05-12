@@ -14,6 +14,7 @@ Hệ thống đăng nhập và đăng ký cho MentorAI Grad với phân quyền 
 ## Công nghệ sử dụng
 
 ### Backend
+
 - Node.js
 - Express.js
 - MongoDB + Mongoose
@@ -21,9 +22,11 @@ Hệ thống đăng nhập và đăng ký cho MentorAI Grad với phân quyền 
 - bcryptjs (mã hóa mật khẩu)
 
 ### Database schema dự phòng
+
 - Thư mục `database/` đã có sẵn schema MySQL cho `users`, `students`, `lecturers` để tích hợp sau này.
 
 ### Frontend
+
 - React (JSX)
 - React Router DOM
 - Axios
@@ -48,6 +51,7 @@ npm install
 ```
 
 Cấu hình file `.env`:
+
 ```env
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/mentoral_grad
@@ -56,6 +60,7 @@ JWT_EXPIRE=7d
 ```
 
 Khởi động server:
+
 ```bash
 npm start
 # Hoặc sử dụng nodemon cho development
@@ -72,11 +77,12 @@ npm install
 ```
 
 Khởi động ứng dụng React:
+
 ```bash
 npm start
 ```
 
-Ứng dụng sẽ chạy tại: `http://localhost:3000`
+Ứng dụng sẽ chạy tại: `http://localhost:5000`
 
 ## Luồng hoạt động
 
@@ -103,6 +109,7 @@ npm start
 ### Authentication
 
 #### Đăng ký
+
 ```
 POST /api/auth/register
 Body: {
@@ -114,6 +121,7 @@ Body: {
 ```
 
 #### Đăng nhập
+
 ```
 POST /api/auth/login
 Body: {
@@ -124,6 +132,7 @@ Body: {
 ```
 
 #### Lấy thông tin user hiện tại
+
 ```
 GET /api/auth/me
 Headers: {
@@ -183,6 +192,7 @@ frontend/
 ## Phát triển tiếp
 
 Các tính năng có thể thêm vào:
+
 - Reset password
 - Email verification
 - Social login (Google, Facebook)

@@ -1,17 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { connectDB } = require('./config/database');
+// const connectDB = require('./config/database');
 
 // Load environment variables
 dotenv.config();
 
-// Connect to database - MySQL is required
-connectDB().catch((error) => {
-  console.error('Database connection failed:', error.message);
-  console.log('Please ensure MySQL is running and .env is configured correctly');
-  process.exit(1);
-});
+// Connect to database (DISABLED - using mock data for now)
+// connectDB();
+console.log('⚠️  Database connection DISABLED - Using mock data');
 
 const app = express();
 
@@ -22,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/reports', require('./routes/reportRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => {

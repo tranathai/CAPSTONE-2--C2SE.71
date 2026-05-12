@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS lecturers (
   PRIMARY KEY (id),
   UNIQUE KEY uk_lecturers_user_id (user_id),
   UNIQUE KEY uk_lecturers_lecturer_code (lecturer_code),
-  CONSTRAINT fk_lecturers_user
+  CONSTRAINT fk_lecturers_user`
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE
     ON UPDATE CASCADE
@@ -65,35 +65,15 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO users (email, password_hash, full_name, role)
-SELECT 'trananhthai12a6@gmail.com', '$2a$10$ccRoxDfM9s91ocgVCipze.CooI0p4OTcPvibRTK6weX4QLieio2Lu', 'Tran Anh Thai', 'student'
-WHERE NOT EXISTS (
-  SELECT 1 FROM users WHERE email = 'trananhthai12a6@gmail.com'
-);
-
-INSERT INTO users (email, password_hash, full_name, role)
 SELECT 'lecturer.demo@gmail.com', '$2b$10$replace_me_with_bcrypt_hash', 'Giang vien demo', 'teacher'
 WHERE NOT EXISTS (
   SELECT 1 FROM users WHERE email = 'lecturer.demo@gmail.com'
 );
 
-INSERT INTO users (email, password_hash, full_name, role)
-SELECT 'henny4@gmail.com', '$2a$10$JNNTZnLVFbRLUkopE6h3AetMNrhzjUWDwFsSGa/3roMyUdLwCbWkO', 'Henny', 'teacher'
-WHERE NOT EXISTS (
-  SELECT 1 FROM users WHERE email = 'henny4@gmail.com'
-);
-
 INSERT INTO students (user_id, student_code, major, class_name, enrollment_year, phone)
-SELECT u.id, 'SV001', 'Cong nghe thong tin', 'CNTT-K28', 2026, '28211152669'
+SELECT u.id, 'SV001', 'Cong nghe thong tin', 'CNTT-K18', 2024, '0900000001'
 FROM users u
 WHERE u.email = 'student.demo@gmail.com'
-  AND NOT EXISTS (
-    SELECT 1 FROM students s WHERE s.user_id = u.id
-  );
-
-INSERT INTO students (user_id, student_code, major, class_name, enrollment_year, phone)
-SELECT u.id, 'SV002', 'Cong nghe thong tin', 'CNTT-K19', 2025, '0900000003'
-FROM users u
-WHERE u.email = 'sv1@gmail.com'
   AND NOT EXISTS (
     SELECT 1 FROM students s WHERE s.user_id = u.id
   );
@@ -102,14 +82,6 @@ INSERT INTO lecturers (user_id, lecturer_code, department, specialization, acade
 SELECT u.id, 'GV001', 'Khoa Cong nghe thong tin', 'Tri tue nhan tao', 'ThS.', '0900000002'
 FROM users u
 WHERE u.email = 'lecturer.demo@gmail.com'
-  AND NOT EXISTS (
-    SELECT 1 FROM lecturers l WHERE l.user_id = u.id
-  );
-
-INSERT INTO lecturers (user_id, lecturer_code, department, specialization, academic_title, phone)
-SELECT u.id, 'GV002', 'Khoa Cong nghe thong tin', 'He thong thong tin', 'ThS.', '0900000004'
-FROM users u
-WHERE u.email = 'henny@gmail.com'
   AND NOT EXISTS (
     SELECT 1 FROM lecturers l WHERE l.user_id = u.id
   );

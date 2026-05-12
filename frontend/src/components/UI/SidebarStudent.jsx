@@ -1,89 +1,37 @@
-import {
-  GraduationCap,
-  LayoutDashboard,
-  FileText,
-  BarChart3,
-  Users,
-  User,
-  Plus,
-} from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
-import "../../styles/sidebar.css";
+import { NavLink } from "react-router-dom";
+import Icon from "./Icon.jsx";
+import "./Sidebar.css";
 
-function SidebarStudent() {
-  const { pathname } = useLocation();
-  const normalizedPath = pathname.toLowerCase();
-  const isMyProjectActive =
-    normalizedPath.startsWith("/myproject") ||
-    normalizedPath.startsWith("/student/submissions") ||
-    normalizedPath.startsWith("/student/project-management/");
+const navItems = [
+  { to: "/student/dashboard", icon: "Dashboard", label: "Dashboard" },
+  { to: "/student/submissions", icon: "Upload", label: "Nộp bài" },
+  { to: "/student/topic", icon: "Assignment", label: "Đề tài" },
+  { to: "/student/feedback", icon: "Feedback", label: "Phản hồi" },
+  { to: "/student/team", icon: "Groups", label: "Nhóm" },
+  { to: "/student/meetings", icon: "Calendar", label: "Lịch họp" },
+  { to: "/student/messages", icon: "Chat", label: "Nhắn tin" },
+  { to: "/student/profile", icon: "Person", label: "Hồ sơ" },
+];
 
+export default function SidebarStudent() {
   return (
-    <div className="sidebar">
-      <div>
-        <div className="sb-brand">
-          <div className="sb-brand-icon" aria-hidden="true">
-            <GraduationCap size={18} color="#fff" />
-          </div>
-          <div className="sb-brand-text">MentorAI Grad</div>
-        </div>
-
-        <div className="sb-profile">
-          <img
-            className="sb-profile-img"
-            src="https://i.pravatar.cc/80?img=32"
-            alt="Student profile"
-          />
-          <div className="sb-profile-meta">
-            <div className="sb-profile-name">Student</div>
-            <div className="sb-profile-role">Project Member</div>
-          </div>
-        </div>
-
-        <nav className="sb-nav" aria-label="Student Sidebar">
-          <NavLink
-            className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}
-            to="/student/dashboard"
-            end
-          >
-            <LayoutDashboard size={18} />
-            Dashboard
-          </NavLink>
-          <NavLink
-            className={() => `sb-item ${isMyProjectActive ? "active" : ""}`}
-            to="/myproject"
-            end
-          >
-            <FileText size={18} />
-            My Project
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `sb-item ${isActive ? "active" : ""}`}
-            to="/student/feedback"
-            end
-          >
-            <BarChart3 size={18} />
-            Feedback
-          </NavLink>
-          <button className="sb-item" type="button">
-            <Users size={18} />
-            Team
-          </button>
-          <button className="sb-item" type="button">
-            <User size={18} />
-            Profile
-          </button>
-        </nav>
+    <aside className="sidebar">
+      <div className="sidebar-brand">
+        <Icon name="School" size={22} sx={{ color: "#fff" }} />
+        <span>MentorAI Grad</span>
       </div>
-
-      <div className="sb-footer">
-        <NavLink className="sb-new-project" to="/project/ProjectRegistration">
-          <Plus size={16} />
-          New Project
-        </NavLink>
-      </div>
-    </div>
+      <nav className="sidebar-nav">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+          >
+            <Icon name={item.icon} size={20} />
+            <span>{item.label}</span>
+          </NavLink>
+        ))}
+      </nav>
+    </aside>
   );
 }
-
-export default SidebarStudent;

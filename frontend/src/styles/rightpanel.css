@@ -1,14 +1,13 @@
 .right {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  width: 100%;
-  min-width: 0;
-  max-width: none;
+  width: 380px;
+  min-width: 300px;
+  max-width: min(380px, 40vw);
   background: #fff;
   border-left: 1px solid #e2e8f0;
   height: 100vh;
-  position: sticky;
-  top: 0;
   overflow: hidden;
 }
 
@@ -72,7 +71,6 @@
 
 .rp-ai-snippet {
   display: -webkit-box;
-  line-clamp: 4;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -88,9 +86,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: sticky;
-  top: 0;
-  align-self: start;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .rp-ai-title {
