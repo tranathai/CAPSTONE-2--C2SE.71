@@ -35,7 +35,7 @@ export default function StudentFeedback() {
     }
     setSummarizing(feedbackId);
     try {
-      const result = await ai.summarize({ content });
+      const result = await ai.summarize(content);
       setSummaryMap((prev) => ({ ...prev, [feedbackId]: result.summary }));
     } catch (err) {
       showToast("Tính năng AI tạm thời không khả dụng", "error");

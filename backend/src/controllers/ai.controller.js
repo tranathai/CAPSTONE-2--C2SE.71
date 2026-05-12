@@ -25,49 +25,53 @@ export async function updateConfig(req, res, next) {
 export async function summarizeFeedback(req, res, next) {
   try {
     const { content } = req.body;
-
-    if (!content || !content.trim()) {
+    const normalizedContent = typeof content === "string" ? content.trim() : "";
+    if (!normalizedContent) {
       return res.status(400).json({ success: false, message: "Nội dung feedback không được để trống" });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
+    const rawKeys = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+    const apiKeys = String(rawKeys)
+      .split(/[\n,;]/)
+      .map((k) => k.trim())
+      .filter(Boolean);
+    if (apiKeys.length === 0) {
       return res.status(503).json({
         success: false,
-        message: "Tính năng AI tạm thời không khả dụng",
+        message: "Thiếu GEMINI_API_KEY (hoặc GOOGLE_API_KEY) trong cấu hình backend",
       });
     }
 
-    const prompt = `Bạn là trợ lý tóm tắt phản hồi của giảng viên cho sinh viên. Hãy tóm tắt nội dung sau thành 3-5 điểm chính ngắn gọn (mỗi điểm dưới 20 từ). Nếu nội dung ngắn dưới 100 từ, chỉ cần liệt kê 1-2 điểm chính. Trả lời bằng tiếng Việt.\n\nNội dung phản hồi:\n${content}`;
+    const prompt = `Bạn là trợ lý tóm tắt phản hồi của giảng viên cho sinh viên. Hãy tóm tắt nội dung sau thành 3-5 điểm chính ngắn gọn (mỗi điểm dưới 20 từ). Nếu nội dung ngắn dưới 100 từ, chỉ cần liệt kê 1-2 điểm chính. Trả lời bằng tiếng Việt.\n\nNội dung phản hồi:\n${normalizedContent}`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 512, temperature: 0.3 },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Gemini API error:", errText);
-      return res.status(503).json({
-        success: false,
-        message: "Tính năng AI tạm thời không khả dụng",
-      });
+    let summary = "";
+    let lastErr = "";
+    for (const apiKey of apiKeys) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: 512, temperature: 0.3 },
+          }),
+        },
+      );
+      if (!response.ok) {
+        lastErr = await response.text();
+        continue;
+      }
+      const data = await response.json();
+      summary = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+      if (summary) break;
     }
-
-    const data = await response.json();
-    const summary = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
     if (!summary) {
-      return res.status(500).json({
+      if (lastErr) console.error("Gemini API error:", lastErr);
+      return res.status(503).json({
         success: false,
-        message: "Không nhận được phản hồi từ AI",
+        message: "Tính năng AI tạm thời không khả dụng",
       });
     }
 

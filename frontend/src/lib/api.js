@@ -161,7 +161,9 @@ export const messages = {
 
 // ─── AI ────────────────────────────────────────────────────────────────────
 export const ai = {
-  summarize: (content) => client.post("/ai/summarize-feedback", { content }).then((r) => body(r.data)),
+  summarize: (content) => client.post("/ai/summarize-feedback", {
+    content: typeof content === "string" ? content : String(content?.content || ""),
+  }).then((r) => body(r.data)),
 };
 
 // ─── System Config ─────────────────────────────────────────────────────────

@@ -438,7 +438,13 @@ export default function AdminMilestones() {
                 </div>
                 <div className="form-group">
                   <label>Tài liệu cần nộp (mỗi dòng một mục)</label>
-                  <textarea className="form-input" rows={5} value={form.required_documents_text} onChange={(e) => setForm((f) => ({ ...f, required_documents_text: e.target.value }))} />
+                  <textarea
+                    className="form-input"
+                    rows={5}
+                    value={form.required_documents_text}
+                    onChange={(e) => setForm((f) => ({ ...f, required_documents_text: e.target.value }))}
+                    placeholder={"Ví dụ:\nRequirements\nProject Plan\nSource code (.zip)"}
+                  />
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? "Đang lưu..." : "Lưu"}</button>

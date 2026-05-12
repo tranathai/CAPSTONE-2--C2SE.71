@@ -270,28 +270,6 @@ export default function AdminTeams() {
     <div className="page-container">
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
 
-      <ConfirmModal
-        open={deleteTeamId != null}
-        title="Xóa nhóm"
-        message="Xóa nhóm này? Hành động không thể hoàn tác."
-        confirmLabel="Xóa nhóm"
-        cancelLabel="Hủy"
-        danger
-        onCancel={() => setDeleteTeamId(null)}
-        onConfirm={executeDeleteTeam}
-      />
-      <ConfirmModal
-        open={!!removeMemberTarget}
-        title="Xóa thành viên"
-        message="Xóa thành viên này khỏi nhóm?"
-        confirmLabel="Xóa"
-        cancelLabel="Hủy"
-        danger
-        busy={memberActionLoading}
-        onCancel={() => !memberActionLoading && setRemoveMemberTarget(null)}
-        onConfirm={executeRemoveMember}
-      />
-
       <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1>Quản lý nhóm</h1>
@@ -612,6 +590,28 @@ export default function AdminTeams() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={deleteTeamId != null}
+        title="Xóa nhóm"
+        message="Xóa nhóm này? Hành động không thể hoàn tác."
+        confirmLabel="Xóa nhóm"
+        cancelLabel="Hủy"
+        danger
+        onCancel={() => setDeleteTeamId(null)}
+        onConfirm={executeDeleteTeam}
+      />
+      <ConfirmModal
+        open={!!removeMemberTarget}
+        title="Xóa thành viên"
+        message="Xóa thành viên này khỏi nhóm?"
+        confirmLabel="Xóa"
+        cancelLabel="Hủy"
+        danger
+        busy={memberActionLoading}
+        onCancel={() => !memberActionLoading && setRemoveMemberTarget(null)}
+        onConfirm={executeRemoveMember}
+      />
     </div>
   );
 }

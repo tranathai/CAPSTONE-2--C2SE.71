@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Icon from "../../components/UI/Icon.jsx";
-import { meetings } from "../../lib/api.js";
+import { meetings, teams } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
 import { topics } from "../../lib/api.js";
 
@@ -9,6 +9,7 @@ export default function StudentMeetings() {
   const [meetingList, setMeetingList] = useState([]);
   const [requests, setRequests] = useState([]);
   const [topicInfo, setTopicInfo] = useState(null);
+  const [teamInfo, setTeamInfo] = useState(null);
   const [tab, setTab] = useState("meetings");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ supervisor_id: "", title: "", reason: "", proposed_at: "" });
@@ -19,13 +20,14 @@ export default function StudentMeetings() {
       meetings.list(),
       meetings.studentRequests(),
       topics.myTopic(),
-    ]).then(([ml, req, topic]) => {
+      teams.myTeam().catch(() => null),
+    ]).then(([ml, req, topic, team]) => {
       setMeetingList(ml);
       setRequests(req);
       setTopicInfo(topic || null);
-      if (topic?.supervisor_id) {
-        setForm((f) => ({ ...f, supervisor_id: String(topic.supervisor_id) }));
-      }
+      setTeamInfo(team || null);
+      const supervisorId = topic?.supervisor_id || team?.supervisor_user_id || "";
+      if (supervisorId) setForm((f) => ({ ...f, supervisor_id: String(supervisorId) }));
     }).catch(() => {});
   }, []);
 
@@ -99,7 +101,7 @@ export default function StudentMeetings() {
               <label>Giảng viên nhận yêu cầu</label>
               <input
                 className="form-input"
-                value={topicInfo?.supervisor_name || "Chưa có giảng viên hướng dẫn"}
+                value={topicInfo?.supervisor_name || teamInfo?.supervisor_name || "Chưa có giảng viên hướng dẫn"}
                 disabled
               />
             </div>

@@ -121,8 +121,8 @@ export async function requestMeeting(req, res, next) {
     const { supervisor_id, title, reason, proposed_at } = req.body;
     const requesterId = req.user.id;
 
-    if (!supervisor_id || !title || !title.trim()) {
-      return res.status(400).json({ success: false, message: "supervisor_id và title không được để trống" });
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, message: "title không được để trống" });
     }
     if (!proposed_at) {
       return res.status(400).json({ success: false, message: "Thời gian đề xuất không được để trống" });
@@ -133,17 +133,22 @@ export async function requestMeeting(req, res, next) {
       return res.status(400).json({ success: false, message: "Bạn chưa thuộc nhóm nào" });
     }
 
+    const resolvedSupervisorId = Number(supervisor_id || team.supervisor_user_id || 0);
+    if (!resolvedSupervisorId) {
+      return res.status(400).json({ success: false, message: "Nhóm chưa có giảng viên hướng dẫn" });
+    }
+
     const id = await createMeetingRequest({
       teamId: team.id,
       requesterId,
-      supervisorId: Number(supervisor_id),
+      supervisorId: resolvedSupervisorId,
       title: title.trim(),
       reason,
       proposedAt: proposed_at,
     });
 
     await createNotification({
-      userId: Number(supervisor_id),
+      userId: resolvedSupervisorId,
       title: "Yêu cầu họp mới",
       message: `Nhóm "${team.name}" yêu cầu họp: "${title.trim()}"`,
       type: "meeting",
