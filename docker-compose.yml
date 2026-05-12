@@ -1,0 +1,25 @@
+# MySQL chạy trong Docker — một máy bật container này, các máy khác trỏ DB_HOST tới IP LAN của máy đó.
+# Sao chép compose.env.example → .env (cùng thư mục với file này), chỉnh mật khẩu, rồi: docker compose up -d
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mentoraigrad-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-mentorai_local_dev}
+      MYSQL_DATABASE: ${DB_NAME:-mentoraigrad}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+
+volumes:
+  mysql_data:
