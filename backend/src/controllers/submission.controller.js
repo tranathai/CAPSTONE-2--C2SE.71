@@ -17,6 +17,21 @@ import { findTopicByTeamId } from "../models/topic.model.js";
 import { createNotification } from "../models/notification.model.js";
 import pool from "../config/db.js";
 
+/** Thứ Hai 00:00:00 (local) của tuần chứa `date`. */
+function startOfMondayWeek(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d;
+}
+
+function formatWeekRangeLabelVi(monday, sunday) {
+  const o = { day: "2-digit", month: "2-digit" };
+  return `${monday.toLocaleDateString("vi-VN", o)}–${sunday.toLocaleDateString("vi-VN", o)}`;
+}
+
 export async function listSubmissions(req, res, next) {
   try {
     const { team_id, milestone_id } = req.query;
@@ -155,6 +170,41 @@ export async function getDashboardStats(req, res, next) {
       [supervisorId],
     );
 
+    const baseMonday = startOfMondayWeek(new Date());
+    const weekly_backlog = [];
+    for (let w = 7; w >= 0; w -= 1) {
+      const monday = new Date(baseMonday);
+      monday.setDate(monday.getDate() - w * 7);
+      const sunday = new Date(monday);
+      sunday.setDate(sunday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+
+      const [reviewedRow] = await pool.query(
+        `SELECT COUNT(DISTINCT s.id) AS count FROM submissions s
+         INNER JOIN teams t ON t.id = s.team_id
+         INNER JOIN topic_registrations tr ON tr.team_id = t.id AND tr.status = 'approved' AND tr.supervisor_id = ?
+         WHERE s.status_label = 'Reviewed' AND s.updated_at >= ? AND s.updated_at <= ?`,
+        [supervisorId, monday, sunday],
+      );
+      const [pendingRow] = await pool.query(
+        `SELECT COUNT(DISTINCT s.id) AS count FROM submissions s
+         INNER JOIN teams t ON t.id = s.team_id
+         INNER JOIN topic_registrations tr ON tr.team_id = t.id AND tr.status = 'approved' AND tr.supervisor_id = ?
+         INNER JOIN submission_versions sv ON sv.id = (
+           SELECT sv2.id FROM submission_versions sv2 WHERE sv2.submission_id = s.id ORDER BY sv2.version_number DESC LIMIT 1
+         )
+         WHERE s.status_label = 'Pending Review' AND sv.submitted_at >= ? AND sv.submitted_at <= ?`,
+        [supervisorId, monday, sunday],
+      );
+
+      weekly_backlog.push({
+        week_start: monday.toISOString().slice(0, 10),
+        label: formatWeekRangeLabelVi(monday, sunday),
+        reviewed: Number(reviewedRow[0]?.count ?? 0),
+        pending: Number(pendingRow[0]?.count ?? 0),
+      });
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -163,6 +213,7 @@ export async function getDashboardStats(req, res, next) {
         late_submissions: lateSubmissions[0]?.count ?? 0,
         pending_topics: pendingTopics[0]?.count ?? 0,
         at_risk_groups: atRiskGroups,
+        weekly_backlog,
       },
     });
   } catch (error) {

@@ -1,4 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 import Icon from "../../components/UI/Icon.jsx";
 import { submissions, topics } from "../../lib/api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -8,6 +18,16 @@ export default function MentorDashboard() {
   const [stats, setStats] = useState(null);
   const [pendingTopics, setPendingTopics] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const weeklyChartData = useMemo(() => {
+    const rows = stats?.weekly_backlog;
+    if (!Array.isArray(rows) || rows.length === 0) return [];
+    return rows.map((w) => ({
+      label: w.label,
+      da_phan_hoi: Number(w.reviewed) || 0,
+      cho_phan_hoi: Number(w.pending) || 0,
+    }));
+  }, [stats]);
 
   useEffect(() => {
     Promise.all([
@@ -46,6 +66,37 @@ export default function MentorDashboard() {
           <div className="stat-value" style={{ color: "#f59e0b" }}>{stats?.pending_topics ?? 0}</div>
         </div>
       </div>
+
+      {weeklyChartData.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-title">
+            <Icon name="BarChart" size={14} sx={{ marginRight: 6 }} />
+            Tài liệu theo tuần (Đã phản hồi vs Chờ phản hồi)
+          </div>
+          <p style={{ fontSize: "0.85rem", color: "#64748b", marginBottom: 12 }}>
+            Theo tuần lịch (Thứ Hai–Chủ Nhật). Xanh: tài liệu được đánh dấu đã phản hồi trong tuần. Cam: tài liệu chờ phản hồi, có bản nộp mới nhất trong tuần.
+          </p>
+          <div style={{ width: "100%", height: 320 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyChartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8edf5" />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} angle={-22} textAnchor="end" height={72} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 12,
+                    border: "none",
+                    boxShadow: "0 12px 32px rgba(15,23,42,0.14)",
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="cho_phan_hoi" name="Chờ phản hồi" stackId="backlog" fill="#f59e0b" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="da_phan_hoi" name="Đã phản hồi" stackId="backlog" fill="#22c55e" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {pendingTopics.length > 0 && (
         <div className="card">

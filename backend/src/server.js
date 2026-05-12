@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./loadEnv.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import express from "express";
@@ -23,6 +23,8 @@ import aiRouter from "./routes/ai.routes.js";
 import systemConfigRouter from "./routes/systemConfig.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 function isAllowedCorsOrigin(origin) {
   if (!origin) return true;
   try {
@@ -40,7 +42,6 @@ function isAllowedCorsOrigin(origin) {
     .includes(origin);
 }
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {

@@ -27,15 +27,47 @@ export default function StudentReview() {
     if (summaryMap[feedbackId]) { setSummaryMap((p) => ({ ...p, [feedbackId]: null })); return; }
     setSummarizing(feedbackId);
     try {
-      const result = await ai.summarize({ content });
+      const result = await ai.summarize(content);
       setSummaryMap((p) => ({ ...p, [feedbackId]: result.summary }));
-    } catch { showToast("Tính năng AI tạm thời không khả dụng", "error"); }
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message || err?.message || "Tính năng AI tạm thời không khả dụng";
+      showToast(msg, "error");
+    }
     finally { setSummarizing(null); }
   };
 
   if (!submission) return <div className="loading-screen"><div className="spinner" /></div>;
 
   const fileUrl = getUploadUrl(submission.file_path);
+
+  /** Tránh chuỗi dài / URL làm tràn cột; giới hạn chiều cao để cuộn trong khối thay vì kéo dài cả trang. */
+  const feedbackTextStyle = {
+    fontSize: "0.875rem",
+    lineHeight: 1.6,
+    color: "#334155",
+    overflowWrap: "break-word",
+    wordBreak: "break-word",
+    whiteSpace: "pre-wrap",
+    maxHeight: "min(50vh, 400px)",
+    overflowY: "auto",
+    margin: 0,
+  };
+  const aiSummaryScrollStyle = {
+    marginTop: 4,
+    maxHeight: "calc(8 * 1.5 * 0.82rem)",
+    minHeight: 0,
+    overflowY: "scroll",
+    overflowX: "hidden",
+    fontSize: "0.82rem",
+    lineHeight: 1.5,
+    color: "#1e3a8a",
+    overflowWrap: "break-word",
+    wordBreak: "break-word",
+    whiteSpace: "pre-wrap",
+    paddingRight: 4,
+    WebkitOverflowScrolling: "touch",
+  };
 
   return (
     <div className="page-container">
@@ -47,7 +79,7 @@ export default function StudentReview() {
         </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 380px)", gap: 20, alignItems: "start" }}>
         {/* Document preview */}
         <div className="card">
           <div className="card-title"><Icon name="FileText" size={14} sx={{ marginRight: 6 }} />Tài liệu nộp</div>
@@ -70,8 +102,8 @@ export default function StudentReview() {
           )}
         </div>
 
-        {/* Feedback panel */}
-        <div>
+        {/* Feedback panel — minWidth 0 để text dài không phá lưới grid */}
+        <div style={{ minWidth: 0 }}>
           <div className="card">
             <div className="card-title">Phản hồi từ giảng viên</div>
             {feedbacksList.length === 0 ? (
@@ -93,15 +125,25 @@ export default function StudentReview() {
                         {new Date(f.created_at).toLocaleString("vi-VN")}
                       </span>
                     </div>
-                    <p style={{ fontSize: "0.875rem", lineHeight: 1.6, color: "#334155" }}>{f.content}</p>
+                    <p style={feedbackTextStyle}>{f.content}</p>
                     <button className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}
                       onClick={() => summarize(f.id, f.content)} disabled={summarizing === f.id}>
                       <Icon name="Sparkles" size={13} /> {summarizing === f.id ? "..." : "Tóm tắt AI"}
                     </button>
                     {summaryMap[f.id] && (
-                      <div style={{ background: "#eff6ff", borderRadius: 6, padding: 8, marginTop: 8 }}>
-                        <strong style={{ fontSize: "0.78rem", color: "#1e40af" }}>Tóm tắt:</strong>
-                        <p style={{ fontSize: "0.82rem", color: "#1e3a8a", marginTop: 4, lineHeight: 1.5 }}>{summaryMap[f.id]}</p>
+                      <div
+                        style={{
+                          background: "#eff6ff",
+                          borderRadius: 6,
+                          padding: 8,
+                          marginTop: 8,
+                          minWidth: 0,
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
+                        <strong style={{ fontSize: "0.78rem", color: "#1e40af", flexShrink: 0 }}>Tóm tắt:</strong>
+                        <div style={aiSummaryScrollStyle}>{summaryMap[f.id]}</div>
                       </div>
                     )}
                   </div>

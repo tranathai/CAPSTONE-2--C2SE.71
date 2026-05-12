@@ -44,26 +44,66 @@ export async function summarizeFeedback(req, res, next) {
 
     const prompt = `Bạn là trợ lý tóm tắt phản hồi của giảng viên cho sinh viên. Hãy tóm tắt nội dung sau thành 3-5 điểm chính ngắn gọn (mỗi điểm dưới 20 từ). Nếu nội dung ngắn dưới 100 từ, chỉ cần liệt kê 1-2 điểm chính. Trả lời bằng tiếng Việt.\n\nNội dung phản hồi:\n${normalizedContent}`;
 
+    const rawModels =
+      process.env.GEMINI_MODEL ||
+      "gemini-2.0-flash,gemini-2.5-flash,gemini-flash-latest";
+    const models = rawModels
+      .split(/[\n,;]/)
+      .map((m) => m.trim())
+      .filter(Boolean);
+
+    function extractSummary(data) {
+      const cand = data?.candidates?.[0];
+      if (!cand) return { text: "", detail: "Không có candidates từ Gemini" };
+      const fr = cand.finishReason;
+      if (fr && fr !== "STOP" && fr !== "MAX_TOKENS" && fr !== "FINISH_REASON_UNSPECIFIED") {
+        return { text: "", detail: `Gemini dừng: ${fr}` };
+      }
+      const parts = cand?.content?.parts;
+      const text = Array.isArray(parts)
+        ? parts.map((p) => p?.text || "").join("").trim()
+        : "";
+      return { text, detail: text ? "" : "Phản hồi trống từ model" };
+    }
+
     let summary = "";
     let lastErr = "";
     for (const apiKey of apiKeys) {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 512, temperature: 0.3 },
-          }),
-        },
-      );
-      if (!response.ok) {
-        lastErr = await response.text();
-        continue;
+      for (const model of models) {
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { maxOutputTokens: 2048, temperature: 0.3 },
+              }),
+            },
+          );
+          const rawText = await response.text();
+          let data;
+          try {
+            data = JSON.parse(rawText);
+          } catch {
+            lastErr = rawText.slice(0, 200);
+            continue;
+          }
+          if (!response.ok) {
+            lastErr = data?.error?.message || rawText.slice(0, 300);
+            continue;
+          }
+          const { text, detail } = extractSummary(data);
+          if (text) {
+            summary = text;
+            break;
+          }
+          lastErr = detail || "Không đọc được nội dung tóm tắt";
+        } catch (e) {
+          lastErr = e?.message || String(e);
+        }
       }
-      const data = await response.json();
-      summary = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
       if (summary) break;
     }
 
@@ -71,7 +111,10 @@ export async function summarizeFeedback(req, res, next) {
       if (lastErr) console.error("Gemini API error:", lastErr);
       return res.status(503).json({
         success: false,
-        message: "Tính năng AI tạm thời không khả dụng",
+        message:
+          lastErr && lastErr.length < 200
+            ? `AI: ${lastErr}`
+            : "Tính năng AI tạm thời không khả dụng (kiểm tra GEMINI_API_KEY và GEMINI_MODEL trong .env backend)",
       });
     }
 

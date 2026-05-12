@@ -5,6 +5,25 @@ import { useToast } from "../../hooks/useToast.js";
 import { useSocket } from "../../context/SocketContext.jsx";
 import "../student/Topic.css";
 
+const PAGE_SIZE = 5;
+
+function buildPageList(totalPages, current) {
+  if (totalPages < 1) return [];
+  if (totalPages === 1) return [1];
+  const set = new Set([1, totalPages, current]);
+  for (let d = -2; d <= 2; d += 1) {
+    const p = current + d;
+    if (p >= 1 && p <= totalPages) set.add(p);
+  }
+  const sorted = [...set].sort((a, b) => a - b);
+  const out = [];
+  for (let i = 0; i < sorted.length; i += 1) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.push("ellipsis");
+    out.push(sorted[i]);
+  }
+  return out;
+}
+
 export default function MentorTopics() {
   const { toast, showToast } = useToast();
   const { on, off } = useSocket();
@@ -17,6 +36,7 @@ export default function MentorTopics() {
   const [approvingTopic, setApprovingTopic] = useState(null);
   const [selectedBatchIds, setSelectedBatchIds] = useState([]);
   const [batchQuery, setBatchQuery] = useState("");
+  const [page, setPage] = useState(1);
 
   const refreshPending = useCallback(() => {
     topics.pending().then(setPending).catch(() => {});
@@ -72,6 +92,15 @@ export default function MentorTopics() {
     }
   };
 
+  const totalPages = Math.max(1, Math.ceil(pending.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pagedPending = pending.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageItems = buildPageList(totalPages, safePage);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
   return (
@@ -90,7 +119,7 @@ export default function MentorTopics() {
           <p>Tất cả đề tài đã được xử lý</p>
         </div>
       ) : (
-        pending.map((t) => (
+        pagedPending.map((t) => (
           <div key={t.id} className="card" style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
               <div>
@@ -144,6 +173,38 @@ export default function MentorTopics() {
             )}
           </div>
         ))
+      )}
+
+      {pending.length > 0 && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+          <small style={{ color: "#64748b" }}>
+            Hiển thị {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, pending.length)} / {pending.length} đề tài
+            {" · "}
+            <strong>Trang {safePage} / {totalPages}</strong>
+          </small>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+            <button type="button" className="btn btn-sm btn-secondary" disabled={safePage <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+              &lt;
+            </button>
+            {pageItems.map((item, idx) =>
+              item === "ellipsis" ? (
+                <span key={`ep-${idx}`} style={{ padding: "0 4px", color: "#94a3b8", userSelect: "none" }}>…</span>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  className={`btn btn-sm ${item === safePage ? "btn-primary" : "btn-secondary"}`}
+                  onClick={() => setPage(item)}
+                >
+                  {item}
+                </button>
+              ),
+            )}
+            <button type="button" className="btn btn-sm btn-secondary" disabled={safePage >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+              &gt;
+            </button>
+          </div>
+        </div>
       )}
 
       {approvingTopic && (

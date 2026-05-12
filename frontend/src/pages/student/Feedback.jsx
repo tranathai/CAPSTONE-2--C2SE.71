@@ -38,13 +38,43 @@ export default function StudentFeedback() {
       const result = await ai.summarize(content);
       setSummaryMap((prev) => ({ ...prev, [feedbackId]: result.summary }));
     } catch (err) {
-      showToast("Tính năng AI tạm thời không khả dụng", "error");
+      const msg =
+        err?.response?.data?.message || err?.message || "Tính năng AI tạm thời không khả dụng";
+      showToast(msg, "error");
     } finally {
       setSummarizing(null);
     }
   };
 
   const visibleFeedbacks = history.filter((s) => s.has_final_feedback || s.has_feedback);
+
+  const feedbackTextStyle = {
+    fontSize: "0.875rem",
+    lineHeight: 1.6,
+    color: "#334155",
+    overflowWrap: "break-word",
+    wordBreak: "break-word",
+    whiteSpace: "pre-wrap",
+    maxHeight: "min(50vh, 400px)",
+    overflowY: "auto",
+    margin: 0,
+  };
+  /* 8 dòng (line-height 1.5 × cỡ chữ); minHeight:0 để cuộn đúng trong flex; scroll luôn để thấy thanh cuộn */
+  const aiSummaryScrollStyle = {
+    marginTop: 4,
+    maxHeight: "calc(8 * 1.5 * 0.875rem)",
+    minHeight: 0,
+    overflowY: "scroll",
+    overflowX: "hidden",
+    fontSize: "0.875rem",
+    lineHeight: 1.5,
+    color: "#1e3a8a",
+    overflowWrap: "break-word",
+    wordBreak: "break-word",
+    whiteSpace: "pre-wrap",
+    paddingRight: 4,
+    WebkitOverflowScrolling: "touch",
+  };
 
   return (
     <div className="page-container">
@@ -102,11 +132,21 @@ export default function StudentFeedback() {
                           <Icon name="Sparkles" size={14} /> {summarizing === f.id ? "Đang tóm tắt..." : "Tóm tắt AI"}
                         </button>
                       </div>
-                      <p style={{ fontSize: "0.875rem", lineHeight: 1.6, color: "#334155" }}>{f.content}</p>
+                      <p style={feedbackTextStyle}>{f.content}</p>
                       {summaryMap[f.id] && (
-                        <div style={{ background: "#eff6ff", borderRadius: 8, padding: 10, marginTop: 8 }}>
-                          <strong style={{ fontSize: "0.8rem", color: "#1e40af" }}>Tóm tắt AI:</strong>
-                          <p style={{ fontSize: "0.875rem", color: "#1e3a8a", marginTop: 4, lineHeight: 1.5 }}>{summaryMap[f.id]}</p>
+                        <div
+                          style={{
+                            background: "#eff6ff",
+                            borderRadius: 8,
+                            padding: 10,
+                            marginTop: 8,
+                            minWidth: 0,
+                            display: "flex",
+                            flexDirection: "column",
+                          }}
+                        >
+                          <strong style={{ fontSize: "0.8rem", color: "#1e40af", flexShrink: 0 }}>Tóm tắt AI:</strong>
+                          <div style={aiSummaryScrollStyle}>{summaryMap[f.id]}</div>
                         </div>
                       )}
                     </div>
