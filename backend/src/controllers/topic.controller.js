@@ -2,7 +2,7 @@ import {
   createTopic,
   findTopicByTeamId,
   hasActiveTopic,
-  findPendingTopics,
+  findPendingTopicsForSupervisor,
   updateTopicStatus,
   findApprovedTopicsBySupervisor,
   getTopicRegistrationEligibility,
@@ -44,6 +44,13 @@ export async function registerTopic(req, res, next) {
       return res.status(400).json({ success: false, message: "Bạn chưa thuộc nhóm nào" });
     }
 
+    if (!team.supervisor_user_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Nhóm chưa được phân công giảng viên hướng dẫn. Liên hệ quản trị viên.",
+      });
+    }
+
     const active = await hasActiveTopic(team.id);
     if (active) {
       const { reason } = await getTopicRegistrationEligibility(team.id);
@@ -60,23 +67,19 @@ export async function registerTopic(req, res, next) {
       technologies: technologies || null,
     });
 
-    const [supervisorRows] = await pool.query(
-      `SELECT id FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'supervisor') AND is_active = 1`,
-    );
-    for (const s of supervisorRows) {
-      await createNotification({
-        userId: s.id,
-        title: "Đề tài mới cần duyệt",
-        message: `Nhóm "${team.name}" vừa đăng ký đề tài: "${title.trim()}"`,
-        type: "info",
-        relatedUrl: "/supervisor/topics",
-      });
-      io.to(`user:${s.id}`).emit("topic_pending_refresh", {
-        topicId,
-        teamName: team.name,
-        title: title.trim(),
-      });
-    }
+    const supId = Number(team.supervisor_user_id);
+    await createNotification({
+      userId: supId,
+      title: "Đề tài mới cần duyệt",
+      message: `Nhóm "${team.name}" vừa đăng ký đề tài: "${title.trim()}"`,
+      type: "info",
+      relatedUrl: "/supervisor/topics",
+    });
+    io.to(`user:${supId}`).emit("topic_pending_refresh", {
+      topicId,
+      teamName: team.name,
+      title: title.trim(),
+    });
 
     return res.status(201).json({ success: true, message: "Đăng ký đề tài thành công, đang chờ duyệt", data: { id: topicId } });
   } catch (error) {
@@ -123,7 +126,7 @@ export async function getMyTopic(req, res, next) {
 
 export async function getPendingTopics(req, res, next) {
   try {
-    const topics = await findPendingTopics();
+    const topics = await findPendingTopicsForSupervisor(req.user.id);
     return res.status(200).json({ success: true, data: topics });
   } catch (error) {
     next(error);
@@ -135,6 +138,23 @@ export async function approveTopic(req, res, next) {
     const { topicId } = req.params;
     const supervisorId = req.user.id;
     const idNum = Number(topicId);
+    if (!idNum || idNum <= 0) {
+      return res.status(400).json({ success: false, message: "Đề tài không hợp lệ" });
+    }
+
+    const [accessRows] = await pool.query(
+      `SELECT tr.id FROM topic_registrations tr
+       INNER JOIN teams t ON t.id = tr.team_id
+       WHERE tr.id = ? AND tr.status = 'pending' AND t.supervisor_user_id = ?`,
+      [idNum, supervisorId],
+    );
+    if (!accessRows.length) {
+      return res.status(403).json({
+        success: false,
+        message: "Bạn chỉ có thể duyệt đề tài của các nhóm được phân công cho bạn.",
+      });
+    }
+
     const selectedIds = Array.isArray(req.body?.milestone_ids)
       ? [...new Set(req.body.milestone_ids.map((x) => Number(x)).filter((x) => Number.isInteger(x) && x > 0))]
       : [];
@@ -192,12 +212,10 @@ export async function approveTopic(req, res, next) {
       }
     }
 
-    const [supRows] = await pool.query(
-      `SELECT id FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'supervisor') AND is_active = 1`,
-    );
-    for (const s of supRows) {
-      io.to(`user:${s.id}`).emit("topic_pending_refresh", { topicId: Number(topicId), action: "resolved" });
-    }
+    io.to(`user:${supervisorId}`).emit("topic_pending_refresh", {
+      topicId: Number(topicId),
+      action: "resolved",
+    });
 
     return res.status(200).json({ success: true, message: "Duyệt đề tài thành công" });
   } catch (error) {
@@ -208,10 +226,29 @@ export async function approveTopic(req, res, next) {
 export async function rejectTopic(req, res, next) {
   try {
     const { topicId } = req.params;
+    const supervisorId = req.user.id;
+    const idNum = Number(topicId);
     const { reason } = req.body;
 
     if (!reason || !reason.trim()) {
       return res.status(400).json({ success: false, message: "Lý do từ chối không được để trống" });
+    }
+
+    if (!idNum || idNum <= 0) {
+      return res.status(400).json({ success: false, message: "Đề tài không hợp lệ" });
+    }
+
+    const [accessRows] = await pool.query(
+      `SELECT tr.id FROM topic_registrations tr
+       INNER JOIN teams t ON t.id = tr.team_id
+       WHERE tr.id = ? AND tr.status = 'pending' AND t.supervisor_user_id = ?`,
+      [idNum, supervisorId],
+    );
+    if (!accessRows.length) {
+      return res.status(403).json({
+        success: false,
+        message: "Bạn chỉ có thể từ chối đề tài của các nhóm được phân công cho bạn.",
+      });
     }
 
     const [topicRows] = await pool.query(
@@ -242,12 +279,10 @@ export async function rejectTopic(req, res, next) {
       }
     }
 
-    const [supRows2] = await pool.query(
-      `SELECT id FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'supervisor') AND is_active = 1`,
-    );
-    for (const s of supRows2) {
-      io.to(`user:${s.id}`).emit("topic_pending_refresh", { topicId: Number(topicId), action: "resolved" });
-    }
+    io.to(`user:${supervisorId}`).emit("topic_pending_refresh", {
+      topicId: Number(topicId),
+      action: "resolved",
+    });
 
     return res.status(200).json({ success: true, message: "Từ chối đề tài thành công" });
   } catch (error) {
@@ -283,11 +318,11 @@ export async function deleteMyTopic(req, res, next) {
       return res.status(400).json({ success: false, message: "Không thể xóa đề tài này" });
     }
 
-    const [supRows] = await pool.query(
-      `SELECT id FROM users WHERE role_id = (SELECT id FROM roles WHERE name = 'supervisor') AND is_active = 1`,
-    );
-    for (const s of supRows) {
-      io.to(`user:${s.id}`).emit("topic_pending_refresh", { topicId: Number(topic.id), action: "removed" });
+    if (team.supervisor_user_id) {
+      io.to(`user:${team.supervisor_user_id}`).emit("topic_pending_refresh", {
+        topicId: Number(topic.id),
+        action: "removed",
+      });
     }
 
     return res.status(200).json({

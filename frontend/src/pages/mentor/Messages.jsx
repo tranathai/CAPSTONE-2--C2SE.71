@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import Icon from "../../components/UI/Icon.jsx";
 import { messages } from "../../lib/api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useToast } from "../../hooks/useToast.js";
+import { useMentorScopeRefresh } from "../../hooks/useMentorScopeRefresh.js";
 
 export default function MentorMessages() {
   const [searchParams] = useSearchParams();
@@ -16,9 +17,15 @@ export default function MentorMessages() {
   const [sending, setSending] = useState(false);
   const bottomRef = useRef(null);
 
-  useEffect(() => {
-    messages.groups().then(setGroups).catch(() => {});
+  const reloadGroupList = useCallback(() => {
+    return messages.groups().then(setGroups).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    reloadGroupList();
+  }, [reloadGroupList]);
+
+  useMentorScopeRefresh(reloadGroupList);
 
   useEffect(() => {
     if (!teamId) return;

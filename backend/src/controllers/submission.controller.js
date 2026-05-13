@@ -153,7 +153,9 @@ export async function getDashboardStats(req, res, next) {
   try {
     const supervisorId = req.user.id;
     const [totalGroups] = await pool.query(
-      `SELECT COUNT(DISTINCT t.id) AS count FROM teams t INNER JOIN topic_registrations tr ON tr.team_id = t.id AND tr.status = 'approved' WHERE tr.supervisor_id = ?`,
+      `SELECT COUNT(DISTINCT t.id) AS count
+       FROM teams t
+       WHERE t.supervisor_user_id = ?`,
       [supervisorId],
     );
     const [newSubmissions] = await pool.query(
@@ -164,7 +166,12 @@ export async function getDashboardStats(req, res, next) {
       `SELECT COUNT(DISTINCT s.id) AS count FROM submissions s INNER JOIN teams t ON t.id = s.team_id INNER JOIN topic_registrations tr ON tr.team_id = t.id AND tr.status = 'approved' INNER JOIN submission_versions sv ON sv.id = (SELECT sv2.id FROM submission_versions sv2 WHERE sv2.submission_id = s.id ORDER BY sv2.version_number DESC LIMIT 1) WHERE tr.supervisor_id = ? AND sv.is_late = 1`,
       [supervisorId],
     );
-    const [pendingTopics] = await pool.query(`SELECT COUNT(*) AS count FROM topic_registrations WHERE status = 'pending'`);
+    const [pendingTopics] = await pool.query(
+      `SELECT COUNT(*) AS count FROM topic_registrations tr
+       INNER JOIN teams t ON t.id = tr.team_id
+       WHERE tr.status = 'pending' AND t.supervisor_user_id = ?`,
+      [supervisorId],
+    );
     const [atRiskGroups] = await pool.query(
       `SELECT t.id, t.name, (SELECT COUNT(*) FROM submissions sub INNER JOIN submission_versions sv ON sv.submission_id = sub.id INNER JOIN milestones m ON m.id = sub.milestone_id WHERE sub.team_id = t.id AND sv.is_late = 1) AS late_count, (SELECT COUNT(*) FROM submissions sub INNER JOIN milestones m ON m.id = sub.milestone_id WHERE sub.team_id = t.id AND m.end_date < NOW() AND NOT EXISTS (SELECT 1 FROM submission_versions sv2 WHERE sv2.submission_id = sub.id)) AS missing_count FROM teams t INNER JOIN topic_registrations tr ON tr.team_id = t.id AND tr.status = 'approved' WHERE tr.supervisor_id = ? HAVING late_count > 0 OR missing_count > 0 LIMIT 10`,
       [supervisorId],

@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Icon from "../../components/UI/Icon.jsx";
 import { meetings, teams } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
+import { useMentorScopeRefresh } from "../../hooks/useMentorScopeRefresh.js";
 
 export default function MentorMeetings() {
   const { toast, showToast } = useToast();
@@ -17,11 +18,21 @@ export default function MentorMeetings() {
   const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const selectedMeeting = meetingList.find((m) => Number(m.id) === Number(selectedMeetingId)) || null;
 
-  useEffect(() => {
-    Promise.all([meetings.list(), meetings.supervisorRequests(), teams.supervisees()]).then(([ml, req, tl]) => {
-      setMeetingList(ml); setRequests(req); setTeamList(tl);
-    }).catch(() => {});
+  const reloadMeetingsPage = useCallback(() => {
+    return Promise.all([meetings.list(), meetings.supervisorRequests(), teams.supervisees()])
+      .then(([ml, req, tl]) => {
+        setMeetingList(ml);
+        setRequests(req);
+        setTeamList(tl);
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    reloadMeetingsPage();
+  }, [reloadMeetingsPage]);
+
+  useMentorScopeRefresh(reloadMeetingsPage);
 
   const handleCreate = async (e) => {
     e.preventDefault();

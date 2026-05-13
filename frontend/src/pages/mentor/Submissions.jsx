@@ -1,16 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "../../components/UI/Icon.jsx";
 import { submissions } from "../../lib/api.js";
+import { useMentorScopeRefresh } from "../../hooks/useMentorScopeRefresh.js";
 
 export default function MentorSubmissions() {
   const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [filter, setFilter] = useState("all");
 
-  useEffect(() => {
-    submissions.supervisor().then(setData).catch(() => {});
+  const reloadSubmissions = useCallback(() => {
+    return submissions.supervisor().then(setData).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    reloadSubmissions();
+  }, [reloadSubmissions]);
+
+  useMentorScopeRefresh(reloadSubmissions);
 
   const filtered = data.filter((s) => {
     if (filter === "all") return true;

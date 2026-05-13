@@ -18,7 +18,8 @@ export async function findTopicByTeamId(teamId) {
   return rows[0] || null;
 }
 
-export async function findPendingTopics() {
+/** Đề tài chờ duyệt của các nhóm mà GV được phân công (teams.supervisor_user_id). */
+export async function findPendingTopicsForSupervisor(supervisorId) {
   const [rows] = await pool.query(
     `SELECT tr.id, tr.title, tr.description, tr.technologies, tr.created_at,
             t.id AS team_id, t.name AS team_name,
@@ -27,8 +28,9 @@ export async function findPendingTopics() {
             (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) AS member_count
      FROM topic_registrations tr
      INNER JOIN teams t ON t.id = tr.team_id
-     WHERE tr.status = 'pending'
+     WHERE tr.status = 'pending' AND t.supervisor_user_id = ?
      ORDER BY tr.created_at ASC`,
+    [supervisorId],
   );
   return rows;
 }

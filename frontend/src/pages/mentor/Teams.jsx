@@ -1,15 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Icon from "../../components/UI/Icon.jsx";
 import { teams } from "../../lib/api.js";
+import { useMentorScopeRefresh } from "../../hooks/useMentorScopeRefresh.js";
 
 export default function MentorTeams() {
   const [teamList, setTeamList] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    teams.supervisees().then(setTeamList).catch(() => {}).finally(() => setLoading(false));
+  const reloadTeams = useCallback(() => {
+    return teams.supervisees().then(setTeamList).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    reloadTeams().finally(() => setLoading(false));
+  }, [reloadTeams]);
+
+  useMentorScopeRefresh(reloadTeams);
 
   const selectTeam = async (id) => {
     if (selectedTeam?.id === id) { setSelectedTeam(null); return; }

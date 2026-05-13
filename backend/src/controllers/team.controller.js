@@ -16,6 +16,8 @@ import {
   countStudentMembersInTeam,
 } from "../models/team.model.js";
 import { findTopicByTeamId, hasActiveTopic } from "../models/topic.model.js";
+import pool from "../config/db.js";
+import { io } from "../server.js";
 
 export async function getMyTeamsJoined(req, res, next) {
   try {
@@ -138,6 +140,22 @@ export async function updateExistingTeam(req, res, next) {
     const teamId = Number(req.params.id);
     const { name, description, semester, leader_user_id, supervisor_user_id } = req.body;
 
+    if (!teamId || teamId <= 0) {
+      return res.status(400).json({ success: false, message: "team_id không hợp lệ" });
+    }
+
+    const existing = await findTeamById(teamId);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy nhóm" });
+    }
+
+    const oldSup =
+      existing.supervisor_user_id != null && existing.supervisor_user_id !== ""
+        ? Number(existing.supervisor_user_id)
+        : null;
+
+    const supervisorFieldSent = Object.prototype.hasOwnProperty.call(req.body, "supervisor_user_id");
+
     let nameForUpdate;
     if (name !== undefined && name !== null) {
       const trimmed = String(name).trim();
@@ -161,6 +179,45 @@ export async function updateExistingTeam(req, res, next) {
       leaderUserId: leader_user_id,
       supervisorUserId: supervisor_user_id,
     });
+
+    if (supervisorFieldSent) {
+      const updated = await findTeamById(teamId);
+      const newSup =
+        updated.supervisor_user_id != null && updated.supervisor_user_id !== ""
+          ? Number(updated.supervisor_user_id)
+          : null;
+
+      if (oldSup !== newSup) {
+        if (newSup != null) {
+          await pool.query(
+            `UPDATE topic_registrations SET supervisor_id = ? WHERE team_id = ? AND status IN ('approved','pending')`,
+            [newSup, teamId],
+          );
+        } else {
+          await pool.query(
+            `UPDATE topic_registrations SET supervisor_id = NULL WHERE team_id = ? AND status IN ('approved','pending')`,
+            [teamId],
+          );
+        }
+
+        const payload = {
+          teamId,
+          previousSupervisorId: oldSup,
+          newSupervisorId: newSup,
+        };
+
+        for (const uid of [oldSup, newSup]) {
+          if (uid) {
+            io.to(`user:${uid}`).emit("mentor_scope_refresh", payload);
+            io.to(`user:${uid}`).emit("topic_pending_refresh", {
+              action: "supervisor_reassigned",
+              teamId,
+            });
+          }
+        }
+      }
+    }
+
     return res.status(200).json({ success: true, message: "Cập nhật nhóm thành công" });
   } catch (error) {
     next(error);

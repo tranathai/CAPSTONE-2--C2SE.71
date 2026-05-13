@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -12,9 +12,12 @@ import {
 import Icon from "../../components/UI/Icon.jsx";
 import { submissions, topics } from "../../lib/api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { useMentorScopeRefresh } from "../../hooks/useMentorScopeRefresh.js";
+import { useSocket } from "../../context/SocketContext.jsx";
 
 export default function MentorDashboard() {
   const { user } = useAuth();
+  const { on, off } = useSocket();
   const [stats, setStats] = useState(null);
   const [pendingTopics, setPendingTopics] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,15 +32,42 @@ export default function MentorDashboard() {
     }));
   }, [stats]);
 
-  useEffect(() => {
-    Promise.all([
-      submissions.stats(),
-      topics.pending(),
-    ]).then(([st, pt]) => {
-      setStats(st);
-      setPendingTopics(pt);
-    }).catch(() => {}).finally(() => setLoading(false));
+  const reloadDashboard = useCallback(() => {
+    return Promise.all([submissions.stats(), topics.pending()])
+      .then(([st, pt]) => {
+        setStats(st);
+        setPendingTopics(pt);
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    reloadDashboard().finally(() => setLoading(false));
+  }, [reloadDashboard]);
+
+  useMentorScopeRefresh(reloadDashboard);
+
+  useEffect(() => {
+    const refresh = () => {
+      reloadDashboard();
+    };
+    on("topic_pending_refresh", refresh);
+    on("new_notification", refresh);
+    on("new_group_message", refresh);
+    return () => {
+      off("topic_pending_refresh", refresh);
+      off("new_notification", refresh);
+      off("new_group_message", refresh);
+    };
+  }, [on, off, reloadDashboard]);
+
+  // Fallback polling in case socket event is missed.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      reloadDashboard();
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [reloadDashboard]);
 
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
