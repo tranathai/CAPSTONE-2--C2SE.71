@@ -265,13 +265,11 @@ export default function AdminUsers() {
                 invalid: [],
                 duplicate: [],
                 other: [],
-                created: [],
               };
               for (const row of importReport.results || []) {
+                if (row?.status === "created") continue;
                 const msg = String(row?.message || "").toLowerCase();
-                if (row?.status === "created") {
-                  groups.created.push(row);
-                } else if (msg.includes("đã tồn tại") || msg.includes("da ton tai")) {
+                if (msg.includes("đã tồn tại") || msg.includes("da ton tai")) {
                   groups.existed.push(row);
                 } else if (msg.includes("thiếu") || msg.includes("thieu")) {
                   groups.missing.push(row);
@@ -299,10 +297,12 @@ export default function AdminUsers() {
                 { key: "invalid", title: "Sai định dạng", cls: "import-report-list--danger", items: groups.invalid },
                 { key: "duplicate", title: "Trùng thông tin", cls: "import-report-list--warning", items: groups.duplicate },
                 { key: "other", title: "Lỗi khác", cls: "import-report-list--danger", items: groups.other },
-                { key: "created", title: "Import thành công", cls: "import-report-list--success", items: groups.created },
               ].filter((s) => s.items.length > 0);
 
               if (sections.length === 0) {
+                if ((importReport.created || 0) > 0 && (importReport.failed || 0) === 0) {
+                  return <p style={{ color: "#166534", margin: "8px 0 0" }}>Tất cả tài khoản đã được import thành công.</p>;
+                }
                 return <p style={{ color: "#64748b", margin: "8px 0 0" }}>Không có chi tiết để hiển thị.</p>;
               }
 
