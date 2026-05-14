@@ -18,11 +18,16 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-// Redirect to login on 401
+// Redirect to login on 401 (skip failed login/register — those must show inline errors, not full reload)
+function isPublicAuthRequest(config) {
+  const path = `${config?.baseURL || ""}${config?.url || ""}`;
+  return /\/auth\/(login|register)\b/.test(path);
+}
+
 client.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    if (err.response?.status === 401 && !isPublicAuthRequest(err.config)) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.location.href = "/login";
@@ -87,7 +92,8 @@ export const milestones = {
 export const topics = {
   register: (data) => client.post("/topics/register", data).then((r) => body(r.data)),
   myTopic: () => client.get("/topics/my").then((r) => body(r.data)),
-  removeMyTopic: () => client.delete("/topics/my").then((r) => body(r.data)),
+  removeMyTopic: (teamId) =>
+    client.delete("/topics/my", { data: teamId != null && teamId !== "" ? { team_id: teamId } : {} }).then((r) => body(r.data)),
   pending: () => client.get("/topics/pending").then((r) => body(r.data)),
   approve: (id, milestoneIds) => client.put(`/topics/${id}/approve`, { milestone_ids: milestoneIds }).then((r) => body(r.data)),
   reject: (id, reason) => client.put(`/topics/${id}/reject`, { reason }).then((r) => body(r.data)),

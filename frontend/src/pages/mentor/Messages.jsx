@@ -57,8 +57,8 @@ export default function MentorMessages() {
   const selectedGroup = groups.find((g) => g.id === Number(teamId));
 
   return (
-    <div className="page-container" style={{ height: "calc(100vh - 120px)", display: "flex", gap: 16, padding: 0 }}>
-      <div style={{ width: 280, borderRight: "1px solid #e2e8f0", padding: "20px 12px", overflowY: "auto" }}>
+    <div className="page-container" style={{ height: "calc(100vh - 120px)", display: "flex", gap: 0, padding: 0, background: "#fff" }}>
+      <div style={{ width: 280, borderRight: "1px solid #e2e8f0", padding: "20px 12px", overflowY: "auto", background: "#fff" }}>
         <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 16, padding: "0 4px" }}>Tin nhắn nhóm</h2>
         {groups.length === 0 ? (
           <p style={{ color: "#94a3b8", fontSize: "0.875rem", textAlign: "center", padding: 20 }}>Chưa có nhóm nào</p>
@@ -81,9 +81,9 @@ export default function MentorMessages() {
         )}
       </div>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#fff" }}>
         {!teamId ? (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", background: "#fff" }}>
             <div style={{ textAlign: "center" }}>
               <Icon name="Chat" size={48} sx={{ opacity: 0.3, marginBottom: 12 }} />
               <p>Chọn nhóm để nhắn tin</p>
@@ -94,7 +94,7 @@ export default function MentorMessages() {
             <div style={{ padding: "12px 16px", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>
               {selectedGroup?.name || "Nhóm chat"}
             </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px", background: "#fff" }}>
               {conversation.map((msg) => {
                 const isMe = msg.sender_id === user?.id;
                 return (

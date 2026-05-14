@@ -34,7 +34,7 @@ export default function MentorTopics() {
   const [milestoneList, setMilestoneList] = useState([]);
   const [batchList, setBatchList] = useState([]);
   const [approvingTopic, setApprovingTopic] = useState(null);
-  const [selectedBatchIds, setSelectedBatchIds] = useState([]);
+  const [selectedBatchId, setSelectedBatchId] = useState(null);
   const [batchQuery, setBatchQuery] = useState("");
   const [page, setPage] = useState(1);
 
@@ -56,10 +56,14 @@ export default function MentorTopics() {
 
   const handleApprove = async (id) => {
     try {
+      if (selectedBatchId == null) {
+        showToast("Vui lòng chọn một đợt tốt nghiệp.", "error");
+        return;
+      }
       const milestoneIds = [
         ...new Set(
           milestoneList
-            .filter((m) => selectedBatchIds.includes(Number(m.graduation_batch_id)))
+            .filter((m) => Number(m.graduation_batch_id) === Number(selectedBatchId))
             .map((m) => Number(m.id))
             .filter((x) => x > 0),
         ),
@@ -72,7 +76,7 @@ export default function MentorTopics() {
       showToast("Duyệt đề tài thành công!", "success");
       setPending((prev) => prev.filter((t) => t.id !== id));
       setApprovingTopic(null);
-      setSelectedBatchIds([]);
+      setSelectedBatchId(null);
       setBatchQuery("");
     } catch (err) {
       showToast(err.message, "error");
@@ -160,7 +164,7 @@ export default function MentorTopics() {
                   className="btn btn-success btn-sm"
                   onClick={() => {
                     setApprovingTopic(t);
-                    setSelectedBatchIds([]);
+                    setSelectedBatchId(null);
                     setBatchQuery("");
                   }}
                 >
@@ -213,6 +217,7 @@ export default function MentorTopics() {
           role="presentation"
           onClick={() => {
             setApprovingTopic(null);
+            setSelectedBatchId(null);
             setBatchQuery("");
           }}
         >
@@ -224,6 +229,7 @@ export default function MentorTopics() {
                 className="topic-modal-close"
                 onClick={() => {
                   setApprovingTopic(null);
+                  setSelectedBatchId(null);
                   setBatchQuery("");
                 }}
                 aria-label="Đóng"
@@ -239,7 +245,7 @@ export default function MentorTopics() {
                 <p style={{ color: "#b45309" }}>Chưa có Đợt tốt nghiệp nào. Hãy nhờ admin tạo trước.</p>
               ) : (
                 <div className="form-group">
-                  <label>Chọn các đợt áp dụng (hiển thị tối đa 5 đợt) *</label>
+                  <label>Chọn một đợt tốt nghiệp (hiển thị tối đa 5 đợt) *</label>
                   <input
                     className="form-input"
                     value={batchQuery}
@@ -252,17 +258,14 @@ export default function MentorTopics() {
                       .filter((b) => b.name?.toLowerCase().includes(batchQuery.trim().toLowerCase()))
                       .slice(0, 5)
                       .map((b) => {
-                      const checked = selectedBatchIds.includes(Number(b.id));
+                      const id = Number(b.id);
                       return (
-                        <label key={b.id} style={{ display: "flex", gap: 8, alignItems: "center", margin: 0 }}>
+                        <label key={b.id} style={{ display: "flex", gap: 8, alignItems: "center", margin: 0, cursor: "pointer" }}>
                           <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) => {
-                              setSelectedBatchIds((prev) =>
-                                e.target.checked ? [...prev, Number(b.id)] : prev.filter((id) => id !== Number(b.id)),
-                              );
-                            }}
+                            type="radio"
+                            name="graduation_batch_pick"
+                            checked={selectedBatchId === id}
+                            onChange={() => setSelectedBatchId(id)}
                           />
                           <span>{b.name}</span>
                         </label>
@@ -279,7 +282,7 @@ export default function MentorTopics() {
               <div className="topic-modal-actions">
                 <button
                   className="btn btn-success"
-                  disabled={selectedBatchIds.length === 0}
+                  disabled={selectedBatchId == null}
                   onClick={() => handleApprove(approvingTopic.id)}
                 >
                   Xác nhận duyệt
@@ -288,6 +291,7 @@ export default function MentorTopics() {
                   className="btn btn-secondary"
                   onClick={() => {
                     setApprovingTopic(null);
+                    setSelectedBatchId(null);
                     setBatchQuery("");
                   }}
                 >

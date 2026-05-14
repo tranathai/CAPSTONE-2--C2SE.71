@@ -30,7 +30,12 @@ export default function Login() {
       else if (role === "supervisor") navigate("/supervisor/dashboard", { replace: true });
       else navigate("/student/dashboard", { replace: true });
     } catch (err) {
-      setError(err.message || "Đăng nhập thất bại");
+      const msg =
+        err.response?.data?.message ||
+        (typeof err.response?.data === "string" ? err.response.data : null) ||
+        err.message ||
+        "Đăng nhập thất bại";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -74,6 +79,7 @@ export default function Login() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="Nhập mật khẩu"
                 autoComplete="current-password"
               />
               <button type="button" className="toggle-pw" onClick={() => setShowPassword((v) => !v)}>

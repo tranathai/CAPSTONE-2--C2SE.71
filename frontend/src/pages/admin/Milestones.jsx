@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Icon from "../../components/UI/Icon.jsx";
 import ConfirmModal from "../../components/UI/ConfirmModal.jsx";
+import RequiredDocumentsPicker from "../../components/admin/RequiredDocumentsPicker.jsx";
 import { milestones } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
 
@@ -35,6 +36,36 @@ function formatDdMmYyyy(value) {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+function parseValidDateTime(v) {
+  if (v == null || (typeof v === "string" && !v.trim())) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function isBatchClosed(batch) {
+  if (!batch?.end_date) return false;
+  const end = new Date(batch.end_date);
+  return !Number.isNaN(end.getTime()) && Date.now() > end.getTime();
+}
+
+function toDatetimeLocalSlice(iso) {
+  if (!iso) return "";
+  const s = String(iso);
+  return s.length >= 16 ? s.slice(0, 16) : s;
+}
+
+/** Trả về tên mốc trùng hoặc null (cùng khoảng thời gian có giao, không tính chạm mép). */
+function findOverlappingMilestone(start, end, milestoneList, excludeId) {
+  for (const m of milestoneList) {
+    if (excludeId != null && Number(m.id) === Number(excludeId)) continue;
+    const b0 = parseValidDateTime(m.start_date);
+    const b1 = parseValidDateTime(m.end_date);
+    if (!b0 || !b1) continue;
+    if (start < b1 && end > b0) return m.name;
+  }
+  return null;
+}
+
 export default function AdminMilestones() {
   const { toast, showToast } = useToast();
   const navigate = useNavigate();
@@ -56,7 +87,7 @@ export default function AdminMilestones() {
     end_date: "",
     deadline_type: "soft",
     display_order: 0,
-    required_documents_text: "",
+    required_documents: [],
   });
   const [submitting, setSubmitting] = useState(false);
   const [deleteBatchId, setDeleteBatchId] = useState(null);
@@ -120,7 +151,7 @@ export default function AdminMilestones() {
       end_date: "",
       deadline_type: "soft",
       display_order: 0,
-      required_documents_text: "",
+      required_documents: [],
     });
   };
 
@@ -144,15 +175,21 @@ export default function AdminMilestones() {
       showToast("Tên đợt tốt nghiệp đã tồn tại. Vui lòng chọn tên khác.", "error");
       return;
     }
-    const start_date = batchRange.start || "";
-    const end_date = batchRange.end || "";
-    if (start_date && end_date) {
-      const a = new Date(start_date);
-      const b = new Date(end_date);
-      if (a > b) {
-        showToast("Ngày kết thúc phải sau hoặc trùng ngày bắt đầu.", "error");
-        return;
-      }
+    const start_date = batchRange.start?.trim() || "";
+    const end_date = batchRange.end?.trim() || "";
+    if (!start_date || !end_date) {
+      showToast("Khung thời gian: vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc.", "error");
+      return;
+    }
+    const a = parseValidDateTime(start_date);
+    const b = parseValidDateTime(end_date);
+    if (!a || !b) {
+      showToast("Ngày bắt đầu / kết thúc đợt không hợp lệ. Chọn đủ ngày và giờ.", "error");
+      return;
+    }
+    if (a.getTime() >= b.getTime()) {
+      showToast("Ngày kết thúc đợt phải sau ngày bắt đầu.", "error");
+      return;
     }
     setBatchSubmitting(true);
     try {
@@ -188,20 +225,59 @@ export default function AdminMilestones() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedBatchId) { showToast("Vui lòng chọn Đợt tốt nghiệp", "error"); return; }
-    if (!form.name || !form.start_date || !form.end_date) { showToast("Điền đầy đủ thông tin", "error"); return; }
-    if (new Date(form.start_date) > new Date(form.end_date)) {
+    if (!selectedBatchId) {
+      showToast("Vui lòng chọn Đợt tốt nghiệp", "error");
+      return;
+    }
+    if (!form.name?.trim()) {
+      showToast("Tên mốc không được để trống", "error");
+      return;
+    }
+
+    const start = parseValidDateTime(form.start_date);
+    const end = parseValidDateTime(form.end_date);
+    if (!start || !end) {
+      showToast("Ngày bắt đầu và kết thúc phải chọn đầy đủ (ngày và giờ).", "error");
+      return;
+    }
+    if (start.getTime() >= end.getTime()) {
       showToast("Thời gian kết thúc phải sau thời gian bắt đầu.", "error");
       return;
     }
+
+    if (!editId && isBatchClosed(selectedBatch)) {
+      showToast("Đợt tốt nghiệp đã kết thúc, không thể tạo mốc mới.", "error");
+      return;
+    }
+
+    const bs = parseValidDateTime(selectedBatch?.start_date);
+    const be = parseValidDateTime(selectedBatch?.end_date);
+    if (bs && be) {
+      if (start.getTime() < bs.getTime() || end.getTime() > be.getTime()) {
+        showToast("Thời gian mốc phải nằm trong khung thời gian của đợt tốt nghiệp.", "error");
+        return;
+      }
+    } else if (bs && start.getTime() < bs.getTime()) {
+      showToast("Ngày bắt đầu mốc không được trước ngày bắt đầu đợt.", "error");
+      return;
+    } else if (be && end.getTime() > be.getTime()) {
+      showToast("Ngày kết thúc mốc không được sau ngày kết thúc đợt.", "error");
+      return;
+    }
+
+    const overlap = findOverlappingMilestone(start, end, list, editId);
+    if (overlap) {
+      showToast(`Mốc trùng khoảng thời gian với mốc "${overlap}".`, "error");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const required_documents = form.required_documents_text
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const required_documents = Array.isArray(form.required_documents)
+        ? form.required_documents.map((s) => String(s).trim()).filter(Boolean)
+        : [];
       const payload = {
-        name: form.name,
+        name: form.name.trim(),
         description: form.description,
         start_date: form.start_date,
         end_date: form.end_date,
@@ -219,12 +295,21 @@ export default function AdminMilestones() {
       }
       resetMilestoneForm();
       await loadMilestones();
-    } catch (err) { showToast(err.message, "error"); }
-    finally { setSubmitting(false); }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Lưu thất bại";
+      showToast(msg, "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleEdit = (m) => {
     setEditId(m.id);
+    const docs = Array.isArray(m.required_documents)
+      ? m.required_documents.map((s) => String(s).trim()).filter(Boolean)
+      : typeof m.required_documents === "string" && m.required_documents.trim()
+        ? m.required_documents.split("\n").map((s) => s.trim()).filter(Boolean)
+        : [];
     setForm({
       name: m.name,
       description: m.description || "",
@@ -232,7 +317,7 @@ export default function AdminMilestones() {
       end_date: m.end_date?.slice(0, 16) || "",
       deadline_type: m.deadline_type || "soft",
       display_order: m.display_order || 0,
-      required_documents_text: Array.isArray(m.required_documents) ? m.required_documents.join("\n") : "",
+      required_documents: docs,
     });
     setShowForm(true);
   };
@@ -295,22 +380,24 @@ export default function AdminMilestones() {
                   placeholder="VD: Đợt tốt nghiệp K28"
                 />
               </div>
-              <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#374151", margin: "0 0 8px 0" }}>Khung thời gian</p>
+              <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#374151", margin: "0 0 8px 0" }}>Khung thời gian *</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                 <div className="form-group">
-                  <label>Ngày bắt đầu</label>
+                  <label>Ngày bắt đầu *</label>
                   <input
                     type="datetime-local"
                     className="form-input"
+                    required
                     value={batchRange.start}
                     onChange={(e) => setBatchRange((r) => ({ ...r, start: e.target.value }))}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Ngày kết thúc</label>
+                  <label>Ngày kết thúc *</label>
                   <input
                     type="datetime-local"
                     className="form-input"
+                    required
                     value={batchRange.end}
                     onChange={(e) => setBatchRange((r) => ({ ...r, end: e.target.value }))}
                   />
@@ -396,10 +483,41 @@ export default function AdminMilestones() {
               <h1>{selectedBatch?.name || "Đợt tốt nghiệp"}</h1>
               <p>Quản lý milestone của đợt này</p>
             </div>
-            <button className="btn btn-primary" onClick={() => { setEditId(null); setShowForm((v) => !v); }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={isBatchClosed(selectedBatch)}
+              title={isBatchClosed(selectedBatch) ? "Đợt đã kết thúc — không thể tạo mốc mới" : undefined}
+              onClick={() => {
+                if (isBatchClosed(selectedBatch)) {
+                  showToast("Đợt tốt nghiệp đã kết thúc, không thể tạo mốc mới.", "error");
+                  return;
+                }
+                setEditId(null);
+                setForm((f) => ({
+                  ...f,
+                  name: "",
+                  description: "",
+                  start_date: "",
+                  end_date: "",
+                  deadline_type: "soft",
+                  display_order: 0,
+                  required_documents: [],
+                }));
+                setShowForm((v) => !v);
+              }}
+            >
               <Icon name="Plus" size={16} /> Thêm mốc mới
             </button>
           </div>
+
+          {selectedBatch && isBatchClosed(selectedBatch) && (
+            <div className="card" style={{ marginBottom: 16, borderLeft: "4px solid #f59e0b", background: "#fffbeb" }}>
+              <p style={{ margin: 0, fontSize: "0.9rem", color: "#92400e" }}>
+                Đợt này đã qua ngày kết thúc — chỉ có thể chỉnh sửa hoặc xóa mốc hiện có, không thêm mốc mới.
+              </p>
+            </div>
+          )}
 
           {showForm && (
             <div className="card">
@@ -407,16 +525,38 @@ export default function AdminMilestones() {
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
                   <label>Tên mốc *</label>
-                  <input className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="VD: Proposal, Mid-term Report" />
+                  <input
+                    className="form-input"
+                    required
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="VD: Proposal, Mid-term Report"
+                  />
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div className="form-group">
                     <label>Ngày bắt đầu *</label>
-                    <input type="datetime-local" className="form-input" value={form.start_date} onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))} />
+                    <input
+                      type="datetime-local"
+                      className="form-input"
+                      required
+                      min={toDatetimeLocalSlice(selectedBatch?.start_date) || undefined}
+                      max={toDatetimeLocalSlice(selectedBatch?.end_date) || undefined}
+                      value={form.start_date}
+                      onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))}
+                    />
                   </div>
                   <div className="form-group">
                     <label>Ngày kết thúc *</label>
-                    <input type="datetime-local" className="form-input" value={form.end_date} onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))} />
+                    <input
+                      type="datetime-local"
+                      className="form-input"
+                      required
+                      min={toDatetimeLocalSlice(selectedBatch?.start_date) || undefined}
+                      max={toDatetimeLocalSlice(selectedBatch?.end_date) || undefined}
+                      value={form.end_date}
+                      onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
+                    />
                   </div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -437,13 +577,11 @@ export default function AdminMilestones() {
                   <textarea className="form-input" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
                 </div>
                 <div className="form-group">
-                  <label>Tài liệu cần nộp (mỗi dòng một mục)</label>
-                  <textarea
-                    className="form-input"
-                    rows={5}
-                    value={form.required_documents_text}
-                    onChange={(e) => setForm((f) => ({ ...f, required_documents_text: e.target.value }))}
-                    placeholder={"Ví dụ:\nRequirements\nProject Plan\nSource code (.zip)"}
+                  <RequiredDocumentsPicker
+                    resetKey={`${selectedBatchId}-${editId ?? "new"}`}
+                    value={form.required_documents}
+                    onChange={(docs) => setForm((f) => ({ ...f, required_documents: docs }))}
+                    disabled={submitting}
                   />
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>

@@ -38,19 +38,20 @@ export async function getMyTeamsJoined(req, res, next) {
 export async function getMyTeam(req, res, next) {
   try {
     const userId = req.user.id;
-    const team = await findTeamByUserId(userId);
-
-    if (!team) {
-      return res.status(200).json({ success: true, data: null });
+    const teamRows = await findTeamsByUserId(userId);
+    if (!teamRows.length) {
+      return res.status(200).json({ success: true, data: [] });
     }
 
-    const members = await findTeamMembers(team.id);
-    const topic = await findTopicByTeamId(team.id);
+    const data = await Promise.all(
+      teamRows.map(async (team) => {
+        const members = await findTeamMembers(team.id);
+        const topic = await findTopicByTeamId(team.id);
+        return { ...team, members, topic };
+      }),
+    );
 
-    return res.status(200).json({
-      success: true,
-      data: { ...team, members, topic },
-    });
+    return res.status(200).json({ success: true, data });
   } catch (error) {
     next(error);
   }

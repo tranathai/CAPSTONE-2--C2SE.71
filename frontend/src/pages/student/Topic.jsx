@@ -29,8 +29,23 @@ function TopicStatusBadge({ topic }) {
   );
 }
 
+/** Một dòng theo nhóm: có hoặc chưa có đề tài (API GET /topics/my) */
+function normalizeTopicSlots(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  return [
+    {
+      team_id: raw.team_id,
+      team_name: raw.team_name || "",
+      topic: raw.id ? raw : null,
+      can_register_new_topic: Boolean(raw.can_register_new_topic),
+      registration_block_reason: raw.registration_block_reason || "",
+    },
+  ];
+}
+
 export default function StudentTopic() {
-  const [topic, setTopic] = useState(null);
+  const [topicSlots, setTopicSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [myTeams, setMyTeams] = useState([]);
@@ -43,10 +58,11 @@ export default function StudentTopic() {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTeamId, setDeleteTeamId] = useState(null);
   const { toast, showToast } = useToast();
 
   const loadTopic = useCallback(() => {
-    return topics.myTopic().then(setTopic);
+    return topics.myTopic().then((data) => setTopicSlots(normalizeTopicSlots(data)));
   }, []);
 
   useEffect(() => {
@@ -112,12 +128,13 @@ export default function StudentTopic() {
   };
 
   const handleDeleteTopic = async () => {
-    if (!topic) return;
+    if (deleteTeamId == null) return;
     setDeleting(true);
     try {
-      await topics.removeMyTopic();
+      await topics.removeMyTopic(deleteTeamId);
       showToast("Đã xóa đề tài", "success");
       setShowDeleteConfirm(false);
+      setDeleteTeamId(null);
       await loadTopic();
     } catch (err) {
       showToast(err.message || "Xóa đề tài thất bại", "error");
@@ -126,22 +143,20 @@ export default function StudentTopic() {
     }
   };
 
-  const canRegister =
-    topic?.can_register_new_topic !== undefined && topic?.can_register_new_topic !== null
-      ? Boolean(topic.can_register_new_topic)
-      : !topic || topic.status === "rejected";
+  const canRegister = useMemo(() => {
+    return topicSlots.some((s) => s.can_register_new_topic);
+  }, [topicSlots]);
 
   const registerBlockedReason = useMemo(() => {
-    if (topic?.registration_block_reason) return topic.registration_block_reason;
-    if (!topic) return "";
-    if (topic.status === "approved") {
-      return "Đề tài đã được duyệt — không thể đăng ký đề tài mới cho nhóm này.";
-    }
-    if (topic.status === "pending") {
-      return "Đề tài đang chờ giảng viên duyệt.";
-    }
-    return "";
-  }, [topic]);
+    if (canRegister) return "";
+    const first = topicSlots.find((s) => !s.can_register_new_topic && s.registration_block_reason);
+    if (first?.registration_block_reason) return first.registration_block_reason;
+    const pend = topicSlots.find((s) => s.topic?.status === "pending");
+    if (pend) return "Ít nhất một nhóm đang chờ duyệt đề tài.";
+    const appr = topicSlots.find((s) => s.topic?.status === "approved");
+    if (appr) return "Tất cả nhóm hiển thị đã có đề tài được duyệt hoặc đang chờ — không thể đăng ký mới cho nhóm đó.";
+    return "Hiện không thể đăng ký đề tài mới.";
+  }, [topicSlots, canRegister]);
 
   if (loading) {
     return (
@@ -152,7 +167,6 @@ export default function StudentTopic() {
   }
 
   const selectableTeams = myTeams.filter((t) => t.can_register_topic);
-
   return (
     <div className="page-container">
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
@@ -160,19 +174,24 @@ export default function StudentTopic() {
       <ConfirmModal
         open={showDeleteConfirm}
         title="Xóa đề tài"
-        message="Bạn chắc chắn muốn xóa đề tài hiện tại? Hành động này không thể hoàn tác."
+        message="Bạn chắc chắn muốn xóa đề tài của nhóm này? Hành động này không thể hoàn tác."
         confirmLabel="Xóa đề tài"
         cancelLabel="Hủy"
         danger
         busy={deleting}
-        onCancel={() => !deleting && setShowDeleteConfirm(false)}
+        onCancel={() => {
+          if (!deleting) {
+            setShowDeleteConfirm(false);
+            setDeleteTeamId(null);
+          }
+        }}
         onConfirm={handleDeleteTopic}
       />
 
       <div className="student-topic-toolbar">
         <div className="page-header student-topic-heading">
           <h1>Đăng ký đề tài</h1>
-          <p>Đăng ký đề tài capstone/đồ án của bạn</p>
+          <p>Đăng ký đề tài capstone/đồ án theo từng nhóm</p>
         </div>
         <div className="student-topic-toolbar-actions">
           <button
@@ -191,75 +210,91 @@ export default function StudentTopic() {
             <AddIcon sx={{ fontSize: 20 }} aria-hidden />
             Đăng ký đề tài mới
           </button>
-          {topic && (
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={deleting}
-              style={{ marginLeft: 8 }}
-            >
-              <Icon name="Trash" size={14} /> {deleting ? "Đang xóa..." : "Xóa đề tài"}
-            </button>
-          )}
         </div>
       </div>
 
-      {topic ? (
-        <div className="card">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: 16,
-            }}
-          >
-            <div>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 700 }}>{topic.title}</h2>
-              <p style={{ color: "#64748b", fontSize: "0.875rem", marginTop: 4 }}>
-                Nhóm: {topic.team_name}
-              </p>
-            </div>
-            <TopicStatusBadge topic={topic} />
-          </div>
-          {topic.description && (
-            <div style={{ marginBottom: 12 }}>
-              <strong>Mô tả:</strong>
-              <p style={{ color: "#475569", marginTop: 4 }}>{topic.description}</p>
-            </div>
-          )}
-          {topic.technologies && (
-            <div style={{ marginBottom: 12 }}>
-              <strong>Công nghệ:</strong>
-              <p style={{ color: "#475569", marginTop: 4 }}>{topic.technologies}</p>
-            </div>
-          )}
-          {topic.supervisor_name && (
-            <div style={{ marginBottom: 12 }}>
-              <strong>Giảng viên hướng dẫn:</strong> {topic.supervisor_name}
-            </div>
-          )}
-          {topic.status === "rejected" && topic.rejection_reason && (
-            <div style={{ background: "#fef2f2", padding: 12, borderRadius: 8, marginTop: 12 }}>
-              <strong style={{ color: "#dc2626" }}>Lý do từ chối:</strong>
-              <p style={{ color: "#991b1b", marginTop: 4 }}>{topic.rejection_reason}</p>
-            </div>
-          )}
-          {topic.status === "rejected" && (
-            <div style={{ marginTop: 16 }}>
-              <button type="button" className="btn btn-primary" onClick={() => openModal(topic)}>
-                Đăng ký lại
-              </button>
-            </div>
-          )}
-        </div>
-      ) : (
+      {!topicSlots.length ? (
         <div className="card empty-state">
           <Icon name="Folder" size={48} sx={{ opacity: 0.3 }} />
-          <h3>Chưa đăng ký đề tài</h3>
-          <p>Nhấn &quot;Đăng ký đề tài mới&quot; ở trên để gửi đơn đăng ký.</p>
+          <h3>Chưa thuộc nhóm nào</h3>
+          <p>Khi được thêm vào nhóm, bạn sẽ đăng ký đề tài tại đây.</p>
         </div>
+      ) : (
+        topicSlots.map((slot) => (
+          <div key={slot.team_id} className="card" style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: "0.82rem", color: "#64748b", marginBottom: 10 }}>
+              <strong>Nhóm:</strong> {slot.team_name}
+            </p>
+            {!slot.topic ? (
+              <div className="empty-state" style={{ padding: "20px 0", textAlign: "center" }}>
+                <Icon name="Folder" size={40} sx={{ opacity: 0.25 }} />
+                <h3 style={{ fontSize: "1rem", marginTop: 8 }}>Chưa đăng ký đề tài</h3>
+                <p style={{ color: "#64748b", fontSize: "0.875rem" }}>
+                  {slot.can_register_new_topic
+                    ? "Nhấn \"Đăng ký đề tài mới\" ở trên và chọn nhóm này."
+                    : slot.registration_block_reason || "Không thể đăng ký đề tài cho nhóm này lúc này."}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    marginBottom: 16,
+                  }}
+                >
+                  <div>
+                    <h2 style={{ fontSize: "1.1rem", fontWeight: 700 }}>{slot.topic.title}</h2>
+                  </div>
+                  <TopicStatusBadge topic={slot.topic} />
+                </div>
+                {slot.topic.description && (
+                  <div style={{ marginBottom: 12 }}>
+                    <strong>Mô tả:</strong>
+                    <p style={{ color: "#475569", marginTop: 4 }}>{slot.topic.description}</p>
+                  </div>
+                )}
+                {slot.topic.technologies && (
+                  <div style={{ marginBottom: 12 }}>
+                    <strong>Công nghệ:</strong>
+                    <p style={{ color: "#475569", marginTop: 4 }}>{slot.topic.technologies}</p>
+                  </div>
+                )}
+                {slot.topic.supervisor_name && (
+                  <div style={{ marginBottom: 12 }}>
+                    <strong>Giảng viên hướng dẫn:</strong> {slot.topic.supervisor_name}
+                  </div>
+                )}
+                {slot.topic.status === "rejected" && slot.topic.rejection_reason && (
+                  <div style={{ background: "#fef2f2", padding: 12, borderRadius: 8, marginTop: 12 }}>
+                    <strong style={{ color: "#dc2626" }}>Lý do từ chối:</strong>
+                    <p style={{ color: "#991b1b", marginTop: 4 }}>{slot.topic.rejection_reason}</p>
+                  </div>
+                )}
+                <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {slot.topic.status === "rejected" && (
+                    <button type="button" className="btn btn-primary" onClick={() => openModal({ ...slot.topic, team_id: slot.team_id })}>
+                      Đăng ký lại
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => {
+                      setDeleteTeamId(slot.team_id);
+                      setShowDeleteConfirm(true);
+                    }}
+                    disabled={deleting}
+                  >
+                    <Icon name="Trash" size={14} /> Xóa đề tài nhóm này
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ))
       )}
 
       {modalOpen && (

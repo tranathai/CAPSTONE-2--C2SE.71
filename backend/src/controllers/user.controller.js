@@ -41,7 +41,11 @@ export async function getMyProfile(req, res, next) {
       profile = await getSupervisorProfile(userId);
     } else {
       const [rows] = await pool.query(
-        `SELECT id, email, full_name, phone, avatar_url, is_active, created_at FROM users WHERE id = ?`,
+        `SELECT u.id, u.email, u.full_name, u.phone, u.avatar_url, u.is_active, u.created_at,
+                r.name AS role_name
+         FROM users u
+         INNER JOIN roles r ON r.id = u.role_id
+         WHERE u.id = ?`,
         [userId],
       );
       profile = rows[0];

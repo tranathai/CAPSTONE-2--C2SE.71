@@ -12,7 +12,7 @@ import {
   deleteSubmissionVersion,
   findSubmissionsByMilestone,
 } from "../models/submission.model.js";
-import { findTeamByUserId } from "../models/team.model.js";
+import { findTeamsByUserId, userBelongsToTeam } from "../models/team.model.js";
 import { findTopicByTeamId } from "../models/topic.model.js";
 import { createNotification } from "../models/notification.model.js";
 import pool from "../config/db.js";
@@ -118,12 +118,17 @@ export async function uploadSubmission(req, res, next) {
 export async function getMySubmissions(req, res, next) {
   try {
     const userId = req.user.id;
-    const team = await findTeamByUserId(userId);
-    if (!team) return res.status(200).json({ success: true, data: [] });
-    const topic = await findTopicByTeamId(team.id);
-    if (!topic) return res.status(200).json({ success: true, data: [] });
-    const history = await findStudentSubmissionHistory(team.id, { sinceDate: topic.created_at });
-    return res.status(200).json({ success: true, data: history });
+    const teamRows = await findTeamsByUserId(userId);
+    if (!teamRows.length) return res.status(200).json({ success: true, data: [] });
+    const merged = [];
+    for (const team of teamRows) {
+      const topic = await findTopicByTeamId(team.id);
+      if (!topic) continue;
+      const history = await findStudentSubmissionHistory(team.id, { sinceDate: topic.created_at });
+      merged.push(...history);
+    }
+    merged.sort((a, b) => new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0));
+    return res.status(200).json({ success: true, data: merged });
   } catch (error) {
     next(error);
   }
@@ -131,8 +136,19 @@ export async function getMySubmissions(req, res, next) {
 
 export async function getMySubmissionsByTeam(req, res, next) {
   try {
+    const userId = req.user.id;
     const teamId = Number(req.params.teamId);
-    const history = await findStudentSubmissionHistory(teamId);
+    if (!teamId || teamId <= 0) {
+      return res.status(400).json({ success: false, message: "team_id không hợp lệ" });
+    }
+    const ok = await userBelongsToTeam(userId, teamId);
+    if (!ok) {
+      return res.status(403).json({ success: false, message: "Bạn không thuộc nhóm này" });
+    }
+    const topic = await findTopicByTeamId(teamId);
+    const history = topic
+      ? await findStudentSubmissionHistory(teamId, { sinceDate: topic.created_at })
+      : await findStudentSubmissionHistory(teamId);
     return res.status(200).json({ success: true, data: history });
   } catch (error) {
     next(error);

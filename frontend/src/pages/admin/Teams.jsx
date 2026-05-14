@@ -6,6 +6,30 @@ import { useToast } from "../../hooks/useToast.js";
 
 const PAGE_SIZE = 10;
 
+const TEAM_NAME_PREFIXES = [
+  { value: "C1SE - ", label: "C1SE -" },
+  { value: "C2SE - ", label: "C2SE -" },
+];
+
+const SEMESTER_OPTIONS = [
+  { value: "I", label: "Học kỳ I" },
+  { value: "II", label: "Học kỳ II" },
+];
+
+function defaultAcademicYearValue() {
+  const n = new Date();
+  const y = n.getMonth() >= 7 ? n.getFullYear() : n.getFullYear() - 1;
+  return `${y}-${y + 1}`;
+}
+
+function academicYearSelectOptions() {
+  const out = [];
+  for (let start = 2018; start <= 2032; start++) {
+    out.push({ value: `${start}-${start + 1}`, label: `Năm học ${start}-${start + 1}` });
+  }
+  return out;
+}
+
 function buildPageList(totalPages, current) {
   if (totalPages < 1) return [];
   if (totalPages === 1) return [1];
@@ -31,7 +55,14 @@ export default function AdminTeams() {
   const [removeMemberTarget, setRemoveMemberTarget] = useState(null);
   const [userList, setUserList] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: "", semester: "", leader_user_id: "", supervisor_user_id: "" });
+  const [form, setForm] = useState({
+    namePrefix: "C2SE - ",
+    nameSuffix: "",
+    semesterHalf: "I",
+    academicYear: defaultAcademicYearValue(),
+    leader_user_id: "",
+    supervisor_user_id: "",
+  });
   const [members, setMembers] = useState([]);
   const [memberSearch, setMemberSearch] = useState("");
   const [memberRoleFilter, setMemberRoleFilter] = useState("");
@@ -59,9 +90,18 @@ export default function AdminTeams() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!form.name) { showToast("Tên nhóm không được trống", "error"); return; }
-    const key = form.name.trim().toLowerCase();
-    if (teamList.some((t) => String(t.name || "").trim().toLowerCase() === key)) {
+    const suffix = form.nameSuffix.trim();
+    if (!suffix) {
+      showToast("Vui lòng nhập phần số / mã nhóm sau prefix (VD: 40, 70)", "error");
+      return;
+    }
+    const name = `${(form.namePrefix || "").trimEnd()}${suffix}`.replace(/\s+/g, " ").trim();
+    if (!name) {
+      showToast("Tên nhóm không được trống", "error");
+      return;
+    }
+    const semester = `${form.academicYear} — Học kỳ ${form.semesterHalf === "II" ? "II" : "I"}`;
+    if (teamList.some((t) => String(t.name || "").trim().toLowerCase() === name.toLowerCase())) {
       showToast("Tên nhóm đã tồn tại. Vui lòng chọn tên khác.", "error");
       return;
     }
@@ -76,13 +116,25 @@ export default function AdminTeams() {
     }
     setCreating(true);
     try {
-      const result = await teams.create(form);
+      const result = await teams.create({
+        name,
+        semester,
+        leader_user_id: form.leader_user_id || undefined,
+        supervisor_user_id: form.supervisor_user_id || undefined,
+      });
       for (const uid of members) {
         await teams.addMember(result.id, uid, uid === Number(form.leader_user_id));
       }
       showToast("Tạo nhóm thành công!", "success");
       setShowCreate(false);
-      setForm({ name: "", semester: "", leader_user_id: "", supervisor_user_id: "" });
+      setForm({
+        namePrefix: "C2SE - ",
+        nameSuffix: "",
+        semesterHalf: "I",
+        academicYear: defaultAcademicYearValue(),
+        leader_user_id: "",
+        supervisor_user_id: "",
+      });
       setMembers([]);
       teams.list().then(setTeamList).catch(() => {});
     } catch (err) {
@@ -284,14 +336,53 @@ export default function AdminTeams() {
         <div className="card">
           <div className="card-title">Tạo nhóm mới</div>
           <form onSubmit={handleCreate}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div className="form-group">
-                <label>Tên nhóm *</label>
-                <input className="form-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="VD: CS-401 Nhóm 1" />
+            <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: 12, alignItems: "end" }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Tiền tố *</label>
+                <select
+                  className="form-input"
+                  value={form.namePrefix}
+                  onChange={(e) => setForm((f) => ({ ...f, namePrefix: e.target.value }))}
+                >
+                  {TEAM_NAME_PREFIXES.map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
               </div>
-              <div className="form-group">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Số / mã nhóm *</label>
+                <input
+                  className="form-input"
+                  value={form.nameSuffix}
+                  onChange={(e) => setForm((f) => ({ ...f, nameSuffix: e.target.value }))}
+                  placeholder="VD: 40, 70"
+                />
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Học kỳ</label>
-                <input className="form-input" value={form.semester} onChange={(e) => setForm((f) => ({ ...f, semester: e.target.value }))} placeholder="VD: 2024-1" />
+                <select
+                  className="form-input"
+                  value={form.semesterHalf}
+                  onChange={(e) => setForm((f) => ({ ...f, semesterHalf: e.target.value }))}
+                >
+                  {SEMESTER_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Năm học</label>
+                <select
+                  className="form-input"
+                  value={form.academicYear}
+                  onChange={(e) => setForm((f) => ({ ...f, academicYear: e.target.value }))}
+                >
+                  {academicYearSelectOptions().map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

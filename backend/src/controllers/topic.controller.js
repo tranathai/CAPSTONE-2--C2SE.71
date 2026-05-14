@@ -8,7 +8,7 @@ import {
   getTopicRegistrationEligibility,
   deleteActiveTopicsByTeam,
 } from "../models/topic.model.js";
-import { findTeamByUserId, findTeamById, userBelongsToTeam } from "../models/team.model.js";
+import { findTeamByUserId, findTeamById, userBelongsToTeam, findTeamsByUserId } from "../models/team.model.js";
 import { createNotification } from "../models/notification.model.js";
 import pool from "../config/db.js";
 import { io } from "../server.js";
@@ -90,35 +90,41 @@ export async function registerTopic(req, res, next) {
 export async function getMyTopic(req, res, next) {
   try {
     const userId = req.user.id;
-    const team = await findTeamByUserId(userId);
-
-    if (!team) {
-      return res.status(200).json({ success: true, data: null });
+    const teamRows = await findTeamsByUserId(userId);
+    if (!teamRows.length) {
+      return res.status(200).json({ success: true, data: [] });
     }
 
-    const topic = await findTopicByTeamId(team.id);
-    const elig = await getTopicRegistrationEligibility(team.id);
-    let selectedMilestoneIds = [];
-    if (topic?.selected_milestone_ids) {
-      try {
-        const parsed = JSON.parse(topic.selected_milestone_ids);
-        if (Array.isArray(parsed)) selectedMilestoneIds = parsed.map((x) => Number(x)).filter((x) => x > 0);
-      } catch {
-        selectedMilestoneIds = [];
-      }
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: topic
-        ? {
-            ...topic,
-            selected_milestone_ids: selectedMilestoneIds,
-            can_register_new_topic: elig.canRegister,
-            registration_block_reason: elig.reason,
+    const items = await Promise.all(
+      teamRows.map(async (team) => {
+        const topic = await findTopicByTeamId(team.id);
+        const elig = await getTopicRegistrationEligibility(team.id);
+        let selectedMilestoneIds = [];
+        if (topic?.selected_milestone_ids) {
+          try {
+            const parsed = JSON.parse(topic.selected_milestone_ids);
+            if (Array.isArray(parsed)) selectedMilestoneIds = parsed.map((x) => Number(x)).filter((x) => x > 0);
+          } catch {
+            selectedMilestoneIds = [];
           }
-        : null,
-    });
+        }
+        const topicPayload = topic
+          ? {
+              ...topic,
+              selected_milestone_ids: selectedMilestoneIds,
+            }
+          : null;
+        return {
+          team_id: team.id,
+          team_name: team.name,
+          topic: topicPayload,
+          can_register_new_topic: elig.canRegister,
+          registration_block_reason: elig.reason || "",
+        };
+      }),
+    );
+
+    return res.status(200).json({ success: true, data: items });
   } catch (error) {
     next(error);
   }
@@ -164,6 +170,14 @@ export async function approveTopic(req, res, next) {
     const [milestoneRows] = await pool.query(`SELECT id FROM milestones WHERE id IN (?)`, [selectedIds]);
     if (milestoneRows.length !== selectedIds.length) {
       return res.status(400).json({ success: false, message: "Mốc thời gian đã chọn không hợp lệ" });
+    }
+    const [batchRows] = await pool.query(`SELECT DISTINCT graduation_batch_id FROM milestones WHERE id IN (?)`, [selectedIds]);
+    const batchIds = [...new Set(batchRows.map((r) => r.graduation_batch_id).filter((x) => x != null))];
+    if (batchIds.length > 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Chỉ được chọn mốc thuộc một đợt tốt nghiệp.",
+      });
     }
     const selectedJson = JSON.stringify(selectedIds);
 
@@ -303,22 +317,32 @@ export async function getApprovedTopics(req, res, next) {
 export async function deleteMyTopic(req, res, next) {
   try {
     const userId = req.user.id;
-    const team = await findTeamByUserId(userId);
-    if (!team) {
+    let teamId = req.body?.team_id != null && req.body?.team_id !== "" ? Number(req.body.team_id) : null;
+    if (teamId) {
+      const ok = await userBelongsToTeam(userId, teamId);
+      if (!ok) {
+        return res.status(403).json({ success: false, message: "Bạn không thuộc nhóm đã chọn" });
+      }
+    } else {
+      const team = await findTeamByUserId(userId);
+      teamId = team?.id || null;
+    }
+    if (!teamId) {
       return res.status(400).json({ success: false, message: "Bạn chưa thuộc nhóm nào" });
     }
 
-    const topic = await findTopicByTeamId(team.id);
+    const topic = await findTopicByTeamId(teamId);
     if (!topic) {
       return res.status(404).json({ success: false, message: "Không có đề tài để xóa" });
     }
 
-    const deletedIds = await deleteActiveTopicsByTeam(team.id);
+    const deletedIds = await deleteActiveTopicsByTeam(teamId);
     if (!deletedIds.length) {
       return res.status(400).json({ success: false, message: "Không thể xóa đề tài này" });
     }
 
-    if (team.supervisor_user_id) {
+    const team = await findTeamById(teamId);
+    if (team?.supervisor_user_id) {
       io.to(`user:${team.supervisor_user_id}`).emit("topic_pending_refresh", {
         topicId: Number(topic.id),
         action: "removed",

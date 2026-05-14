@@ -39,6 +39,15 @@ export async function findAllGraduationBatches() {
   return rows;
 }
 
+export async function findGraduationBatchById(id) {
+  const [rows] = await pool.query(
+    `SELECT id, name, description, start_date, end_date, created_at, updated_at
+     FROM graduation_batches WHERE id = ?`,
+    [id],
+  );
+  return rows[0] || null;
+}
+
 /** Trùng tên đợt: không phân biệt hoa thường, trim. excludeId: khi cập nhật đợt. */
 export async function findGraduationBatchIdByNormalizedName(trimmedName, { excludeId } = {}) {
   const key = String(trimmedName || "").trim();

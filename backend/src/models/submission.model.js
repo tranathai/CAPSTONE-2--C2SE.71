@@ -111,7 +111,7 @@ export async function createSubmission({ teamId, milestoneId, title, filePath, o
 }
 
 export async function findStudentSubmissionHistory(teamId, { sinceDate } = {}) {
-  let sql = `SELECT s.id, s.title, s.submitted_at, s.status_label,
+  let sql = `SELECT s.id, s.team_id, s.title, s.submitted_at, s.status_label,
             m.name AS milestone_name, m.end_date AS milestone_deadline,
             sv.id AS version_id, sv.version_number, sv.file_path, sv.is_late,
             EXISTS(SELECT 1 FROM feedbacks f WHERE f.submission_version_id = sv.id) AS has_feedback,

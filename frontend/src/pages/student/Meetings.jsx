@@ -21,7 +21,12 @@ export default function StudentMeetings() {
       meetings.studentRequests(),
       topics.myTopic(),
       teams.myTeam().catch(() => null),
-    ]).then(([ml, req, topic, team]) => {
+    ]).then(([ml, req, topicRaw, teamData]) => {
+      const teamsArr = Array.isArray(teamData) ? teamData : teamData ? [teamData] : [];
+      const slots = Array.isArray(topicRaw) ? topicRaw : topicRaw && topicRaw.id ? [topicRaw] : [];
+      const approvedSlot = slots.find((s) => s.topic?.status === "approved");
+      const topic = approvedSlot?.topic || null;
+      const team = teamsArr.find((x) => x.id === approvedSlot?.team_id) || teamsArr[0] || null;
       setMeetingList(ml);
       setRequests(req);
       setTopicInfo(topic || null);

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Navigate } from "react-router-dom";
 import Icon from "../../components/UI/Icon.jsx";
 import { submissions, milestones, teams, notifications, topics } from "../../lib/api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -20,12 +19,20 @@ export default function StudentDashboard() {
       submissions.my(),
       milestones.list(),
       notifications.list({ limit: 5 }),
-    ]).then(([t, topic, subs, allMilestones, notifs]) => {
-      setTeam(t);
+    ]).then(([t, topicRaw, subs, allMilestones, notifs]) => {
+      const teamsArr = Array.isArray(t) ? t : t ? [t] : [];
+      setTeam(teamsArr[0] || null);
       setMySubmissions(subs);
-      const selectedIds = Array.isArray(topic?.selected_milestone_ids)
-        ? topic.selected_milestone_ids.map((x) => Number(x)).filter((x) => x > 0)
-        : [];
+      const slots = Array.isArray(topicRaw) ? topicRaw : topicRaw && topicRaw.id ? [topicRaw] : [];
+      const selectedIds = [
+        ...new Set(
+          slots.flatMap((s) =>
+            s.topic?.status === "approved" && Array.isArray(s.topic?.selected_milestone_ids)
+              ? s.topic.selected_milestone_ids.map((x) => Number(x)).filter((x) => x > 0)
+              : [],
+          ),
+        ),
+      ];
       const now = Date.now();
       const upcoming = allMilestones
         .filter((m) => selectedIds.includes(Number(m.id)))

@@ -1,12 +1,29 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Icon from "../../components/UI/Icon.jsx";
 import ConfirmModal from "../../components/UI/ConfirmModal.jsx";
 import { submissions, milestones, teams, topics } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
 import { useNavigate } from "react-router-dom";
 
+function normalizeTopicSlots(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (raw.id) {
+    return [
+      {
+        team_id: raw.team_id,
+        team_name: raw.team_name || "",
+        topic: raw,
+      },
+    ];
+  }
+  return [];
+}
+
 export default function StudentSubmissions() {
-  const [team, setTeam] = useState(null);
+  const [myTeams, setMyTeams] = useState([]);
+  const [activeTeamId, setActiveTeamId] = useState(null);
+  const [topicSlots, setTopicSlots] = useState([]);
   const [currentTopic, setCurrentTopic] = useState(null);
   const [history, setHistory] = useState([]);
   const [milestoneList, setMilestoneList] = useState([]);
@@ -24,30 +41,56 @@ export default function StudentSubmissions() {
   const { toast, showToast } = useToast();
   const navigate = useNavigate();
 
+  const refreshSubmissionHistory = useCallback(async () => {
+    if (!activeTeamId) {
+      setHistory([]);
+      return;
+    }
+    try {
+      setHistory(await submissions.myByTeam(activeTeamId));
+    } catch {
+      setHistory(await submissions.my());
+    }
+  }, [activeTeamId]);
+
   useEffect(() => {
-    Promise.all([
-      teams.myTeam(),
-      topics.myTopic(),
-      submissions.my(),
-      milestones.list(),
-    ]).then(([t, myTopic, subs, ms]) => {
-      setTeam(t);
-      setCurrentTopic(myTopic);
-      setHistory(subs);
-      setMilestoneList(ms);
-    }).catch(() => {});
+    Promise.all([teams.myTeam(), topics.myTopic(), milestones.list()])
+      .then(([teamsData, slotsRaw, ms]) => {
+        const arr = Array.isArray(teamsData) ? teamsData : teamsData ? [teamsData] : [];
+        setMyTeams(arr);
+        setTopicSlots(normalizeTopicSlots(slotsRaw));
+        setMilestoneList(ms);
+        setActiveTeamId(arr[0]?.id ?? null);
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!activeTeamId) {
+      setCurrentTopic(null);
+      setHistory([]);
+      return;
+    }
+    const slot = topicSlots.find((s) => Number(s.team_id) === Number(activeTeamId));
+    setCurrentTopic(slot?.topic || null);
+    refreshSubmissionHistory();
+  }, [activeTeamId, topicSlots, refreshSubmissionHistory]);
+
+  const activeTeam = useMemo(
+    () => myTeams.find((t) => Number(t.id) === Number(activeTeamId)) || null,
+    [myTeams, activeTeamId],
+  );
 
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) { showToast("Vui lòng chọn file", "error"); return; }
     if (!selectedMilestone) { showToast("Vui lòng chọn mốc thời gian", "error"); return; }
-    if (!team) { showToast("Bạn chưa thuộc nhóm nào", "error"); return; }
+    if (!activeTeam) { showToast("Bạn chưa thuộc nhóm nào", "error"); return; }
 
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("team_id", team.id);
+    formData.append("team_id", activeTeam.id);
     formData.append("milestone_id", selectedMilestone);
     if (title) formData.append("title", title);
 
@@ -58,8 +101,7 @@ export default function StudentSubmissions() {
       setSelectedMilestone("");
       setFile(null);
       setTitle("");
-      const subs = await submissions.my();
-      setHistory(subs);
+      await refreshSubmissionHistory();
     } catch (err) {
       showToast(err.message || "Upload thất bại", "error");
     } finally {
@@ -74,8 +116,7 @@ export default function StudentSubmissions() {
       showToast("Cập nhật thành công!", "success");
       setEditingSubmission(null);
       setEditTitle("");
-      const subs = await submissions.my();
-      setHistory(subs);
+      await refreshSubmissionHistory();
     } catch (err) {
       showToast(err.message || "Cập nhật thất bại", "error");
     }
@@ -100,8 +141,7 @@ export default function StudentSubmissions() {
     try {
       await submissions.studentUploadVersion(formData);
       showToast("Đã cập nhật phiên bản mới", "success");
-      const subs = await submissions.my();
-      setHistory(subs);
+      await refreshSubmissionHistory();
     } catch (err) {
       showToast(err.message || "Cập nhật phiên bản thất bại", "error");
     } finally {
@@ -116,8 +156,7 @@ export default function StudentSubmissions() {
       await submissions.deleteVersion(vid);
       showToast("Xóa thành công!", "success");
       setDeleteVersionId(null);
-      const subs = await submissions.my();
-      setHistory(subs);
+      await refreshSubmissionHistory();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Xóa thất bại";
       showToast(msg, "error");
@@ -211,11 +250,27 @@ export default function StudentSubmissions() {
         onConfirm={executeDeleteVersion}
       />
 
-      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1>Nộp bài</h1>
           <p>Upload báo cáo theo từng mốc thời gian</p>
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          {myTeams.length > 1 && (
+            <div className="form-group" style={{ marginBottom: 0, minWidth: 200 }}>
+              <label htmlFor="sub-team" style={{ fontSize: "0.75rem" }}>Nhóm</label>
+              <select
+                id="sub-team"
+                className="form-input"
+                value={activeTeamId ?? ""}
+                onChange={(e) => setActiveTeamId(Number(e.target.value))}
+              >
+                {myTeams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         <button
           className="btn btn-primary"
           disabled={!topicApproved}
@@ -233,6 +288,7 @@ export default function StudentSubmissions() {
         >
           <Icon name="Upload" size={16} /> Nộp bài mới
         </button>
+        </div>
       </div>
 
       {!topicApproved && (

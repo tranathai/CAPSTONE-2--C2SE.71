@@ -56,7 +56,7 @@ export default function MentorTeams() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
                   {selectedTeam.members?.map((m) => (
                     <div key={m.id} style={{ background: "#f8fafc", borderRadius: 8, padding: 10 }}>
-                      <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{m.full_name} {m.is_leader && "👑"}</div>
+                      <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{m.full_name}{Number(m.is_leader) === 1 ? " 👑" : ""}</div>
                       <div style={{ fontSize: "0.78rem", color: "#64748b" }}>{m.email}</div>
                     </div>
                   ))}
