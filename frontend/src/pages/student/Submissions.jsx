@@ -4,6 +4,9 @@ import ConfirmModal from "../../components/UI/ConfirmModal.jsx";
 import { submissions, milestones, teams, topics } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
 import { useNavigate } from "react-router-dom";
+import StudentRequiredDocumentSelect, {
+  parseMilestoneRequiredDocs,
+} from "../../components/student/StudentRequiredDocumentSelect.jsx";
 
 function normalizeTopicSlots(raw) {
   if (!raw) return [];
@@ -30,10 +33,10 @@ export default function StudentSubmissions() {
   const [showUpload, setShowUpload] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState("");
   const [file, setFile] = useState(null);
-  const [title, setTitle] = useState("");
+  const [selectedDocument, setSelectedDocument] = useState("");
   const [uploading, setUploading] = useState(false);
   const [editingSubmission, setEditingSubmission] = useState(null);
-  const [editTitle, setEditTitle] = useState("");
+  const [editDocument, setEditDocument] = useState("");
   const [versionUploadSubmissionId, setVersionUploadSubmissionId] = useState(null);
   const [uploadingVersionForId, setUploadingVersionForId] = useState(null);
   const versionFileRef = useRef(null);
@@ -86,13 +89,22 @@ export default function StudentSubmissions() {
     if (!file) { showToast("Vui lòng chọn file", "error"); return; }
     if (!selectedMilestone) { showToast("Vui lòng chọn mốc thời gian", "error"); return; }
     if (!activeTeam) { showToast("Bạn chưa thuộc nhóm nào", "error"); return; }
+    const milestoneDocs = parseMilestoneRequiredDocs(selectedMilestoneMeta);
+    if (milestoneDocs.length === 0) {
+      showToast("Mốc này chưa có danh sách tài liệu cần nộp. Liên hệ admin.", "error");
+      return;
+    }
+    if (!selectedDocument?.trim()) {
+      showToast("Vui lòng chọn tài liệu cần nộp", "error");
+      return;
+    }
 
     setUploading(true);
     const formData = new FormData();
     formData.append("file", file);
     formData.append("team_id", activeTeam.id);
     formData.append("milestone_id", selectedMilestone);
-    if (title) formData.append("title", title);
+    formData.append("title", selectedDocument.trim());
 
     try {
       await submissions.studentUpload(formData);
@@ -100,7 +112,7 @@ export default function StudentSubmissions() {
       setShowUpload(false);
       setSelectedMilestone("");
       setFile(null);
-      setTitle("");
+      setSelectedDocument("");
       await refreshSubmissionHistory();
     } catch (err) {
       showToast(err.message || "Upload thất bại", "error");
@@ -109,13 +121,16 @@ export default function StudentSubmissions() {
     }
   };
 
-  const handleEditTitle = async (submissionId) => {
-    if (!editTitle.trim()) return;
+  const handleEditDocument = async (submissionId) => {
+    if (!editDocument.trim()) {
+      showToast("Vui lòng chọn tài liệu", "error");
+      return;
+    }
     try {
-      await submissions.update(submissionId, { title: editTitle.trim() });
+      await submissions.update(submissionId, { title: editDocument.trim() });
       showToast("Cập nhật thành công!", "success");
       setEditingSubmission(null);
-      setEditTitle("");
+      setEditDocument("");
       await refreshSubmissionHistory();
     } catch (err) {
       showToast(err.message || "Cập nhật thất bại", "error");
@@ -203,6 +218,19 @@ export default function StudentSubmissions() {
     return milestoneList.find((m) => String(m.id) === String(selectedMilestone)) || null;
   }, [milestoneList, selectedMilestone]);
 
+  const selectedMilestoneDocs = useMemo(
+    () => parseMilestoneRequiredDocs(selectedMilestoneMeta),
+    [selectedMilestoneMeta],
+  );
+
+  const getDocsForSubmission = useCallback(
+    (sub) => {
+      const m = milestoneList.find((x) => Number(x.id) === Number(sub?.milestone_id));
+      return parseMilestoneRequiredDocs(m);
+    },
+    [milestoneList],
+  );
+
   const getMilestoneState = (m) => {
     const now = new Date();
     const start = m?.start_date ? new Date(m.start_date) : null;
@@ -283,7 +311,7 @@ export default function StudentSubmissions() {
             setShowUpload((v) => !v);
             setSelectedMilestone("");
             setFile(null);
-            setTitle("");
+            setSelectedDocument("");
           }}
         >
           <Icon name="Upload" size={16} /> Nộp bài mới
@@ -335,12 +363,15 @@ export default function StudentSubmissions() {
           <div className="card-title">Upload bài nộp mới</div>
           <form onSubmit={handleUpload}>
             <div className="form-group">
-              <label>Tiêu đề (tùy chọn)</label>
-              <input className="form-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="VD: Báo cáo giữa kỳ" />
-            </div>
-            <div className="form-group">
               <label>Mốc thời gian *</label>
-              <select className="form-input" value={selectedMilestone} onChange={(e) => setSelectedMilestone(e.target.value)}>
+              <select
+                className="form-input"
+                value={selectedMilestone}
+                onChange={(e) => {
+                  setSelectedMilestone(e.target.value);
+                  setSelectedDocument("");
+                }}
+              >
                 <option value="">-- Chọn mốc thời gian --</option>
                 {allowedMilestones.map((m) => (
                   <option key={m.id} value={m.id}>{m.name}</option>
@@ -361,20 +392,12 @@ export default function StudentSubmissions() {
                 <label style={{ marginBottom: 8, display: "block", fontWeight: 600 }}>
                   Tài liệu cần nộp — {selectedMilestoneMeta.name}
                 </label>
-                {Array.isArray(selectedMilestoneMeta.required_documents) &&
-                selectedMilestoneMeta.required_documents.length > 0 ? (
-                  <ul style={{ margin: 0, paddingLeft: 20, color: "#334155", fontSize: "0.95rem" }}>
-                    {selectedMilestoneMeta.required_documents.map((item, idx) => (
-                      <li key={idx} style={{ marginBottom: 4 }}>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p style={{ margin: 0, fontSize: "0.9rem", color: "#64748b" }}>
-                    Admin chưa cấu hình danh sách tài liệu cho mốc này.
-                  </p>
-                )}
+                <StudentRequiredDocumentSelect
+                  options={selectedMilestoneDocs}
+                  value={selectedDocument}
+                  onChange={setSelectedDocument}
+                  disabled={uploading}
+                />
               </div>
             )}
 
@@ -393,7 +416,7 @@ export default function StudentSubmissions() {
                   setShowUpload(false);
                   setSelectedMilestone("");
                   setFile(null);
-                  setTitle("");
+                  setSelectedDocument("");
                 }}
               >
                 Hủy
@@ -424,7 +447,7 @@ export default function StudentSubmissions() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Tiêu đề</th>
+                  <th>Tài liệu</th>
                   <th>Ngày nộp</th>
                   <th>Phiên bản</th>
                   <th>Trạng thái</th>
@@ -436,19 +459,20 @@ export default function StudentSubmissions() {
                   <tr key={s.id}>
                     <td>
                       {editingSubmission === s.id ? (
-                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                          <input 
-                            className="form-input" 
-                            value={editTitle} 
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            style={{ flex: 1 }}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 200 }}>
+                          <StudentRequiredDocumentSelect
+                            options={getDocsForSubmission(s)}
+                            value={editDocument}
+                            onChange={setEditDocument}
                           />
-                          <button className="btn btn-sm btn-success" onClick={() => handleEditTitle(s.id)}>
-                            <span aria-hidden>✓</span>
-                          </button>
-                          <button className="btn btn-sm btn-secondary" onClick={() => setEditingSubmission(null)}>
-                            <span aria-hidden>✗</span>
-                          </button>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button type="button" className="btn btn-sm btn-success" onClick={() => handleEditDocument(s.id)}>
+                              <span aria-hidden>✓</span>
+                            </button>
+                            <button type="button" className="btn btn-sm btn-secondary" onClick={() => setEditingSubmission(null)}>
+                              <span aria-hidden>✗</span>
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <strong>{s.title}</strong>
@@ -476,7 +500,7 @@ export default function StudentSubmissions() {
                         </button>
                         <button className="btn btn-sm btn-warning" onClick={() => {
                           setEditingSubmission(s.id);
-                          setEditTitle(s.title);
+                          setEditDocument(s.title || "");
                         }}>
                           <Icon name="Edit" size={14} />
                         </button>

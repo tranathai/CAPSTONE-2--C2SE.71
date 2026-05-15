@@ -73,13 +73,22 @@ export async function updateTopicStatus(id, { status, supervisorId, rejectionRea
 
 export async function findApprovedTopicsBySupervisor(supervisorId) {
   const [rows] = await pool.query(
-    `SELECT tr.id, tr.title, tr.description, tr.technologies, tr.created_at,
-            t.id AS team_id, t.name AS team_name,
-            (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) AS member_count
+    `SELECT tr.id, tr.title, tr.description, tr.technologies, tr.created_at, tr.updated_at,
+            t.id AS team_id, t.name AS team_name, t.semester,
+            (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) AS member_count,
+            (SELECT COUNT(*) FROM submissions s WHERE s.team_id = t.id) AS submission_count,
+            (SELECT COUNT(*) FROM submissions s
+               INNER JOIN submission_versions sv ON sv.id = (
+                 SELECT sv2.id FROM submission_versions sv2 WHERE sv2.submission_id = s.id
+                 ORDER BY sv2.version_number DESC LIMIT 1
+               )
+             WHERE s.team_id = t.id
+               AND NOT EXISTS (SELECT 1 FROM feedbacks f WHERE f.submission_version_id = sv.id)
+            ) AS pending_submission_count
      FROM topic_registrations tr
      INNER JOIN teams t ON t.id = tr.team_id
      WHERE tr.supervisor_id = ? AND tr.status = 'approved'
-     ORDER BY tr.id DESC`,
+     ORDER BY tr.updated_at DESC, tr.id DESC`,
     [supervisorId],
   );
   return rows;

@@ -42,6 +42,14 @@ function body(data) {
   return data;
 }
 
+export function getApiErrorMessage(err, fallback = "API error") {
+  return err?.response?.data?.message || err?.message || fallback;
+}
+
+export const API_ORIGIN =
+  import.meta.env.VITE_API_ORIGIN ||
+  (import.meta.env.DEV ? "http://localhost:5000" : "http://localhost:5000");
+
 // ─── Auth ────────────────────────────────────────────────────────────────────
 export const auth = {
   login: (email, password) => client.post("/auth/login", { email, password }).then((r) => body(r.data)),
@@ -65,6 +73,15 @@ export const teams = {
   myTeam: () => client.get("/teams/me").then((r) => body(r.data)),
   joined: () => client.get("/teams/joined").then((r) => body(r.data)),
   list: (params) => client.get("/teams", { params }).then((r) => body(r.data)),
+  semesterBusyStudents: (semester, excludeTeamId) =>
+    client
+      .get("/teams/semester-busy-students", {
+        params: {
+          semester,
+          ...(excludeTeamId != null && excludeTeamId !== "" ? { exclude_team_id: excludeTeamId } : {}),
+        },
+      })
+      .then((r) => body(r.data)),
   get: (id) => client.get(`/teams/${id}`).then((r) => body(r.data)),
   supervisees: () => client.get("/teams/supervisees").then((r) => body(r.data)),
   create: (data) => client.post("/teams", data).then((r) => body(r.data)),
@@ -105,7 +122,12 @@ export const submissions = {
   list: (params) => client.get("/submissions", { params }).then((r) => body(r.data)),
   my: () => client.get("/submissions/my").then((r) => body(r.data)),
   myByTeam: (teamId) => client.get(`/submissions/my/team/${teamId}`).then((r) => body(r.data)),
-  supervisor: () => client.get("/submissions/supervisor").then((r) => body(r.data)),
+  supervisor: (teamId) =>
+    client
+      .get("/submissions/supervisor", {
+        params: teamId != null && teamId !== "" ? { team_id: teamId } : {},
+      })
+      .then((r) => body(r.data)),
   stats: () => client.get("/submissions/stats").then((r) => body(r.data)),
   get: (id) => client.get(`/submissions/${id}`).then((r) => body(r.data)),
   upload: (formData) => client.post("/submissions/upload", formData, {
@@ -167,9 +189,16 @@ export const messages = {
 
 // ─── AI ────────────────────────────────────────────────────────────────────
 export const ai = {
-  summarize: (content) => client.post("/ai/summarize-feedback", {
-    content: typeof content === "string" ? content : String(content?.content || ""),
-  }).then((r) => body(r.data)),
+  summarize: (payload) => {
+    const data =
+      typeof payload === "string"
+        ? { content: payload }
+        : {
+            content: payload?.content ?? "",
+            feedback_id: payload?.feedback_id ?? payload?.feedbackId,
+          };
+    return client.post("/ai/summarize-feedback", data).then((r) => body(r.data));
+  },
 };
 
 // ─── System Config ─────────────────────────────────────────────────────────
@@ -177,3 +206,8 @@ export const systemConfig = {
   list: () => client.get("/system-config").then((r) => body(r.data)),
   update: (key, value, description) => client.put("/system-config", { key, value, description }).then((r) => body(r.data)),
 };
+
+// Legacy named exports (older components)
+export const getSubmission = (id) => submissions.get(id);
+export const getFeedbacks = (versionId) => feedbacks.byVersion(versionId);
+export const createFeedback = (data) => feedbacks.create(data);

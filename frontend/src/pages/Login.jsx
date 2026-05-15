@@ -92,14 +92,6 @@ export default function Login() {
             {loading ? "Đang đăng nhập..." : "Đăng nhập →"}
           </button>
         </form>
-
-        <div className="login-footer">
-          <div className="login-credentials">
-            <p><strong>Demo Admin:</strong> admin@mentorai.edu / admin123</p>
-            <p><strong>Demo Sinh viên:</strong> nguyen.van.a@student.edu.vn / student123</p>
-            <p><strong>Demo Giảng viên:</strong> ts.nguyen@mentorai.edu / super123</p>
-          </div>
-        </div>
       </div>
     </div>
   );

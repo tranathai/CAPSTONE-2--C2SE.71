@@ -26,7 +26,8 @@ export async function submitFeedback(req, res, next) {
     const { submission_version_id, content, is_final } = req.body;
     const supervisorId = req.user.id;
 
-    if (!submission_version_id) {
+    const versionId = Number(submission_version_id);
+    if (!Number.isFinite(versionId) || versionId <= 0) {
       return res.status(400).json({ success: false, message: "submission_version_id không hợp lệ" });
     }
     if (!content || !content.trim()) {
@@ -36,11 +37,27 @@ export async function submitFeedback(req, res, next) {
       return res.status(400).json({ success: false, message: "Feedback không được vượt quá 5000 ký tự" });
     }
 
-    if (req.user.role_name !== "supervisor") {
-      return res.status(403).json({ success: false, message: "Chỉ supervisor mới được tạo feedback" });
+    const { default: pool } = await import("../config/db.js");
+    const [versionRows] = await pool.query(
+      `SELECT sv.id, s.team_id
+       FROM submission_versions sv
+       INNER JOIN submissions s ON s.id = sv.submission_id
+       WHERE sv.id = ?`,
+      [versionId],
+    );
+    if (!versionRows[0]) {
+      return res.status(404).json({ success: false, message: "Phiên bản bài nộp không tồn tại" });
     }
 
-    const versionId = Number(submission_version_id);
+    const [accessRows] = await pool.query(
+      `SELECT 1 FROM topic_registrations tr
+       WHERE tr.team_id = ? AND tr.supervisor_id = ? AND tr.status = 'approved'
+       LIMIT 1`,
+      [versionRows[0].team_id, supervisorId],
+    );
+    if (!accessRows.length) {
+      return res.status(403).json({ success: false, message: "Bạn không có quyền phản hồi bài nộp này" });
+    }
     const feedbackId = await createFeedback({
       versionId,
       supervisorId,
@@ -48,8 +65,6 @@ export async function submitFeedback(req, res, next) {
       isFinal: Boolean(is_final),
     });
 
-    // Update submission status_label
-    const { default: pool } = await import("../config/db.js");
     await pool.query(
       `UPDATE submissions SET status_label = 'Reviewed' WHERE id = (
         SELECT submission_id FROM submission_versions WHERE id = ?

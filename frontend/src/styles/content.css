@@ -790,3 +790,85 @@
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+/* Student team directory — up to 5 members per row */
+.team-members-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(var(--member-cols, 5), minmax(0, 1fr));
+}
+
+@media (max-width: 768px) {
+  .team-members-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}
+
+.team-member-card {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  min-width: 0;
+}
+
+.team-member-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.team-member-card__avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: #3b82f6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.team-member-card__info {
+  min-width: 0;
+  flex: 1;
+}
+
+.team-member-card__name {
+  font-weight: 700;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.25;
+}
+
+.team-member-card__mssv {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.team-member-card__contact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.team-member-card__contact-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.team-member-card__contact-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

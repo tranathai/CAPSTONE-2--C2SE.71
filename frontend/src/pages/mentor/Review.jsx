@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import Icon from "../../components/UI/Icon.jsx";
-import { submissions, feedbacks } from "../../lib/api.js";
+import { submissions, feedbacks, getApiErrorMessage } from "../../lib/api.js";
+import { resolveSubmissionVersionId } from "../../lib/submissionVersion.js";
 import { useToast } from "../../hooks/useToast.js";
 import { getUploadUrl } from "../../lib/uploadUrl.js";
 
 export default function MentorReview() {
   const { submissionId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backTeamId = location.state?.teamId;
   const { toast, showToast } = useToast();
   const [submission, setSubmission] = useState(null);
   const [existingFeedbacks, setExistingFeedbacks] = useState([]);
@@ -16,25 +19,42 @@ export default function MentorReview() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    setSubmission(null);
+    setExistingFeedbacks([]);
+
     submissions.get(Number(submissionId)).then(async (s) => {
+      if (cancelled) return;
       setSubmission(s);
-      const fbs = await feedbacks.byVersion(s.version_id).catch(() => []);
-      setExistingFeedbacks(fbs);
+      const versionId = resolveSubmissionVersionId(s);
+      if (!versionId) {
+        showToast("Bài nộp chưa có phiên bản tệp — không thể gửi phản hồi", "error");
+        return;
+      }
+      const fbs = await feedbacks.byVersion(versionId).catch(() => []);
+      if (!cancelled) setExistingFeedbacks(fbs);
     }).catch(() => showToast("Không tải được", "error"));
+
+    return () => { cancelled = true; };
   }, [submissionId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!feedbackText.trim()) { showToast("Nội dung feedback không được trống", "error"); return; }
+    const versionId = resolveSubmissionVersionId(submission);
+    if (!versionId) {
+      showToast("Không xác định được phiên bản bài nộp", "error");
+      return;
+    }
     setSubmitting(true);
     try {
-      await feedbacks.create({ submission_version_id: submission.version_id, content: feedbackText, is_final: isFinal });
+      await feedbacks.create({ submission_version_id: versionId, content: feedbackText.trim(), is_final: isFinal });
       showToast("Gửi phản hồi thành công!", "success");
       setFeedbackText("");
-      const fbs = await feedbacks.byVersion(submission.version_id);
+      const fbs = await feedbacks.byVersion(versionId);
       setExistingFeedbacks(fbs);
     } catch (err) {
-      showToast(err.message, "error");
+      showToast(getApiErrorMessage(err, "Không gửi được phản hồi"), "error");
     } finally {
       setSubmitting(false);
     }
@@ -49,7 +69,15 @@ export default function MentorReview() {
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
 
       <div style={{ marginBottom: 20 }}>
-        <button className="btn btn-secondary btn-sm" onClick={() => navigate("/supervisor/submissions")}>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={() =>
+            backTeamId
+              ? navigate(`/supervisor/submissions/team/${backTeamId}`, { state: { topic: location.state?.topic } })
+              : navigate("/supervisor/submissions")
+          }
+        >
           <Icon name="ArrowBack" size={14} /> Quay lại
         </button>
       </div>
@@ -101,7 +129,12 @@ export default function MentorReview() {
                 <input type="checkbox" id="isFinal" checked={isFinal} onChange={(e) => setIsFinal(e.target.checked)} />
                 <label htmlFor="isFinal" style={{ fontSize: "0.875rem", cursor: "pointer" }}>Đánh dấu là phản hồi cuối cùng</label>
               </div>
-              <button type="submit" className="btn btn-primary" disabled={submitting} style={{ width: "100%" }}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={submitting || !resolveSubmissionVersionId(submission)}
+                style={{ width: "100%" }}
+              >
                 <Icon name="Send" size={16} /> {submitting ? "Đang gửi..." : "Gửi phản hồi"}
               </button>
             </form>

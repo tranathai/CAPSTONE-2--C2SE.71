@@ -1,8 +1,83 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Icon from "../../components/UI/Icon.jsx";
 import { meetings, teams } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
 import { useMentorScopeRefresh } from "../../hooks/useMentorScopeRefresh.js";
+
+function getMeetingTiming(m) {
+  if (m.status === "cancelled") {
+    return { label: "Đã hủy", badgeClass: "badge-danger", bucket: "past" };
+  }
+  const start = new Date(m.scheduled_at);
+  const durationMs = (Number(m.duration_minutes) || 60) * 60 * 1000;
+  const end = new Date(start.getTime() + durationMs);
+  const now = new Date();
+  if (Number.isNaN(start.getTime())) {
+    return { label: "Không rõ", badgeClass: "badge-gray", bucket: "past" };
+  }
+  if (now < start) {
+    return { label: "Sắp tới", badgeClass: "badge-success", bucket: "upcoming" };
+  }
+  if (now <= end) {
+    return { label: "Đang diễn ra", badgeClass: "badge-warning", bucket: "upcoming" };
+  }
+  return { label: "Đã qua", badgeClass: "badge-gray", bucket: "past" };
+}
+
+function MeetingRow({ m, onSelect, dimmed = false }) {
+  const timing = m._timing || getMeetingTiming(m);
+  return (
+    <div
+      className="card"
+      style={{
+        marginBottom: 10,
+        cursor: "pointer",
+        opacity: dimmed ? 0.88 : 1,
+        borderLeft: `4px solid ${timing.bucket === "upcoming" ? "#22c55e" : "#94a3b8"}`,
+      }}
+      onClick={onSelect}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <strong>{m.title}</strong>
+          <div style={{ fontSize: "0.82rem", color: "#64748b", marginTop: 4 }}>
+            <Icon name="Schedule" size={12} /> {new Date(m.scheduled_at).toLocaleString("vi-VN")} ({m.duration_minutes || 60} phút)
+            {m.team_name && (
+              <span style={{ marginLeft: 12 }}>
+                <Icon name="Group" size={12} /> {m.team_name}
+              </span>
+            )}
+            {m.location && (
+              <span style={{ marginLeft: 12 }}>
+                <Icon name="LocationOn" size={12} /> {m.location}
+              </span>
+            )}
+          </div>
+          {m.meeting_url && (
+            <a
+              href={m.meeting_url}
+              target="_blank"
+              rel="noreferrer"
+              style={{ fontSize: "0.8rem", color: "#3b82f6", marginTop: 4, display: "inline-block" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Icon name="Videocam" size={12} /> Link họp
+            </a>
+          )}
+        </div>
+        <span className={`badge ${timing.badgeClass}`}>{timing.label}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function MentorMeetings() {
   const { toast, showToast } = useToast();
@@ -10,6 +85,7 @@ export default function MentorMeetings() {
   const [requests, setRequests] = useState([]);
   const [teamList, setTeamList] = useState([]);
   const [tab, setTab] = useState("meetings");
+  const [meetingFilter, setMeetingFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", scheduled_at: "", duration_minutes: 60, team_id: "", meeting_url: "", location: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -17,6 +93,25 @@ export default function MentorMeetings() {
   const [approveData, setApproveData] = useState({});
   const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const selectedMeeting = meetingList.find((m) => Number(m.id) === Number(selectedMeetingId)) || null;
+
+  const { upcomingMeetings, pastMeetings } = useMemo(() => {
+    const upcoming = [];
+    const past = [];
+    for (const m of meetingList) {
+      const timing = getMeetingTiming(m);
+      if (timing.bucket === "upcoming") upcoming.push({ ...m, _timing: timing });
+      else past.push({ ...m, _timing: timing });
+    }
+    upcoming.sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
+    past.sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at));
+    return { upcomingMeetings: upcoming, pastMeetings: past };
+  }, [meetingList]);
+
+  const filteredMeetings = useMemo(() => {
+    if (meetingFilter === "upcoming") return upcomingMeetings;
+    if (meetingFilter === "past") return pastMeetings;
+    return [...upcomingMeetings, ...pastMeetings];
+  }, [meetingFilter, upcomingMeetings, pastMeetings]);
 
   const reloadMeetingsPage = useCallback(() => {
     return Promise.all([meetings.list(), meetings.supervisorRequests(), teams.supervisees()])
@@ -149,7 +244,12 @@ export default function MentorMeetings() {
             >
               <Icon name="Close" size={16} />
             </button>
-            <h3 id="meeting-detail-title" style={{ marginBottom: 8 }}>{selectedMeeting.title || "Chi tiết cuộc họp"}</h3>
+            <h3 id="meeting-detail-title" style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {selectedMeeting.title || "Chi tiết cuộc họp"}
+              <span className={`badge ${getMeetingTiming(selectedMeeting).badgeClass}`}>
+                {getMeetingTiming(selectedMeeting).label}
+              </span>
+            </h3>
             <div style={{ display: "grid", gap: 8, color: "#334155", fontSize: "0.9rem", lineHeight: 1.5 }}>
               <div><strong>Thời gian:</strong> {selectedMeeting.duration_minutes || 0} phút</div>
               <div><strong>Ngày/giờ:</strong> {new Date(selectedMeeting.scheduled_at).toLocaleString("vi-VN")}</div>
@@ -177,28 +277,68 @@ export default function MentorMeetings() {
 
       {tab === "meetings" && (
         <>
-          {meetingList.length === 0 ? (
-            <div className="card empty-state"><Icon name="CalendarToday" size={48} sx={{ opacity: 0.3 }} /><h3>Chưa có cuộc họp nào</h3></div>
-          ) : meetingList.map((m) => (
-            <div
-              key={m.id}
-              className="card"
-              style={{ marginBottom: 10, cursor: "pointer" }}
-              onClick={() => setSelectedMeetingId(m.id)}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div>
-                  <strong>{m.title}</strong>
-                  <div style={{ fontSize: "0.82rem", color: "#64748b", marginTop: 4 }}>
-                    <Icon name="Schedule" size={12} /> {new Date(m.scheduled_at).toLocaleString("vi-VN")} ({m.duration_minutes} phút)
-                    {m.location && <span style={{ marginLeft: 12 }}><Icon name="LocationOn" size={12} /> {m.location}</span>}
-                    {m.meeting_url && <a href={m.meeting_url} target="_blank" rel="noreferrer" style={{ marginLeft: 12, color: "#3b82f6" }}><Icon name="Videocam" size={12} /> Link</a>}
-                  </div>
-                </div>
-                <span className={`badge ${m.status === "scheduled" ? "badge-success" : "badge-gray"}`}>{m.status}</span>
-              </div>
+          {meetingList.length > 0 && (
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              {[
+                ["all", "Tất cả", meetingList.length],
+                ["upcoming", "Sắp tới", upcomingMeetings.length],
+                ["past", "Đã qua", pastMeetings.length],
+              ].map(([key, label, count]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`btn ${meetingFilter === key ? "btn-primary" : "btn-secondary"}`}
+                  onClick={() => setMeetingFilter(key)}
+                >
+                  {label} ({count})
+                </button>
+              ))}
             </div>
-          ))}
+          )}
+
+          {meetingList.length === 0 ? (
+            <div className="card empty-state">
+              <Icon name="CalendarToday" size={48} sx={{ opacity: 0.3 }} />
+              <h3>Chưa có cuộc họp nào</h3>
+            </div>
+          ) : meetingFilter === "all" ? (
+            <>
+              {upcomingMeetings.length > 0 && (
+                <section style={{ marginBottom: 24 }}>
+                  <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 12, color: "#15803d" }}>
+                    Sắp tới ({upcomingMeetings.length})
+                  </h3>
+                  {upcomingMeetings.map((m) => (
+                    <MeetingRow key={m.id} m={m} onSelect={() => setSelectedMeetingId(m.id)} />
+                  ))}
+                </section>
+              )}
+              {pastMeetings.length > 0 && (
+                <section>
+                  <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 12, color: "#64748b" }}>
+                    Đã qua ({pastMeetings.length})
+                  </h3>
+                  {pastMeetings.map((m) => (
+                    <MeetingRow key={m.id} m={m} onSelect={() => setSelectedMeetingId(m.id)} dimmed />
+                  ))}
+                </section>
+              )}
+            </>
+          ) : filteredMeetings.length === 0 ? (
+            <div className="card empty-state">
+              <Icon name="CalendarToday" size={48} sx={{ opacity: 0.3 }} />
+              <h3>Không có cuộc họp trong mục này</h3>
+            </div>
+          ) : (
+            filteredMeetings.map((m) => (
+              <MeetingRow
+                key={m.id}
+                m={m}
+                onSelect={() => setSelectedMeetingId(m.id)}
+                dimmed={m._timing?.bucket === "past"}
+              />
+            ))
+          )}
         </>
       )}
 

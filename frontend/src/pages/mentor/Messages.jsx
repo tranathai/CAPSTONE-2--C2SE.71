@@ -81,12 +81,21 @@ export default function MentorMessages() {
         )}
       </div>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#fff" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: teamId ? "#fff" : "#f1f5f9" }}>
         {!teamId ? (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", background: "#fff" }}>
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#64748b",
+              background: "#f1f5f9",
+            }}
+          >
             <div style={{ textAlign: "center" }}>
               <Icon name="Chat" size={48} sx={{ opacity: 0.3, marginBottom: 12 }} />
-              <p>Chọn nhóm để nhắn tin</p>
+              <p style={{ margin: 0 }}>Chọn nhóm để nhắn tin</p>
             </div>
           </div>
         ) : (

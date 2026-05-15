@@ -134,9 +134,8 @@ export async function findStudentSubmissionHistory(teamId, { sinceDate } = {}) {
   return rows;
 }
 
-export async function findSupervisorSubmissions(supervisorId) {
-  const [rows] = await pool.query(
-    `SELECT s.id, s.title, s.submitted_at, s.status_label,
+export async function findSupervisorSubmissions(supervisorId, { teamId } = {}) {
+  let sql = `SELECT s.id, s.title, s.submitted_at, s.status_label,
             t.id AS team_id, t.name AS team_name,
             m.name AS milestone_name,
             sv.id AS version_id, sv.file_path, sv.is_late,
@@ -149,10 +148,14 @@ export async function findSupervisorSubmissions(supervisorId) {
        SELECT sv2.id FROM submission_versions sv2 WHERE sv2.submission_id = s.id
        ORDER BY sv2.version_number DESC LIMIT 1
      )
-     WHERE tr.supervisor_id = ?
-     ORDER BY s.submitted_at DESC`,
-    [supervisorId],
-  );
+     WHERE tr.supervisor_id = ?`;
+  const params = [supervisorId];
+  if (teamId) {
+    sql += ` AND t.id = ?`;
+    params.push(teamId);
+  }
+  sql += ` ORDER BY s.submitted_at DESC`;
+  const [rows] = await pool.query(sql, params);
   return rows;
 }
 

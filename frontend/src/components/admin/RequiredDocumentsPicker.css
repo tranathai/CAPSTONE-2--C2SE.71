@@ -119,3 +119,32 @@
   margin-top: 8px;
   line-height: 1.35;
 }
+
+.student-doc-btn {
+  font-size: 0.8rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.student-doc-btn:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.student-doc-btn--active {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.student-doc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

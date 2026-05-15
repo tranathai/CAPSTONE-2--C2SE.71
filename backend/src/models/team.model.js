@@ -72,6 +72,44 @@ export async function countStudentMembersInTeam(teamId) {
   return Number(rows[0]?.count || 0);
 }
 
+/** Sinh viên đã ở nhóm khác cùng chuỗi semester (học kỳ + năm học). */
+export async function findStudentOtherTeamInSemester(userId, semester, excludeTeamId = null) {
+  const sem = String(semester || "").trim();
+  if (!sem || !userId) return null;
+  let sql = `SELECT t.id, t.name, t.semester
+     FROM team_members tm
+     INNER JOIN teams t ON t.id = tm.team_id
+     INNER JOIN users u ON u.id = tm.user_id
+     INNER JOIN roles r ON r.id = u.role_id
+     WHERE tm.user_id = ? AND r.name = 'student' AND TRIM(COALESCE(t.semester, '')) = ?`;
+  const params = [userId, sem];
+  if (excludeTeamId) {
+    sql += ` AND t.id <> ?`;
+    params.push(excludeTeamId);
+  }
+  sql += ` LIMIT 1`;
+  const [rows] = await pool.query(sql, params);
+  return rows[0] || null;
+}
+
+export async function findStudentUserIdsInSemester(semester, excludeTeamId = null) {
+  const sem = String(semester || "").trim();
+  if (!sem) return [];
+  let sql = `SELECT DISTINCT tm.user_id
+     FROM team_members tm
+     INNER JOIN teams t ON t.id = tm.team_id
+     INNER JOIN users u ON u.id = tm.user_id
+     INNER JOIN roles r ON r.id = u.role_id
+     WHERE r.name = 'student' AND TRIM(COALESCE(t.semester, '')) = ?`;
+  const params = [sem];
+  if (excludeTeamId) {
+    sql += ` AND t.id <> ?`;
+    params.push(excludeTeamId);
+  }
+  const [rows] = await pool.query(sql, params);
+  return rows.map((r) => Number(r.user_id)).filter((id) => id > 0);
+}
+
 export async function findTeamMembers(teamId) {
   const [rows] = await pool.query(
     `SELECT u.id, u.full_name, u.email, u.phone, u.avatar_url, tm.is_leader,

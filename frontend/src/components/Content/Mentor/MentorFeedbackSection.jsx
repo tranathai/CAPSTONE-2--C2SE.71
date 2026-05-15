@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { createFeedback, getFeedbacks } from "../../../lib/api";
-import { DEMO_SUPERVISOR_ID } from "../../../config/demoUser";
 
 function formatWhen(iso) {
   if (!iso) return "";
@@ -71,7 +70,6 @@ export function MentorFeedbackSection({
       setPosting(true);
       await createFeedback({
         submission_version_id: submissionVersionId,
-        supervisor_id: DEMO_SUPERVISOR_ID,
         content: content.trim(),
       });
       const next = await getFeedbacks(submissionVersionId);

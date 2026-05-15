@@ -75,6 +75,22 @@ async function ensureTeamsSupervisorColumn(conn) {
   }
 }
 
+async function ensureFeedbacksAiSummaryColumn(conn) {
+  const db = process.env.DB_NAME || "mentorai_grad";
+  const [cols] = await conn.query(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'feedbacks' AND COLUMN_NAME = 'ai_summary'`,
+    [db],
+  );
+  if (cols.length > 0) return;
+  try {
+    await conn.query(`ALTER TABLE feedbacks ADD COLUMN ai_summary TEXT NULL`);
+    console.log("[Bootstrap] feedbacks.ai_summary column added.");
+  } catch (e) {
+    console.warn("[Bootstrap] Could not add feedbacks.ai_summary:", e.message);
+  }
+}
+
 async function ensureMilestonesGraduationBatchColumn(conn) {
   const db = process.env.DB_NAME || "mentorai_grad";
   const [cols] = await conn.query(
@@ -360,12 +376,15 @@ export async function bootstrapDatabase() {
         supervisor_id BIGINT UNSIGNED NOT NULL,
         content TEXT NOT NULL,
         is_final TINYINT(1) NOT NULL DEFAULT 0,
+        ai_summary TEXT DEFAULT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (submission_version_id) REFERENCES submission_versions(id) ON DELETE CASCADE,
         FOREIGN KEY (supervisor_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    await ensureFeedbacksAiSummaryColumn(conn);
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS meetings (

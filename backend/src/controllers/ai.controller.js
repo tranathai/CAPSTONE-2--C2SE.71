@@ -1,4 +1,9 @@
 import { getConfig, setConfig, listConfig } from "../models/systemConfig.model.js";
+import {
+  findFeedbackForStudentAccess,
+  updateFeedbackAiSummary,
+} from "../models/feedback.model.js";
+import { formatSummaryWithDisclaimer } from "../utils/feedbackSummary.js";
 
 export async function getAllConfig(req, res, next) {
   try {
@@ -24,8 +29,21 @@ export async function updateConfig(req, res, next) {
 
 export async function summarizeFeedback(req, res, next) {
   try {
-    const { content } = req.body;
-    const normalizedContent = typeof content === "string" ? content.trim() : "";
+    const { content, feedback_id } = req.body;
+    const feedbackId = Number(feedback_id);
+    let normalizedContent = typeof content === "string" ? content.trim() : "";
+
+    if (Number.isFinite(feedbackId) && feedbackId > 0) {
+      if (req.user.role_name !== "student") {
+        return res.status(403).json({ success: false, message: "Chỉ sinh viên mới được tóm tắt phản hồi" });
+      }
+      const feedbackRow = await findFeedbackForStudentAccess(feedbackId, req.user.id);
+      if (!feedbackRow) {
+        return res.status(404).json({ success: false, message: "Không tìm thấy phản hồi hoặc bạn không có quyền" });
+      }
+      normalizedContent = feedbackRow.content?.trim() || normalizedContent;
+    }
+
     if (!normalizedContent) {
       return res.status(400).json({ success: false, message: "Nội dung feedback không được để trống" });
     }
@@ -118,7 +136,13 @@ export async function summarizeFeedback(req, res, next) {
       });
     }
 
-    return res.status(200).json({ success: true, data: { summary } });
+    const formattedSummary = formatSummaryWithDisclaimer(summary);
+
+    if (Number.isFinite(feedbackId) && feedbackId > 0) {
+      await updateFeedbackAiSummary(feedbackId, formattedSummary);
+    }
+
+    return res.status(200).json({ success: true, data: { summary: formattedSummary } });
   } catch (error) {
     console.error("AI summarization error:", error);
     return res.status(503).json({

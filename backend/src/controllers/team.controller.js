@@ -14,10 +14,45 @@ import {
   userBelongsToTeam,
   findUserRoleNameById,
   countStudentMembersInTeam,
+  findStudentOtherTeamInSemester,
+  findStudentUserIdsInSemester,
 } from "../models/team.model.js";
 import { findTopicByTeamId, hasActiveTopic } from "../models/topic.model.js";
 import pool from "../config/db.js";
 import { io } from "../server.js";
+
+async function assertStudentCanJoinTeamSemester(userId, teamId) {
+  const team = await findTeamById(teamId);
+  if (!team) {
+    return { ok: false, message: "Không tìm thấy nhóm" };
+  }
+  const semester = String(team.semester || "").trim();
+  if (!semester) {
+    return { ok: false, message: "Nhóm chưa có học kỳ / năm học. Vui lòng cập nhật trước khi thêm sinh viên." };
+  }
+  const conflict = await findStudentOtherTeamInSemester(userId, semester, teamId);
+  if (conflict) {
+    return {
+      ok: false,
+      message: `Sinh viên đã thuộc nhóm "${conflict.name}" trong cùng học kỳ năm học.`,
+    };
+  }
+  return { ok: true };
+}
+
+export async function getSemesterBusyStudents(req, res, next) {
+  try {
+    const semester = String(req.query.semester || "").trim();
+    if (!semester) {
+      return res.status(400).json({ success: false, message: "Thiếu thông tin học kỳ / năm học" });
+    }
+    const excludeTeamId = req.query.exclude_team_id ? Number(req.query.exclude_team_id) : null;
+    const userIds = await findStudentUserIdsInSemester(semester, excludeTeamId || null);
+    return res.status(200).json({ success: true, data: userIds });
+  } catch (error) {
+    next(error);
+  }
+}
 
 export async function getMyTeamsJoined(req, res, next) {
   try {
@@ -127,6 +162,14 @@ export async function createNewTeam(req, res, next) {
     });
 
     if (leader_user_id) {
+      const leaderRole = await findUserRoleNameById(Number(leader_user_id));
+      if (leaderRole === "student") {
+        const semCheck = await assertStudentCanJoinTeamSemester(Number(leader_user_id), teamId);
+        if (!semCheck.ok) {
+          await deleteTeam(teamId);
+          return res.status(400).json({ success: false, message: semCheck.message });
+        }
+      }
       await addTeamMember(teamId, leader_user_id, true);
     }
 
@@ -171,6 +214,27 @@ export async function updateExistingTeam(req, res, next) {
         });
       }
       nameForUpdate = trimmed;
+    }
+
+    const semesterChanging =
+      semester !== undefined &&
+      semester !== null &&
+      String(semester).trim() !== String(existing.semester || "").trim();
+
+    if (semesterChanging) {
+      const newSem = String(semester).trim();
+      const members = await findTeamMembers(teamId);
+      for (const m of members) {
+        const roleName = await findUserRoleNameById(m.id);
+        if (roleName !== "student") continue;
+        const conflict = await findStudentOtherTeamInSemester(m.id, newSem, teamId);
+        if (conflict) {
+          return res.status(400).json({
+            success: false,
+            message: `Không thể đổi học kỳ: "${m.full_name}" đã thuộc nhóm "${conflict.name}" trong học kỳ này.`,
+          });
+        }
+      }
     }
 
     await updateTeam(teamId, {
@@ -256,6 +320,10 @@ export async function addMember(req, res, next) {
         const studentCount = await countStudentMembersInTeam(teamId);
         if (studentCount >= 5) {
           return res.status(400).json({ success: false, message: "Nhóm chỉ được tối đa 5 sinh viên" });
+        }
+        const semCheck = await assertStudentCanJoinTeamSemester(targetUserId, teamId);
+        if (!semCheck.ok) {
+          return res.status(400).json({ success: false, message: semCheck.message });
         }
       }
     }

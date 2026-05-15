@@ -16,6 +16,38 @@ import { findTeamsByUserId, userBelongsToTeam } from "../models/team.model.js";
 import { findTopicByTeamId } from "../models/topic.model.js";
 import { createNotification } from "../models/notification.model.js";
 import pool from "../config/db.js";
+import { findMilestoneById } from "../models/milestone.model.js";
+
+function normalizeDocKey(s) {
+  return String(s || "").trim().toLowerCase();
+}
+
+/** title phải nằm trong required_documents của mốc (khi có cấu hình). */
+async function resolveStudentSubmissionTitle({ milestoneId, title }) {
+  if (!milestoneId) {
+    return { ok: false, message: "Vui lòng chọn mốc thời gian" };
+  }
+  const milestone = await findMilestoneById(milestoneId);
+  if (!milestone) {
+    return { ok: false, message: "Không tìm thấy mốc thời gian" };
+  }
+  const allowed = milestone.required_documents || [];
+  if (allowed.length === 0) {
+    return {
+      ok: false,
+      message: "Mốc này chưa có danh sách tài liệu cần nộp. Vui lòng liên hệ quản trị viên.",
+    };
+  }
+  const trimmed = title?.trim();
+  if (!trimmed) {
+    return { ok: false, message: "Vui lòng chọn tài liệu cần nộp" };
+  }
+  const match = allowed.find((d) => normalizeDocKey(d) === normalizeDocKey(trimmed));
+  if (!match) {
+    return { ok: false, message: "Tài liệu không nằm trong danh sách cho phép của mốc này" };
+  }
+  return { ok: true, title: match };
+}
 
 /** Thứ Hai 00:00:00 (local) của tuần chứa `date`. */
 function startOfMondayWeek(date) {
@@ -158,8 +190,20 @@ export async function getMySubmissionsByTeam(req, res, next) {
 export async function getSupervisorSubmissions(req, res, next) {
   try {
     const supervisorId = req.user.id;
-    const submissions = await findSupervisorSubmissions(supervisorId);
-    return res.status(200).json({ success: true, data: submissions });
+    const teamId = req.query.team_id ? Number(req.query.team_id) : null;
+    if (teamId) {
+      const [allowed] = await pool.query(
+        `SELECT 1 FROM topic_registrations tr
+         WHERE tr.team_id = ? AND tr.status = 'approved' AND tr.supervisor_id = ?
+         LIMIT 1`,
+        [teamId, supervisorId],
+      );
+      if (!allowed.length) {
+        return res.status(403).json({ success: false, message: "Bạn không có quyền xem bài nộp của nhóm này" });
+      }
+    }
+    const rows = await findSupervisorSubmissions(supervisorId, { teamId: teamId || null });
+    return res.status(200).json({ success: true, data: rows });
   } catch (error) {
     next(error);
   }
@@ -257,7 +301,12 @@ export async function studentUploadSubmission(req, res, next) {
       return res.status(400).json({ success: false, message: "team_id không hợp lệ" });
     }
 
-    const submissionTitle = (title && title.trim()) || req.file.originalname || "Submission";
+    const titleCheck = await resolveStudentSubmissionTitle({ milestoneId, title });
+    if (!titleCheck.ok) {
+      await fs.promises.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({ success: false, message: titleCheck.message });
+    }
+    const submissionTitle = titleCheck.title;
     const result = await createStudentSubmission({
       teamId, milestoneId, title: submissionTitle,
       filePath: `/uploads/${req.file.filename}`,
@@ -335,8 +384,16 @@ export async function updateSubmission(req, res, next) {
     const { id } = req.params;
     const { title } = req.body;
     const userId = req.user.id;
-    if (!title || !title.trim()) return res.status(400).json({ success: false, message: "Tiêu đề không được để trống" });
-    await updateSubmissionTitle(Number(id), title.trim(), userId);
+    const sub = await findSubmissionById(Number(id));
+    if (!sub) return res.status(404).json({ success: false, message: "Không tìm thấy bài nộp" });
+    const titleCheck = await resolveStudentSubmissionTitle({
+      milestoneId: sub.milestone_id,
+      title,
+    });
+    if (!titleCheck.ok) {
+      return res.status(400).json({ success: false, message: titleCheck.message });
+    }
+    await updateSubmissionTitle(Number(id), titleCheck.title, userId);
     return res.status(200).json({ success: true, message: "Cập nhật thành công" });
   } catch (error) {
     next(error);

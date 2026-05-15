@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Icon from "../../components/UI/Icon.jsx";
-import { submissions, feedbacks } from "../../lib/api.js";
+import { submissions, feedbacks, ai, getApiErrorMessage } from "../../lib/api.js";
+import { summariesFromFeedbacks, displayAiSummary } from "../../lib/feedbackSummary.js";
 import { useToast } from "../../hooks/useToast.js";
-import { ai } from "../../lib/api.js";
 import { getUploadUrl } from "../../lib/uploadUrl.js";
+import { resolveSubmissionVersionId } from "../../lib/submissionVersion.js";
 
 export default function StudentReview() {
   const { submissionId } = useParams();
@@ -16,25 +17,30 @@ export default function StudentReview() {
   const [summaryMap, setSummaryMap] = useState({});
 
   useEffect(() => {
+    setSummaryMap({});
     submissions.get(Number(submissionId)).then(async (s) => {
       setSubmission(s);
-      const fbs = await feedbacks.byVersion(s.version_id).catch(() => []);
+      const versionId = resolveSubmissionVersionId(s);
+      if (!versionId) {
+        setFeedbacksList([]);
+        return;
+      }
+      const fbs = await feedbacks.byVersion(versionId).catch(() => []);
       setFeedbacksList(fbs);
+      setSummaryMap(summariesFromFeedbacks(fbs));
     }).catch(() => showToast("Không tải được submission", "error"));
   }, [submissionId]);
 
   const summarize = async (feedbackId, content) => {
-    if (summaryMap[feedbackId]) { setSummaryMap((p) => ({ ...p, [feedbackId]: null })); return; }
     setSummarizing(feedbackId);
     try {
-      const result = await ai.summarize(content);
-      setSummaryMap((p) => ({ ...p, [feedbackId]: result.summary }));
+      const result = await ai.summarize({ content, feedback_id: feedbackId });
+      setSummaryMap((p) => ({ ...p, [feedbackId]: displayAiSummary(result.summary) }));
     } catch (err) {
-      const msg =
-        err?.response?.data?.message || err?.message || "Tính năng AI tạm thời không khả dụng";
-      showToast(msg, "error");
+      showToast(getApiErrorMessage(err, "Tính năng AI tạm thời không khả dụng"), "error");
+    } finally {
+      setSummarizing(null);
     }
-    finally { setSummarizing(null); }
   };
 
   if (!submission) return <div className="loading-screen"><div className="spinner" /></div>;
@@ -128,9 +134,10 @@ export default function StudentReview() {
                     <p style={feedbackTextStyle}>{f.content}</p>
                     <button className="btn btn-sm btn-secondary" style={{ marginTop: 8 }}
                       onClick={() => summarize(f.id, f.content)} disabled={summarizing === f.id}>
-                      <Icon name="Sparkles" size={13} /> {summarizing === f.id ? "..." : "Tóm tắt AI"}
+                      <Icon name="Sparkles" size={13} />
+                      {summarizing === f.id ? "..." : summaryMap[f.id] ? "Tóm tắt lại" : "Tóm tắt AI"}
                     </button>
-                    {summaryMap[f.id] && (
+                    {(summaryMap[f.id] || f.ai_summary) && (
                       <div
                         style={{
                           background: "#eff6ff",
@@ -143,7 +150,9 @@ export default function StudentReview() {
                         }}
                       >
                         <strong style={{ fontSize: "0.78rem", color: "#1e40af", flexShrink: 0 }}>Tóm tắt:</strong>
-                        <div style={aiSummaryScrollStyle}>{summaryMap[f.id]}</div>
+                        <div style={aiSummaryScrollStyle}>
+                          {displayAiSummary(summaryMap[f.id] || f.ai_summary)}
+                        </div>
                       </div>
                     )}
                   </div>

@@ -1,314 +1,244 @@
-# 🚀 MentorAI Grad
+# MentorAI Grad
 
-### Capstone Project Management System with AI-Assisted Feedback
+**Hệ thống quản lý đồ án tốt nghiệp (Capstone) có hỗ trợ tóm tắt phản hồi bằng AI**
 
-MentorAI Grad is a web-based system designed to support the management and supervision of capstone projects between students and supervisors. The platform centralizes project topic approval, milestone tracking, report submission, and feedback management, with AI-assisted summarization to improve understanding of supervisor comments.
+MentorAI Grad là ứng dụng web hỗ trợ sinh viên, giảng viên hướng dẫn và quản trị viên trong suốt vòng đời đồ án: đăng ký đề tài, quản lý đợt/mốc, nộp tài liệu theo mốc, nhận phản hồi, tóm tắt AI, lịch họp và nhắn tin.
 
 ---
 
-# 📌 Project Overview
+## Tổng quan
 
-Managing capstone projects often involves fragmented communication, unclear progress tracking, and manual document handling. MentorAI Grad addresses these challenges by providing a centralized platform where students and supervisors can collaborate effectively throughout the project lifecycle.
-
-The system supports the full workflow:
+Luồng nghiệp vụ chính:
 
 ```text
-Topic Proposal → Approval → Milestones → Submission → Feedback → AI Summary → Dashboard
+Đăng ký đề tài → Duyệt đề tài → Đợt tốt nghiệp / Mốc → Nộp bài (nhiều phiên bản)
+→ Phản hồi GV → Tóm tắt AI (lưu DB) → Dashboard / Thông báo
 ```
 
 ---
 
-# ✨ Key Features
+## Tính năng chính
 
-## 👤 User Management
+### Quản lý người dùng
+- Đăng nhập JWT (`/api/auth/login`)
+- Phân quyền theo vai trò: **student**, **supervisor**, **admin**
+- Admin: tạo/khóa tài khoản, import CSV
 
-* User registration and login
-* Role-based access control (Student, Supervisor, Admin)
-* JWT authentication and session management
+### Đề tài & nhóm
+- Sinh viên đăng ký đề tài theo nhóm
+- Giảng viên duyệt/từ chối; chọn mốc thuộc **một đợt tốt nghiệp**
+- Một sinh viên chỉ thuộc **một nhóm** trong cùng học kỳ + năm học
+- Sinh viên có thể tham gia nhiều nhóm ở các học kỳ/đợt khác nhau
 
-## 📘 Project Topic Management
+### Đợt tốt nghiệp & mốc (Admin)
+- Tạo **đợt tốt nghiệp** (bắt buộc khung thời gian bắt đầu/kết thúc)
+- Tạo **mốc** gắn đợt; cấu hình **tài liệu cần nộp** (`required_documents`)
+- Validate trùng thời gian mốc; không tạo mốc mới khi đợt đã kết thúc
 
-* Students propose capstone project topics
-* Supervisors review and approve/reject topics
-* Each team is assigned one project
+### Nộp bài
+- Nộp file theo mốc; chọn **tag tài liệu** từ danh sách mốc (thay tiêu đề tự do)
+- Nhiều **phiên bản** (`submission_versions`) cho mỗi bài nộp
+- Xem trước PDF / tải file
 
-## 📅 Milestone Management
+### Phản hồi & AI
+- Giảng viên gửi phản hồi theo phiên bản bài nộp
+- Sinh viên **tóm tắt AI** (Google Gemini); kết quả lưu `feedbacks.ai_summary`
+- Mỗi dòng tóm tắt có ghi chú: *bản tóm tắt này chỉ mang tính chất tham khảo*
 
-* Automatic creation of milestones after project approval:
-
-  * Proposal
-  * Midterm
-  * Final
-* Deadlines are generated based on project start date
-
-## 📤 Submission Management
-
-* Students submit reports for each milestone
-* Support multiple submission versions
-* File upload and storage via URL
-
-## 💬 Feedback System
-
-* Supervisors provide feedback on submissions
-* Students can review and improve based on comments
-
-## 🤖 AI-Assisted Feedback Summarization
-
-* Integration with Gemini API
-* Summarizes supervisor feedback
-* Highlights key revision points
-
-## 📊 Progress Dashboard
-
-* Track milestone completion status
-* Identify overdue submissions
-* Monitor overall project progress
-
-## 🔔 Notification System
-
-* Deadline reminders
-* Feedback notifications
-* Submission confirmation alerts
+### Khác
+- Thông báo trong app
+- Lịch họp & yêu cầu họp (sinh viên ↔ giảng viên)
+- Tin nhắn 1-1, nhóm theo team, theo đề tài (Socket.IO)
+- Dashboard thống kê (admin / giảng viên)
 
 ---
 
-# 🏗️ System Architecture
-
-The system follows a **three-tier architecture**:
+## Kiến trúc
 
 ```text
-Frontend (ReactJS)
-        │
-Backend (NodeJS / Express API)
-        │
-Database (MySQL)
-        │
-External AI Service (Gemini API)
+┌─────────────────────┐
+│  Frontend (React)   │  Vite · React Router · Axios · MUI
+│  localhost:5173     │
+└──────────┬──────────┘
+           │ REST + WebSocket
+┌──────────▼──────────┐
+│  Backend (Node.js)  │  Express 5 · JWT · Multer
+│  localhost:5000     │
+└──────────┬──────────┘
+           │ mysql2
+┌──────────▼──────────┐
+│  MySQL              │  Database: mentorai_grad
+│  (bootstrap tự động)│
+└─────────────────────┘
+           │
+┌──────────▼──────────┐
+│  Gemini API         │  Tóm tắt phản hồi (tùy chọn)
+└─────────────────────┘
 ```
 
 ---
 
-# 🛠️ Technology Stack
+## Công nghệ
 
-## Backend
-
-* Node.js
-* Express.js
-* MySQL
-* JWT (Authentication)
-* bcrypt (Password hashing)
-
-## Frontend
-
-* ReactJS (Vite)
-* React Router DOM
-* Axios
-
-## Database
-
-* MySQL (Relational Database)
-
-## AI Integration
-
-* Gemini API (Feedback summarization)
-
-## Tools
-
-* Git / GitHub
-* Postman
-* VS Code
+| Tầng | Công nghệ |
+|------|-----------|
+| Frontend | React 19, Vite 8, React Router 7, Axios, MUI, Socket.IO Client, Recharts |
+| Backend | Node.js, Express 5, mysql2, JWT, bcryptjs, Multer, Socket.IO |
+| Database | **MySQL 8** (utf8mb4) |
+| AI | Google Gemini API (`GEMINI_API_KEY`) |
 
 ---
 
-# 👥 System Roles
+## Vai trò hệ thống
 
-## Student
-
-* Register and log in
-* Propose project topics
-* Submit milestone reports
-* View feedback and AI summaries
-* Track project progress
-
-## Supervisor
-
-* Review and approve/reject topics
-* Define and monitor milestones
-* Provide feedback
-* Track student progress
-
-## Administrator
-
-* Manage user accounts
-* Monitor system activities
+| Vai trò | Đường dẫn UI | Mô tả |
+|---------|--------------|--------|
+| **student** | `/student/*` | Đề tài, nộp bài, xem phản hồi & tóm tắt AI, nhóm, lịch họp, tin nhắn |
+| **supervisor** | `/supervisor/*` | Duyệt đề tài, xem/nhận xét bài nộp, quản lý nhóm, lịch họp |
+| **admin** | `/admin/*` | Người dùng, nhóm, đợt/mốc, dashboard |
 
 ---
 
-# 🗄️ Database Design (Overview)
+## Cơ sở dữ liệu (MySQL)
 
-Main entities:
+Database mặc định: **`mentorai_grad`**.
+
+Backend **tự tạo database và bảng** khi khởi động (`backend/src/config/bootstrap.js`) — không bắt buộc chạy SQL thủ công, nhưng có thể tham khảo:
+
+- `database/schema_mysql.sql` — schema tham khảo
+- `backend/sql/` — script bổ trợ
+
+### Bảng chính
 
 ```text
-Users
-Teams
-Team_Members
-Projects
-Milestones
-Submissions
-Feedbacks
-Notifications
+roles, users
+student_profiles, supervisor_profiles
+graduation_batches, milestones
+teams, team_members
+topic_registrations, topics
+submissions, submission_versions
+feedbacks          (cột ai_summary: tóm tắt AI đã lưu)
+meetings, meeting_participants, meeting_requests
+messages, notifications, system_config
 ```
 
-## Relationships
+### Quan hệ (rút gọn)
 
 ```text
-Users
-   │
-   ├── Team_Members
-   │        │
-   │        └── Teams
-   │              │
-   │              └── Projects
-   │                      │
-   │                      └── Milestones
-   │                              │
-   │                              └── Submissions
-   │                                      │
-   │                                      └── Feedbacks
-```
-
-✔ Database is normalized to **3NF**
-✔ Optimized for query performance
-
----
-
-# 🔄 System Workflow
-
-```text
-1. Student proposes project topic
-2. Supervisor reviews and approves/rejects
-3. System auto-generates milestones
-4. Student submits milestone reports
-5. Supervisor provides feedback
-6. AI summarizes feedback
-7. Dashboard updates progress
+users ── team_members ── teams ── topic_registrations
+                              └── submissions ── submission_versions ── feedbacks
+graduation_batches ── milestones ── submissions (milestone_id)
 ```
 
 ---
 
-# 📡 API Endpoints (Core)
-
-## 🔐 Authentication
-
-```
-POST   /api/auth/register
-POST   /api/auth/login
-GET    /api/auth/me
-```
-
-## 📘 Project
-
-```
-POST   /api/projects
-GET    /api/projects/pending
-PUT    /api/projects/:id/approve
-PUT    /api/projects/:id/reject
-```
-
-## 📅 Milestone
-
-```
-GET    /api/milestones/:projectId
-```
-
-## 📤 Submission
-
-```
-POST   /api/submissions
-GET    /api/submissions/:milestoneId
-```
-
-## 💬 Feedback
-
-```
-POST   /api/feedback
-GET    /api/feedback/:submissionId
-```
-
----
-
-# 📁 Project Structure
+## Cấu trúc thư mục
 
 ```text
-mentorai-grad/
-│
+CAPSTONE-2--C2SE.71/
 ├── backend/
-│   ├── controllers/
-│   ├── services/
-│   ├── models/
-│   ├── routes/
-│   ├── middlewares/
-│   ├── config/
-│   └── server.js
-│
+│   ├── src/
+│   │   ├── config/          # db.js, bootstrap.js (MySQL auto-migrate)
+│   │   ├── controllers/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   ├── middleware/
+│   │   ├── utils/
+│   │   └── server.js        # Express + Socket.IO
+│   ├── uploads/             # File nộp bài
+│   ├── .env.example
+│   └── package.json
 ├── frontend/
 │   ├── src/
 │   │   ├── pages/
+│   │   │   ├── student/     # Dashboard, Submissions, Review, Feedback, ...
+│   │   │   ├── mentor/      # Supervisor UI
+│   │   │   └── admin/       # Users, Teams, Milestones
 │   │   ├── components/
-│   │   ├── services/
-│   │   └── context/
-│
-├── database/
-│   └── schema.sql
-│
-├── docs/
-│   ├── architecture/
-│   ├── erd/
-│   └── diagrams/
-│
+│   │   ├── context/         # AuthContext, SocketContext
+│   │   └── lib/api.js       # Axios client
+│   └── package.json
+├── database/                # schema MySQL tham khảo
 └── README.md
 ```
 
 ---
 
-# ⚙️ Installation Guide
+## API (tóm tắt)
 
-## 1. Clone repository
+Base URL: `http://localhost:5000/api`  
+Header: `Authorization: Bearer <token>`
 
-```bash
-git clone https://github.com/your-repo/mentorai-grad.git
-```
+| Nhóm | Endpoint | Ghi chú |
+|------|----------|---------|
+| Health | `GET /health` | Kiểm tra server |
+| Auth | `POST /auth/login`, `GET /auth/me` | JWT |
+| Users | `GET/PUT /users/me`, `GET/POST /users` | Admin quản lý user |
+| Teams | `GET /teams/joined`, `POST /teams`, `GET /teams/semester-busy-students` | Nhóm & validate semester |
+| Topics | `POST /topics/register`, `GET /topics/my`, `PUT /topics/:id/approve` | Đề tài |
+| Milestones | `GET /milestones`, `GET /milestones/batches`, `POST /milestones/batches` | Admin |
+| Submissions | `GET /submissions/my`, `POST /submissions/student/upload`, `GET /submissions/supervisor` | Nộp bài |
+| Feedbacks | `GET /feedbacks/version/:versionId`, `POST /feedbacks` | GV gửi phản hồi |
+| AI | `POST /ai/summarize-feedback` | Body: `{ content, feedback_id }` |
+| Meetings | `GET /meetings`, `POST /meetings/request` | Lịch họp |
+| Messages | `GET /messages/contacts`, `POST /messages`, `GET /messages/groups/:teamId` | Chat |
+| Notifications | `GET /notifications`, `PUT /notifications/read-all` | Thông báo |
+
+Phản hồi JSON chuẩn: `{ success: true|false, data?, message? }`.
 
 ---
 
-## 2. Setup Backend
+## Cài đặt & chạy
+
+### Yêu cầu
+
+- **Node.js** 18+
+- **MySQL** 8.x (service đang chạy)
+- (Tùy chọn) **Gemini API key** cho tóm tắt AI
+
+### 1. Clone repository
+
+```bash
+git clone <url-repo>
+cd CAPSTONE-2--C2SE.71
+```
+
+### 2. Backend
 
 ```bash
 cd backend
 npm install
+cp .env.example .env
 ```
 
-Create `.env` file:
+Chỉnh `backend/.env`:
 
 ```env
-PORT=5000
 DB_HOST=localhost
+DB_PORT=3306
 DB_USER=root
-DB_PASSWORD=your_password
+DB_PASSWORD=your_mysql_password
 DB_NAME=mentorai_grad
+
+PORT=5000
 JWT_SECRET=your_secret_key
-GEMINI_API_KEY=your_api_key
+JWT_EXPIRE=7d
+FRONTEND_URL=http://localhost:5173
+
+# Tùy chọn — tóm tắt AI (nhiều key cách nhau bởi dấu phẩy)
+GEMINI_API_KEY=your_gemini_key
+GEMINI_MODEL=gemini-2.0-flash,gemini-2.5-flash
 ```
 
-Run backend:
+Chạy backend (tự bootstrap MySQL lần đầu):
 
 ```bash
 npm run dev
 ```
 
----
+API: [http://localhost:5000](http://localhost:5000) · Health: [http://localhost:5000/api/health](http://localhost:5000/api/health)
 
-## 3. Setup Frontend
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -316,46 +246,56 @@ npm install
 npm run dev
 ```
 
----
+UI: [http://localhost:5173](http://localhost:5173)
 
-# 🔐 Security
+Frontend dev proxy gọi API qua `/api` → `localhost:5000` (cấu hình trong Vite).
 
-* Password hashing using bcrypt
-* JWT-based authentication
-* Role-based access control (RBAC)
-* File validation for uploads
+### 4. Tài khoản
 
----
-
-# 🚀 Future Improvements
-
-* Real-time notifications (WebSocket)
-* Advanced analytics dashboard
-* Integration with LMS systems
-* Enhanced AI recommendations
-* Mobile application
+- Tài khoản do **admin** tạo qua `/admin/users`, hoặc dữ liệu seed khi bootstrap (nếu DB trống).
+- Đăng nhập tại `/login` — hệ thống chuyển hướng theo role.
 
 ---
 
-# 👨‍💻 Development Team
+## Bảo mật
 
-Capstone Project Team - MentorAI Grad
-Duy Tan University
-
----
-
-# 📄 License
-
-This project is developed for academic purposes.
+- Mật khẩu băm **bcrypt**
+- Xác thực **JWT** trên mọi route bảo vệ
+- **RBAC** qua `requireRole` (student / supervisor / admin)
+- Upload file qua Multer; file phục vụ tại `/uploads`
 
 ---
 
-# 🏁 Final Note
+## Scripts hữu ích
 
-This system focuses on delivering a **stable MVP** with:
+```bash
+# Backend
+cd backend && npm run dev    # nodemon
+cd backend && npm start      # production
 
-* Clean architecture
-* Clear workflow
-* Practical AI integration
+# Frontend
+cd frontend && npm run dev
+cd frontend && npm run build
+```
 
 ---
+
+## Ghi chú phát triển
+
+- Schema MySQL được quản lý chủ yếu qua **`bootstrap.js`** khi server start; thêm cột mới dùng hàm `ensure*Column` trong file đó.
+- File upload lưu tại `backend/uploads/`.
+- Socket.IO dùng cho tin nhắn realtime (cùng port với HTTP server).
+- Tóm tắt AI lưu tại `feedbacks.ai_summary`; sinh viên chỉ tóm tắt phản hồi của nhóm mình.
+
+---
+
+## Nhóm phát triển
+
+Capstone Project — **MentorAI Grad**  
+Đại học Duy Tân
+
+---
+
+## License
+
+Dự án phục vụ mục đích học tập / đồ án tốt nghiệp.

@@ -15,7 +15,8 @@ import StudentReview from "./pages/student/Review.jsx";
 import StudentMeetings from "./pages/student/Meetings.jsx";
 import StudentMessages from "./pages/student/Messages.jsx";
 import MentorDashboard from "./pages/mentor/Dashboard.jsx";
-import MentorSubmissions from "./pages/mentor/Submissions.jsx";
+import MentorSubmissionTopics from "./pages/mentor/MentorSubmissionTopics.jsx";
+import MentorTeamSubmissions from "./pages/mentor/MentorTeamSubmissions.jsx";
 import MentorReview from "./pages/mentor/Review.jsx";
 import MentorTopics from "./pages/mentor/Topics.jsx";
 import MentorTeams from "./pages/mentor/Teams.jsx";
@@ -94,7 +95,8 @@ export default function App() {
       }>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<MentorDashboard />} />
-        <Route path="submissions" element={<MentorSubmissions />} />
+        <Route path="submissions" element={<MentorSubmissionTopics />} />
+        <Route path="submissions/team/:teamId" element={<MentorTeamSubmissions />} />
         <Route path="review/:submissionId" element={<MentorReview />} />
         <Route path="topics" element={<MentorTopics />} />
         <Route path="teams" element={<MentorTeams />} />

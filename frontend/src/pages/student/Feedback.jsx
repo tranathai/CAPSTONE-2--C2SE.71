@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import Icon from "../../components/UI/Icon.jsx";
-import { submissions, feedbacks } from "../../lib/api.js";
+import { submissions, feedbacks, ai, getApiErrorMessage } from "../../lib/api.js";
+import { summariesFromFeedbacks, displayAiSummary } from "../../lib/feedbackSummary.js";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../../hooks/useToast.js";
-import { ai } from "../../lib/api.js";
 
 export default function StudentFeedback() {
   const navigate = useNavigate();
@@ -25,22 +25,17 @@ export default function StudentFeedback() {
     try {
       const data = await feedbacks.byVersion(versionId);
       setFeedbackMap((prev) => ({ ...prev, [versionId]: data }));
+      setSummaryMap((prev) => ({ ...prev, ...summariesFromFeedbacks(data) }));
     } catch { showToast("Không tải được phản hồi", "error"); }
   };
 
   const summarize = async (feedbackId, content) => {
-    if (summaryMap[feedbackId]) {
-      setSummaryMap((prev) => ({ ...prev, [feedbackId]: null }));
-      return;
-    }
     setSummarizing(feedbackId);
     try {
-      const result = await ai.summarize(content);
-      setSummaryMap((prev) => ({ ...prev, [feedbackId]: result.summary }));
+      const result = await ai.summarize({ content, feedback_id: feedbackId });
+      setSummaryMap((prev) => ({ ...prev, [feedbackId]: displayAiSummary(result.summary) }));
     } catch (err) {
-      const msg =
-        err?.response?.data?.message || err?.message || "Tính năng AI tạm thời không khả dụng";
-      showToast(msg, "error");
+      showToast(getApiErrorMessage(err, "Tính năng AI tạm thời không khả dụng"), "error");
     } finally {
       setSummarizing(null);
     }
@@ -129,11 +124,12 @@ export default function StudentFeedback() {
                           onClick={() => summarize(f.id, f.content)}
                           disabled={summarizing === f.id}
                         >
-                          <Icon name="Sparkles" size={14} /> {summarizing === f.id ? "Đang tóm tắt..." : "Tóm tắt AI"}
+                          <Icon name="Sparkles" size={14} />
+                          {summarizing === f.id ? "Đang tóm tắt..." : summaryMap[f.id] ? "Tóm tắt lại" : "Tóm tắt AI"}
                         </button>
                       </div>
                       <p style={feedbackTextStyle}>{f.content}</p>
-                      {summaryMap[f.id] && (
+                      {(summaryMap[f.id] || f.ai_summary) && (
                         <div
                           style={{
                             background: "#eff6ff",
@@ -146,7 +142,9 @@ export default function StudentFeedback() {
                           }}
                         >
                           <strong style={{ fontSize: "0.8rem", color: "#1e40af", flexShrink: 0 }}>Tóm tắt AI:</strong>
-                          <div style={aiSummaryScrollStyle}>{summaryMap[f.id]}</div>
+                          <div style={aiSummaryScrollStyle}>
+                            {displayAiSummary(summaryMap[f.id] || f.ai_summary)}
+                          </div>
                         </div>
                       )}
                     </div>

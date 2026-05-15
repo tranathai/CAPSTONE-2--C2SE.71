@@ -30,6 +30,10 @@ function academicYearSelectOptions() {
   return out;
 }
 
+function buildSemesterLabel(academicYear, semesterHalf) {
+  return `${academicYear} — Học kỳ ${semesterHalf === "II" ? "II" : "I"}`;
+}
+
 function buildPageList(totalPages, current) {
   if (totalPages < 1) return [];
   if (totalPages === 1) return [1];
@@ -73,11 +77,38 @@ export default function AdminTeams() {
   const [memberActionLoading, setMemberActionLoading] = useState(false);
   const [memberSearchValue, setMemberSearchValue] = useState("");
   const [supervisorSearchValue, setSupervisorSearchValue] = useState("");
+  const [busyStudentIds, setBusyStudentIds] = useState([]);
 
   useEffect(() => {
     teams.list().then(setTeamList).catch(() => {});
     users.list().then(setUserList).catch(() => {});
   }, []);
+
+  const createSemesterLabel = useMemo(
+    () => buildSemesterLabel(form.academicYear, form.semesterHalf),
+    [form.academicYear, form.semesterHalf],
+  );
+
+  useEffect(() => {
+    if (!showCreate && !selectedTeamDetail?.id) {
+      setBusyStudentIds([]);
+      return;
+    }
+    const semester = showCreate
+      ? createSemesterLabel
+      : String(selectedTeamDetail?.semester || "").trim();
+    if (!semester) {
+      setBusyStudentIds([]);
+      return;
+    }
+    const excludeId = showCreate ? null : selectedTeamDetail.id;
+    teams
+      .semesterBusyStudents(semester, excludeId)
+      .then((ids) => setBusyStudentIds(Array.isArray(ids) ? ids.map(Number) : []))
+      .catch(() => setBusyStudentIds([]));
+  }, [showCreate, selectedTeamDetail?.id, selectedTeamDetail?.semester, createSemesterLabel]);
+
+  const busyStudentIdSet = useMemo(() => new Set(busyStudentIds), [busyStudentIds]);
 
   const teamTotalPages = Math.max(1, Math.ceil(teamList.length / PAGE_SIZE));
   const teamSafePage = Math.min(teamListPage, teamTotalPages);
@@ -100,7 +131,7 @@ export default function AdminTeams() {
       showToast("Tên nhóm không được trống", "error");
       return;
     }
-    const semester = `${form.academicYear} — Học kỳ ${form.semesterHalf === "II" ? "II" : "I"}`;
+    const semester = createSemesterLabel;
     if (teamList.some((t) => String(t.name || "").trim().toLowerCase() === name.toLowerCase())) {
       showToast("Tên nhóm đã tồn tại. Vui lòng chọn tên khác.", "error");
       return;
@@ -113,6 +144,16 @@ export default function AdminTeams() {
     if (selectedStudentIds.size > 5) {
       showToast("Nhóm chỉ được tối đa 5 sinh viên (không tính giảng viên)", "error");
       return;
+    }
+    for (const uid of selectedStudentIds) {
+      if (busyStudentIdSet.has(Number(uid))) {
+        const u = userList.find((x) => Number(x.id) === Number(uid));
+        showToast(
+          `${u?.full_name || "Sinh viên"} đã tham gia nhóm khác trong cùng học kỳ năm học.`,
+          "error",
+        );
+        return;
+      }
     }
     setCreating(true);
     try {
@@ -257,7 +298,22 @@ export default function AdminTeams() {
   const toggleMember = (uid) => {
     const user = userList.find((u) => u.id === uid);
     if (!user || user.role_name !== "student") return;
-    setMembers((prev) => prev.includes(uid) ? prev.filter((m) => m !== uid) : [...prev, uid]);
+    if (!members.includes(uid) && busyStudentIdSet.has(Number(uid))) {
+      showToast("Sinh viên đã tham gia nhóm khác trong cùng học kỳ năm học.", "error");
+      return;
+    }
+    setMembers((prev) => (prev.includes(uid) ? prev.filter((m) => m !== uid) : [...prev, uid]));
+  };
+
+  const selectLeader = (uid) => {
+    if (busyStudentIdSet.has(Number(uid)) && !members.includes(uid)) {
+      showToast("Sinh viên đã tham gia nhóm khác trong cùng học kỳ năm học.", "error");
+      return;
+    }
+    setForm((f) => ({ ...f, leader_user_id: String(uid) }));
+    if (!members.includes(uid)) {
+      setMembers((prev) => [...prev, uid]);
+    }
   };
 
   const filteredUsers = useMemo(() => {
@@ -288,8 +344,13 @@ export default function AdminTeams() {
 
   const availableStudentsForDetail = useMemo(() => {
     const currentIds = new Set((selectedTeamDetail?.members || []).map((m) => Number(m.id)));
-    return userList.filter((u) => u.role_name === "student" && !currentIds.has(Number(u.id)));
-  }, [selectedTeamDetail, userList]);
+    return userList.filter(
+      (u) =>
+        u.role_name === "student"
+        && !currentIds.has(Number(u.id))
+        && !busyStudentIdSet.has(Number(u.id)),
+    );
+  }, [selectedTeamDetail, userList, busyStudentIdSet]);
   const studentSearchSuggestions = useMemo(() => {
     const keyword = memberSearchValue.trim().toLowerCase();
     if (!keyword) return availableStudentsForDetail.slice(0, 8);
@@ -338,7 +399,7 @@ export default function AdminTeams() {
           <form onSubmit={handleCreate}>
             <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: 12, alignItems: "end" }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Tiền tố *</label>
+                <label>Môn học *</label>
                 <select
                   className="form-input"
                   value={form.namePrefix}
@@ -410,7 +471,8 @@ export default function AdminTeams() {
             <div className="form-group">
               <label>Danh sách chọn thành viên/giảng viên (10 mỗi trang)</label>
               <p style={{ marginTop: 4, marginBottom: 8, color: "#64748b", fontSize: "0.875rem" }}>
-                Sinh viên: chọn Thành viên/Trưởng nhóm (tối đa 5 sinh viên). Giảng viên: chọn ô Giảng viên hướng dẫn.
+                Sinh viên: chọn Thành viên/Trưởng nhóm (tối đa 5 sinh viên; mỗi sinh viên chỉ một nhóm trong cùng học kỳ năm học).
+                Giảng viên: chọn ô Giảng viên hướng dẫn.
               </p>
               <div style={{ overflowX: "auto" }}>
                 <table className="data-table">
@@ -425,23 +487,30 @@ export default function AdminTeams() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pagedUsers.map((u) => (
-                      <tr key={u.id}>
+                    {pagedUsers.map((u) => {
+                      const studentBusy =
+                        u.role_name === "student"
+                        && busyStudentIdSet.has(Number(u.id))
+                        && !members.includes(u.id);
+                      return (
+                      <tr key={u.id} style={studentBusy ? { opacity: 0.55 } : undefined}>
                         <td>
                           <input
                             type="checkbox"
-                            disabled={u.role_name !== "student"}
+                            disabled={u.role_name !== "student" || studentBusy}
                             checked={members.includes(u.id)}
                             onChange={() => toggleMember(u.id)}
+                            title={studentBusy ? "Đã có nhóm trong học kỳ này" : undefined}
                           />
                         </td>
                         <td>
                           <input
                             type="radio"
                             name="leader_user_id"
-                            disabled={u.role_name !== "student"}
+                            disabled={u.role_name !== "student" || studentBusy}
                             checked={String(form.leader_user_id) === String(u.id)}
-                            onChange={() => setForm((f) => ({ ...f, leader_user_id: String(u.id) }))}
+                            onChange={() => selectLeader(u.id)}
+                            title={studentBusy ? "Đã có nhóm trong học kỳ này" : undefined}
                           />
                         </td>
                         <td>
@@ -457,11 +526,11 @@ export default function AdminTeams() {
                         <td>{u.email}</td>
                         <td>
                           <span className={`badge ${u.role_name === "supervisor" ? "badge-info" : "badge-gray"}`}>
-                            {u.role_name === "supervisor" ? "Giảng viên" : "Sinh viên"}
+                            {u.role_name === "supervisor" ? "Giảng viên" : studentBusy ? "Đã có nhóm (HK)" : "Sinh viên"}
                           </span>
                         </td>
                       </tr>
-                    ))}
+                    );})}
                     {pagedUsers.length === 0 && (
                       <tr>
                         <td colSpan={6} style={{ textAlign: "center", color: "#94a3b8" }}>Không có dữ liệu</td>

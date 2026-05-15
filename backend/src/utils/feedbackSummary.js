@@ -1,0 +1,27 @@
+export const AI_SUMMARY_DISCLAIMER = "bản tóm tắt này chỉ mang tính chất tham khảo";
+
+/** Gắn disclaimer cuối mỗi dòng / mỗi ý trong tóm tắt AI. */
+export function formatSummaryWithDisclaimer(text) {
+  if (!text || !String(text).trim()) return "";
+
+  const rawLines = String(text)
+    .trim()
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const lines = [];
+  for (const line of rawLines) {
+    const chunks = line.split(/(?=\s*(?:[-•*]|\d+[.)])\s+)/).map((c) => c.trim()).filter(Boolean);
+    if (chunks.length > 1) lines.push(...chunks);
+    else lines.push(line);
+  }
+
+  return lines
+    .map((line) => {
+      const body = line.replace(new RegExp(AI_SUMMARY_DISCLAIMER, "gi"), "").trim();
+      if (!body) return AI_SUMMARY_DISCLAIMER;
+      return `${body}\n${AI_SUMMARY_DISCLAIMER}`;
+    })
+    .join("\n");
+}
