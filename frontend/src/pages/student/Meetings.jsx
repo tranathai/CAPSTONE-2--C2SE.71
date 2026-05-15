@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Icon from "../../components/UI/Icon.jsx";
 import { meetings, teams } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
 import { topics } from "../../lib/api.js";
+import { getMeetingTiming, partitionMeetingsByTiming } from "../../lib/meetingTiming.js";
 
 export default function StudentMeetings() {
   const { toast, showToast } = useToast();
@@ -60,10 +61,14 @@ export default function StudentMeetings() {
     }
   };
 
-  const upcomingMeetings = meetingList.filter((m) => m.status === "scheduled" && new Date(m.scheduled_at) > new Date());
-  const pastMeetings = meetingList.filter((m) => m.status !== "scheduled" || new Date(m.scheduled_at) <= new Date());
+  const { upcomingMeetings, pastMeetings } = useMemo(
+    () => partitionMeetingsByTiming(meetingList),
+    [meetingList],
+  );
 
-  const MeetingCard = ({ m }) => (
+  const MeetingCard = ({ m }) => {
+    const timing = m._timing || getMeetingTiming(m);
+    return (
     <div className="card" style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
@@ -77,12 +82,11 @@ export default function StudentMeetings() {
             Người chủ trì: {m.host_name} {m.team_name ? `• Nhóm: ${m.team_name}` : ""}
           </div>
         </div>
-        <span className={`badge ${m.status === "scheduled" ? "badge-success" : m.status === "cancelled" ? "badge-danger" : "badge-gray"}`}>
-          {m.status === "scheduled" ? "Sắp tới" : m.status === "cancelled" ? "Đã hủy" : "Hoàn thành"}
-        </span>
+        <span className={`badge ${timing.badgeClass}`}>{timing.label}</span>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="page-container">

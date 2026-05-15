@@ -3,26 +3,7 @@ import Icon from "../../components/UI/Icon.jsx";
 import { meetings, teams } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
 import { useMentorScopeRefresh } from "../../hooks/useMentorScopeRefresh.js";
-
-function getMeetingTiming(m) {
-  if (m.status === "cancelled") {
-    return { label: "Đã hủy", badgeClass: "badge-danger", bucket: "past" };
-  }
-  const start = new Date(m.scheduled_at);
-  const durationMs = (Number(m.duration_minutes) || 60) * 60 * 1000;
-  const end = new Date(start.getTime() + durationMs);
-  const now = new Date();
-  if (Number.isNaN(start.getTime())) {
-    return { label: "Không rõ", badgeClass: "badge-gray", bucket: "past" };
-  }
-  if (now < start) {
-    return { label: "Sắp tới", badgeClass: "badge-success", bucket: "upcoming" };
-  }
-  if (now <= end) {
-    return { label: "Đang diễn ra", badgeClass: "badge-warning", bucket: "upcoming" };
-  }
-  return { label: "Đã qua", badgeClass: "badge-gray", bucket: "past" };
-}
+import { getMeetingTiming, partitionMeetingsByTiming } from "../../lib/meetingTiming.js";
 
 function MeetingRow({ m, onSelect, dimmed = false }) {
   const timing = m._timing || getMeetingTiming(m);
@@ -94,18 +75,10 @@ export default function MentorMeetings() {
   const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const selectedMeeting = meetingList.find((m) => Number(m.id) === Number(selectedMeetingId)) || null;
 
-  const { upcomingMeetings, pastMeetings } = useMemo(() => {
-    const upcoming = [];
-    const past = [];
-    for (const m of meetingList) {
-      const timing = getMeetingTiming(m);
-      if (timing.bucket === "upcoming") upcoming.push({ ...m, _timing: timing });
-      else past.push({ ...m, _timing: timing });
-    }
-    upcoming.sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
-    past.sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at));
-    return { upcomingMeetings: upcoming, pastMeetings: past };
-  }, [meetingList]);
+  const { upcomingMeetings, pastMeetings } = useMemo(
+    () => partitionMeetingsByTiming(meetingList),
+    [meetingList],
+  );
 
   const filteredMeetings = useMemo(() => {
     if (meetingFilter === "upcoming") return upcomingMeetings;

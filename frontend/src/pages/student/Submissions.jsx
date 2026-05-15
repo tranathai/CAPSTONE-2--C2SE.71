@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import StudentRequiredDocumentSelect, {
   parseMilestoneRequiredDocs,
 } from "../../components/student/StudentRequiredDocumentSelect.jsx";
+import { notifyStudentSubmissionsChanged } from "../../lib/studentSubmissionEvents.js";
 
 function normalizeTopicSlots(raw) {
   if (!raw) return [];
@@ -114,6 +115,7 @@ export default function StudentSubmissions() {
       setFile(null);
       setSelectedDocument("");
       await refreshSubmissionHistory();
+      notifyStudentSubmissionsChanged();
     } catch (err) {
       showToast(err.message || "Upload thất bại", "error");
     } finally {
@@ -132,6 +134,7 @@ export default function StudentSubmissions() {
       setEditingSubmission(null);
       setEditDocument("");
       await refreshSubmissionHistory();
+      notifyStudentSubmissionsChanged();
     } catch (err) {
       showToast(err.message || "Cập nhật thất bại", "error");
     }
@@ -157,6 +160,7 @@ export default function StudentSubmissions() {
       await submissions.studentUploadVersion(formData);
       showToast("Đã cập nhật phiên bản mới", "success");
       await refreshSubmissionHistory();
+      notifyStudentSubmissionsChanged();
     } catch (err) {
       showToast(err.message || "Cập nhật phiên bản thất bại", "error");
     } finally {
@@ -172,6 +176,7 @@ export default function StudentSubmissions() {
       showToast("Xóa thành công!", "success");
       setDeleteVersionId(null);
       await refreshSubmissionHistory();
+      notifyStudentSubmissionsChanged();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Xóa thất bại";
       showToast(msg, "error");
