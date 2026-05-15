@@ -174,6 +174,39 @@ async function ensureMessagingTeamsColumn(conn) {
   `);
 }
 
+async function ensureMessagesMetaColumns(conn) {
+  const db = process.env.DB_NAME || "mentorai_grad";
+  const columns = [
+    {
+      name: "message_kind",
+      sql: `ALTER TABLE messages ADD COLUMN message_kind ENUM('chat','system') NOT NULL DEFAULT 'chat'`,
+    },
+    {
+      name: "is_deleted",
+      sql: `ALTER TABLE messages ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0`,
+    },
+    {
+      name: "updated_at",
+      sql: `ALTER TABLE messages ADD COLUMN updated_at DATETIME NULL`,
+    },
+  ];
+
+  for (const col of columns) {
+    const [cols] = await conn.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'messages' AND COLUMN_NAME = ?`,
+      [db, col.name],
+    );
+    if (cols.length > 0) continue;
+    try {
+      await conn.query(col.sql);
+      console.log(`[Bootstrap] messages.${col.name} added.`);
+    } catch (e) {
+      console.warn(`[Bootstrap] Could not add messages.${col.name}:`, e.message);
+    }
+  }
+}
+
 /**
  * Auto-create database + all tables if they don't exist.
  * Safe to run on every startup — uses CREATE TABLE IF NOT EXISTS.
@@ -465,6 +498,7 @@ export async function bootstrapDatabase() {
 
     await ensureMessagingTopicsColumns(conn);
     await ensureMessagingTeamsColumn(conn);
+    await ensureMessagesMetaColumns(conn);
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS notifications (

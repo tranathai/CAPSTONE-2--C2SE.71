@@ -6,6 +6,11 @@ import {
   canAccessTeamChat,
   findUserChatGroups,
   findGroupMessages,
+  findGroupMessageById,
+  updateGroupChatMessage,
+  softDeleteGroupChatMessage,
+  insertGroupSystemNotice,
+  getGroupChatMemberIds,
   sendGroupMessage,
   markGroupMessagesRead,
   markMessagesRead,
@@ -15,6 +20,10 @@ import {
 } from "../models/message.model.js";
 import { createNotification } from "../models/notification.model.js";
 import { io } from "../server.js";
+import {
+  isGroupMessageWithinEditWindow,
+  GROUP_MESSAGE_EDIT_EXPIRED_MESSAGE,
+} from "../utils/groupMessageWindow.js";
 
 export async function getConversation(req, res, next) {
   try {
@@ -143,6 +152,126 @@ export async function getGroupMessages(req, res, next) {
     });
     await markGroupMessagesRead(teamId, userId);
     return res.status(200).json({ success: true, data: messages });
+  } catch (error) {
+    next(error);
+  }
+}
+
+function emitGroupChatToMembers(teamId, event, payload) {
+  getGroupChatMemberIds(teamId)
+    .then((memberIds) => {
+      for (const uid of memberIds) {
+        io.to(`user:${uid}`).emit(event, payload);
+      }
+    })
+    .catch(() => {});
+}
+
+export async function updateGroupMessage(req, res, next) {
+  try {
+    const messageId = Number(req.params.messageId);
+    const { content } = req.body;
+    const userId = req.user.id;
+
+    if (!content || !String(content).trim()) {
+      return res.status(400).json({ success: false, message: "Nội dung tin nhắn không được để trống" });
+    }
+
+    const msg = await findGroupMessageById(messageId);
+    if (!msg) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy tin nhắn" });
+    }
+    if (msg.sender_id !== userId) {
+      return res.status(403).json({ success: false, message: "Chỉ có thể chỉnh sửa tin nhắn của bạn" });
+    }
+    if (msg.message_kind !== "chat" || msg.is_deleted) {
+      return res.status(400).json({ success: false, message: "Không thể chỉnh sửa tin nhắn này" });
+    }
+    if (!isGroupMessageWithinEditWindow(msg.created_at)) {
+      return res.status(400).json({ success: false, message: GROUP_MESSAGE_EDIT_EXPIRED_MESSAGE });
+    }
+
+    const allowed = await canAccessTeamChat(msg.team_id, userId);
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: "Bạn không có quyền trong nhóm chat này" });
+    }
+
+    const trimmed = String(content).trim();
+    const updated = await updateGroupChatMessage(messageId, userId, trimmed);
+    if (!updated) {
+      return res.status(400).json({ success: false, message: GROUP_MESSAGE_EDIT_EXPIRED_MESSAGE });
+    }
+
+    const notice = `${req.user.full_name} đã chỉnh sửa tin nhắn`;
+    const systemId = await insertGroupSystemNotice({
+      teamId: msg.team_id,
+      actorId: userId,
+      content: notice,
+    });
+
+    emitGroupChatToMembers(msg.team_id, "group_chat_updated", {
+      teamId: msg.team_id,
+      messageId,
+      systemMessageId: systemId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Chỉnh sửa tin nhắn thành công",
+      data: { id: messageId, content: trimmed, system_message_id: systemId },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function deleteGroupMessage(req, res, next) {
+  try {
+    const messageId = Number(req.params.messageId);
+    const userId = req.user.id;
+
+    const msg = await findGroupMessageById(messageId);
+    if (!msg) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy tin nhắn" });
+    }
+    if (msg.sender_id !== userId) {
+      return res.status(403).json({ success: false, message: "Chỉ có thể xóa tin nhắn của bạn" });
+    }
+    if (msg.message_kind !== "chat" || msg.is_deleted) {
+      return res.status(400).json({ success: false, message: "Không thể xóa tin nhắn này" });
+    }
+    if (!isGroupMessageWithinEditWindow(msg.created_at)) {
+      return res.status(400).json({ success: false, message: GROUP_MESSAGE_EDIT_EXPIRED_MESSAGE });
+    }
+
+    const allowed = await canAccessTeamChat(msg.team_id, userId);
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: "Bạn không có quyền trong nhóm chat này" });
+    }
+
+    const deleted = await softDeleteGroupChatMessage(messageId, userId);
+    if (!deleted) {
+      return res.status(400).json({ success: false, message: GROUP_MESSAGE_EDIT_EXPIRED_MESSAGE });
+    }
+
+    const notice = `${req.user.full_name} đã xóa tin nhắn`;
+    const systemId = await insertGroupSystemNotice({
+      teamId: msg.team_id,
+      actorId: userId,
+      content: notice,
+    });
+
+    emitGroupChatToMembers(msg.team_id, "group_chat_updated", {
+      teamId: msg.team_id,
+      messageId,
+      systemMessageId: systemId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Xóa tin nhắn thành công",
+      data: { id: messageId, system_message_id: systemId },
+    });
   } catch (error) {
     next(error);
   }

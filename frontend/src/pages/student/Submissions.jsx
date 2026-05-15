@@ -8,6 +8,7 @@ import StudentRequiredDocumentSelect, {
   parseMilestoneRequiredDocs,
 } from "../../components/student/StudentRequiredDocumentSelect.jsx";
 import { notifyStudentSubmissionsChanged } from "../../lib/studentSubmissionEvents.js";
+import SubmissionVersionHistoryModal from "../../components/student/SubmissionVersionHistoryModal.jsx";
 
 function normalizeTopicSlots(raw) {
   if (!raw) return [];
@@ -42,6 +43,7 @@ export default function StudentSubmissions() {
   const [uploadingVersionForId, setUploadingVersionForId] = useState(null);
   const versionFileRef = useRef(null);
   const [deleteVersionId, setDeleteVersionId] = useState(null);
+  const [versionHistorySubmission, setVersionHistorySubmission] = useState(null);
   const { toast, showToast } = useToast();
   const navigate = useNavigate();
 
@@ -272,6 +274,13 @@ export default function StudentSubmissions() {
       />
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
 
+      <SubmissionVersionHistoryModal
+        open={versionHistorySubmission != null}
+        submissionId={versionHistorySubmission?.id}
+        title={versionHistorySubmission?.title}
+        onClose={() => setVersionHistorySubmission(null)}
+      />
+
       <ConfirmModal
         open={deleteVersionId != null}
         title="Xóa phiên bản nộp"
@@ -500,7 +509,15 @@ export default function StudentSubmissions() {
                             <Icon name="Upload" size={14} /> Cập nhật phiên bản
                           </button>
                         )}
-                        <button className="btn btn-sm btn-secondary" onClick={() => navigate(`/student/review/${s.id}`)}>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-secondary"
+                          title="Lịch sử phiên bản"
+                          onClick={() => setVersionHistorySubmission({ id: s.id, title: s.title })}
+                        >
+                          <Icon name="ListAlt" size={14} /> Lịch sử
+                        </button>
+                        <button className="btn btn-sm btn-secondary" onClick={() => navigate(`/student/review/${s.id}`)} title="Xem & phản hồi">
                           <Icon name="Eye" size={14} />
                         </button>
                         <button className="btn btn-sm btn-warning" onClick={() => {

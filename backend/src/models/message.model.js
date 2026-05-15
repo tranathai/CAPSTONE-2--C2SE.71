@@ -38,22 +38,74 @@ export async function findUserChatGroups(userId) {
 
 export async function findGroupMessages(teamId, { limit = 100, offset = 0 } = {}) {
   const [rows] = await pool.query(
-    `SELECT MIN(m.id) AS id,
-            m.content,
-            MIN(m.is_read) AS is_read,
-            MIN(m.created_at) AS created_at,
-            m.team_id,
-            s.full_name AS sender_name,
-            m.sender_id
+    `SELECT m.id, m.content, m.is_read, m.created_at, m.updated_at,
+            m.is_deleted, m.message_kind, m.team_id,
+            s.full_name AS sender_name, m.sender_id
      FROM messages m
      INNER JOIN users s ON s.id = m.sender_id
      WHERE m.team_id = ?
-     GROUP BY m.team_id, m.sender_id, m.content, DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i:%s')
-     ORDER BY created_at ASC
+     ORDER BY m.created_at ASC
      LIMIT ? OFFSET ?`,
     [teamId, limit, offset],
   );
   return rows;
+}
+
+export async function findGroupMessageById(messageId) {
+  const [rows] = await pool.query(
+    `SELECT m.id, m.content, m.sender_id, m.team_id, m.message_kind, m.is_deleted, m.created_at,
+            u.full_name AS sender_name
+     FROM messages m
+     INNER JOIN users u ON u.id = m.sender_id
+     WHERE m.id = ? AND m.team_id IS NOT NULL
+     LIMIT 1`,
+    [messageId],
+  );
+  return rows[0] || null;
+}
+
+export async function updateGroupChatMessage(messageId, senderId, content) {
+  const [result] = await pool.query(
+    `UPDATE messages
+     SET content = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ? AND sender_id = ? AND team_id IS NOT NULL
+       AND message_kind = 'chat' AND is_deleted = 0
+       AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+    [content, messageId, senderId],
+  );
+  return result.affectedRows > 0;
+}
+
+export async function softDeleteGroupChatMessage(messageId, senderId) {
+  const [result] = await pool.query(
+    `UPDATE messages
+     SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ? AND sender_id = ? AND team_id IS NOT NULL
+       AND message_kind = 'chat' AND is_deleted = 0
+       AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)`,
+    [messageId, senderId],
+  );
+  return result.affectedRows > 0;
+}
+
+export async function insertGroupSystemNotice({ teamId, actorId, content }) {
+  const [result] = await pool.query(
+    `INSERT INTO messages (sender_id, receiver_id, content, team_id, message_kind)
+     VALUES (?, ?, ?, ?, 'system')`,
+    [actorId, actorId, content, teamId],
+  );
+  return result.insertId;
+}
+
+export async function getGroupChatMemberIds(teamId) {
+  const [rows] = await pool.query(
+    `SELECT DISTINCT u.id
+     FROM users u
+     WHERE EXISTS (SELECT 1 FROM team_members tm WHERE tm.team_id = ? AND tm.user_id = u.id)
+        OR EXISTS (SELECT 1 FROM teams t WHERE t.id = ? AND t.supervisor_user_id = u.id)`,
+    [teamId, teamId],
+  );
+  return rows.map((r) => r.id);
 }
 
 export async function sendGroupMessage({ senderId, teamId, content }) {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import Icon from "../../components/UI/Icon.jsx";
+import GroupChatThread from "../../components/messages/GroupChatThread.jsx";
 import { messages } from "../../lib/api.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useToast } from "../../hooks/useToast.js";
@@ -56,6 +57,16 @@ export default function MentorMessages() {
 
   const selectedGroup = groups.find((g) => g.id === Number(teamId));
 
+  const reloadConversation = async () => {
+    if (!teamId) return;
+    try {
+      const msgs = await messages.groupMessages(Number(teamId));
+      setConversation(msgs);
+    } catch {
+      setConversation([]);
+    }
+  };
+
   return (
     <div className="page-container" style={{ height: "calc(100vh - 120px)", display: "flex", gap: 0, padding: 0, background: "#fff" }}>
       <div style={{ width: 280, borderRight: "1px solid #e2e8f0", padding: "20px 12px", overflowY: "auto", background: "#fff" }}>
@@ -104,22 +115,13 @@ export default function MentorMessages() {
               {selectedGroup?.name || "Nhóm chat"}
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "16px", background: "#fff" }}>
-              {conversation.map((msg) => {
-                const isMe = msg.sender_id === user?.id;
-                return (
-                  <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start", marginBottom: 12 }}>
-                    <div style={{ maxWidth: "70%", background: isMe ? "#10b981" : "#f1f5f9", color: isMe ? "#fff" : "#1e293b", borderRadius: 12, padding: "10px 14px", fontSize: "0.875rem" }}>
-                      {!isMe && (
-                        <div style={{ fontSize: "0.75rem", opacity: 0.8, marginBottom: 4, fontWeight: 600 }}>
-                          {msg.sender_name}
-                        </div>
-                      )}
-                      <p style={{ margin: 0, lineHeight: 1.5 }}>{msg.content}</p>
-                      <div style={{ fontSize: "0.7rem", opacity: 0.7, marginTop: 4, textAlign: "right" }}>{new Date(msg.created_at).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</div>
-                    </div>
-                  </div>
-                );
-              })}
+              <GroupChatThread
+                conversation={conversation}
+                user={user}
+                meBubbleColor="#10b981"
+                onReload={reloadConversation}
+                showToast={showToast}
+              />
               <div ref={bottomRef} />
             </div>
             <form onSubmit={handleSend} style={{ padding: "12px 16px", borderTop: "1px solid #e2e8f0", display: "flex", gap: 8 }}>
