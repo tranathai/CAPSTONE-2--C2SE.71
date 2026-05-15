@@ -195,6 +195,21 @@ textarea.form-input { resize: vertical; min-height: 100px; }
   margin-bottom: 6px;
 }
 
+.form-input--invalid {
+  border-color: #dc2626;
+}
+
+.form-input--invalid:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.form-field-error {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: #b91c1c;
+}
+
 /* ── Modals ───────────────────────────────────────── */
 .modal-overlay {
   position: fixed;

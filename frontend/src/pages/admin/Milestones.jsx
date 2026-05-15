@@ -54,6 +54,102 @@ function toDatetimeLocalSlice(iso) {
   return s.length >= 16 ? s.slice(0, 16) : s;
 }
 
+function FieldError({ message }) {
+  if (!message) return null;
+  return (
+    <p className="form-field-error" role="alert">
+      {message}
+    </p>
+  );
+}
+
+function inputClass(hasError) {
+  return hasError ? "form-input form-input--invalid" : "form-input";
+}
+
+function clearFieldError(setErrors, field) {
+  setErrors((prev) => {
+    if (!prev[field]) return prev;
+    const next = { ...prev };
+    delete next[field];
+    return next;
+  });
+}
+
+function validateBatchForm(batchForm, batchRange, batches) {
+  const errors = {};
+  const name = batchForm.name.trim();
+  if (!name) {
+    errors.name = "Tên đợt tốt nghiệp không được để trống.";
+  } else {
+    const batchKey = name.toLowerCase();
+    if (batches.some((b) => String(b.name || "").trim().toLowerCase() === batchKey)) {
+      errors.name = "Tên đợt tốt nghiệp đã tồn tại. Vui lòng chọn tên khác.";
+    }
+  }
+  const startRaw = batchRange.start?.trim() || "";
+  const endRaw = batchRange.end?.trim() || "";
+  if (!startRaw) errors.start = "Vui lòng chọn ngày bắt đầu.";
+  if (!endRaw) errors.end = "Vui lòng chọn ngày kết thúc.";
+  if (startRaw && endRaw) {
+    const a = parseValidDateTime(startRaw);
+    const b = parseValidDateTime(endRaw);
+    if (!a) errors.start = errors.start || "Ngày bắt đầu không hợp lệ.";
+    if (!b) errors.end = errors.end || "Ngày kết thúc không hợp lệ.";
+    if (a && b && a.getTime() >= b.getTime()) {
+      errors.end = "Ngày kết thúc phải sau ngày bắt đầu.";
+    }
+  }
+  return errors;
+}
+
+function validateMilestoneForm(form, list, editId, selectedBatch) {
+  const errors = {};
+  if (!form.name?.trim()) {
+    errors.name = "Tên mốc không được để trống.";
+  }
+  const startRaw = form.start_date?.trim() || "";
+  const endRaw = form.end_date?.trim() || "";
+  if (!startRaw) errors.start_date = "Vui lòng chọn ngày bắt đầu.";
+  if (!endRaw) errors.end_date = "Vui lòng chọn ngày kết thúc.";
+  const start = parseValidDateTime(startRaw);
+  const end = parseValidDateTime(endRaw);
+  if (startRaw && !start) errors.start_date = errors.start_date || "Ngày bắt đầu không hợp lệ.";
+  if (endRaw && !end) errors.end_date = errors.end_date || "Ngày kết thúc không hợp lệ.";
+  if (start && end && start.getTime() >= end.getTime()) {
+    errors.end_date = "Thời gian kết thúc phải sau thời gian bắt đầu.";
+  }
+  if (start && end && selectedBatch) {
+    const bs = parseValidDateTime(selectedBatch.start_date);
+    const be = parseValidDateTime(selectedBatch.end_date);
+    if (bs && be) {
+      if (start.getTime() < bs.getTime()) {
+        errors.start_date = "Thời gian mốc phải nằm trong khung thời gian của đợt tốt nghiệp.";
+      }
+      if (end.getTime() > be.getTime()) {
+        errors.end_date = "Thời gian mốc phải nằm trong khung thời gian của đợt tốt nghiệp.";
+      }
+    } else if (bs && start.getTime() < bs.getTime()) {
+      errors.start_date = "Ngày bắt đầu mốc không được trước ngày bắt đầu đợt.";
+    } else if (be && end.getTime() > be.getTime()) {
+      errors.end_date = "Ngày kết thúc mốc không được sau ngày kết thúc đợt.";
+    }
+    if (start && end) {
+      const overlap = findOverlappingMilestone(start, end, list, editId);
+      if (overlap) {
+        errors.start_date = errors.start_date || `Mốc trùng khoảng thời gian với mốc "${overlap}".`;
+      }
+    }
+  }
+  const docs = Array.isArray(form.required_documents)
+    ? form.required_documents.map((s) => String(s).trim()).filter(Boolean)
+    : [];
+  if (docs.length === 0) {
+    errors.required_documents = "Vui lòng chọn ít nhất 1 tài liệu cần nộp.";
+  }
+  return errors;
+}
+
 /** Trả về tên mốc trùng hoặc null (cùng khoảng thời gian có giao, không tính chạm mép). */
 function findOverlappingMilestone(start, end, milestoneList, excludeId) {
   for (const m of milestoneList) {
@@ -79,6 +175,8 @@ export default function AdminMilestones() {
   /** Giống Tạo mốc mới: datetime-local (YYYY-MM-DDTHH:mm) */
   const [batchRange, setBatchRange] = useState({ start: "", end: "" });
   const [batchSubmitting, setBatchSubmitting] = useState(false);
+  const [batchErrors, setBatchErrors] = useState({});
+  const [milestoneErrors, setMilestoneErrors] = useState({});
   const [batchPage, setBatchPage] = useState(1);
   const [form, setForm] = useState({
     name: "",
@@ -144,6 +242,7 @@ export default function AdminMilestones() {
   const resetMilestoneForm = () => {
     setShowForm(false);
     setEditId(null);
+    setMilestoneErrors({});
     setForm({
       name: "",
       description: "",
@@ -166,37 +265,19 @@ export default function AdminMilestones() {
 
   const handleCreateBatch = async (e) => {
     e.preventDefault();
-    if (!batchForm.name.trim()) {
-      showToast("Tên Đợt tốt nghiệp không được trống", "error");
-      return;
-    }
-    const batchKey = batchForm.name.trim().toLowerCase();
-    if (batches.some((b) => String(b.name || "").trim().toLowerCase() === batchKey)) {
-      showToast("Tên đợt tốt nghiệp đã tồn tại. Vui lòng chọn tên khác.", "error");
-      return;
-    }
-    const start_date = batchRange.start?.trim() || "";
-    const end_date = batchRange.end?.trim() || "";
-    if (!start_date || !end_date) {
-      showToast("Khung thời gian: vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc.", "error");
-      return;
-    }
-    const a = parseValidDateTime(start_date);
-    const b = parseValidDateTime(end_date);
-    if (!a || !b) {
-      showToast("Ngày bắt đầu / kết thúc đợt không hợp lệ. Chọn đủ ngày và giờ.", "error");
-      return;
-    }
-    if (a.getTime() >= b.getTime()) {
-      showToast("Ngày kết thúc đợt phải sau ngày bắt đầu.", "error");
-      return;
-    }
+    const errors = validateBatchForm(batchForm, batchRange, batches);
+    setBatchErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    const start_date = batchRange.start.trim();
+    const end_date = batchRange.end.trim();
     setBatchSubmitting(true);
     try {
       await milestones.createBatch({ ...batchForm, start_date, end_date });
       showToast("Đã tạo Đợt tốt nghiệp", "success");
       setBatchForm({ name: "", description: "" });
       setBatchRange({ start: "", end: "" });
+      setBatchErrors({});
       await loadBatches();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Tạo Đợt tốt nghiệp thất bại";
@@ -229,47 +310,15 @@ export default function AdminMilestones() {
       showToast("Vui lòng chọn Đợt tốt nghiệp", "error");
       return;
     }
-    if (!form.name?.trim()) {
-      showToast("Tên mốc không được để trống", "error");
-      return;
-    }
-
-    const start = parseValidDateTime(form.start_date);
-    const end = parseValidDateTime(form.end_date);
-    if (!start || !end) {
-      showToast("Ngày bắt đầu và kết thúc phải chọn đầy đủ (ngày và giờ).", "error");
-      return;
-    }
-    if (start.getTime() >= end.getTime()) {
-      showToast("Thời gian kết thúc phải sau thời gian bắt đầu.", "error");
-      return;
-    }
 
     if (!editId && isBatchClosed(selectedBatch)) {
       showToast("Đợt tốt nghiệp đã kết thúc, không thể tạo mốc mới.", "error");
       return;
     }
 
-    const bs = parseValidDateTime(selectedBatch?.start_date);
-    const be = parseValidDateTime(selectedBatch?.end_date);
-    if (bs && be) {
-      if (start.getTime() < bs.getTime() || end.getTime() > be.getTime()) {
-        showToast("Thời gian mốc phải nằm trong khung thời gian của đợt tốt nghiệp.", "error");
-        return;
-      }
-    } else if (bs && start.getTime() < bs.getTime()) {
-      showToast("Ngày bắt đầu mốc không được trước ngày bắt đầu đợt.", "error");
-      return;
-    } else if (be && end.getTime() > be.getTime()) {
-      showToast("Ngày kết thúc mốc không được sau ngày kết thúc đợt.", "error");
-      return;
-    }
-
-    const overlap = findOverlappingMilestone(start, end, list, editId);
-    if (overlap) {
-      showToast(`Mốc trùng khoảng thời gian với mốc "${overlap}".`, "error");
-      return;
-    }
+    const errors = validateMilestoneForm(form, list, editId, selectedBatch);
+    setMilestoneErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
     setSubmitting(true);
     try {
@@ -294,6 +343,7 @@ export default function AdminMilestones() {
         showToast("Tạo milestone thành công!", "success");
       }
       resetMilestoneForm();
+      setMilestoneErrors({});
       await loadMilestones();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Lưu thất bại";
@@ -319,6 +369,7 @@ export default function AdminMilestones() {
       display_order: m.display_order || 0,
       required_documents: docs,
     });
+    setMilestoneErrors({});
     setShowForm(true);
   };
 
@@ -370,15 +421,21 @@ export default function AdminMilestones() {
 
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="card-title">Tạo Đợt tốt nghiệp</div>
-            <form onSubmit={handleCreateBatch}>
+            <form onSubmit={handleCreateBatch} noValidate>
               <div className="form-group" style={{ marginBottom: 12 }}>
                 <label>Tên đợt *</label>
                 <input
-                  className="form-input"
+                  className={inputClass(batchErrors.name)}
                   value={batchForm.name}
-                  onChange={(e) => setBatchForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    setBatchForm((f) => ({ ...f, name }));
+                    if (batchErrors.name) clearFieldError(setBatchErrors, "name");
+                  }}
                   placeholder="VD: Đợt tốt nghiệp K28"
+                  aria-invalid={Boolean(batchErrors.name)}
                 />
+                <FieldError message={batchErrors.name} />
               </div>
               <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#374151", margin: "0 0 8px 0" }}>Khung thời gian *</p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
@@ -386,21 +443,31 @@ export default function AdminMilestones() {
                   <label>Ngày bắt đầu *</label>
                   <input
                     type="datetime-local"
-                    className="form-input"
-                    required
+                    className={inputClass(batchErrors.start)}
                     value={batchRange.start}
-                    onChange={(e) => setBatchRange((r) => ({ ...r, start: e.target.value }))}
+                    onChange={(e) => {
+                      const start = e.target.value;
+                      setBatchRange((r) => ({ ...r, start }));
+                      if (batchErrors.start) clearFieldError(setBatchErrors, "start");
+                    }}
+                    aria-invalid={Boolean(batchErrors.start)}
                   />
+                  <FieldError message={batchErrors.start} />
                 </div>
                 <div className="form-group">
                   <label>Ngày kết thúc *</label>
                   <input
                     type="datetime-local"
-                    className="form-input"
-                    required
+                    className={inputClass(batchErrors.end)}
                     value={batchRange.end}
-                    onChange={(e) => setBatchRange((r) => ({ ...r, end: e.target.value }))}
+                    onChange={(e) => {
+                      const end = e.target.value;
+                      setBatchRange((r) => ({ ...r, end }));
+                      if (batchErrors.end) clearFieldError(setBatchErrors, "end");
+                    }}
+                    aria-invalid={Boolean(batchErrors.end)}
                   />
+                  <FieldError message={batchErrors.end} />
                 </div>
               </div>
               <textarea className="form-input" rows={2} style={{ marginTop: 4 }} value={batchForm.description} onChange={(e) => setBatchForm((f) => ({ ...f, description: e.target.value }))} placeholder="Mô tả đợt..." />
@@ -494,6 +561,7 @@ export default function AdminMilestones() {
                   return;
                 }
                 setEditId(null);
+                setMilestoneErrors({});
                 setForm((f) => ({
                   ...f,
                   name: "",
@@ -522,41 +590,56 @@ export default function AdminMilestones() {
           {showForm && (
             <div className="card">
               <div className="card-title">{editId ? "Chỉnh sửa" : "Tạo mốc mới"}</div>
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} noValidate>
                 <div className="form-group">
                   <label>Tên mốc *</label>
                   <input
-                    className="form-input"
-                    required
+                    className={inputClass(milestoneErrors.name)}
                     value={form.name}
-                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setForm((f) => ({ ...f, name }));
+                      if (milestoneErrors.name) clearFieldError(setMilestoneErrors, "name");
+                    }}
                     placeholder="VD: Proposal, Mid-term Report"
+                    aria-invalid={Boolean(milestoneErrors.name)}
                   />
+                  <FieldError message={milestoneErrors.name} />
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div className="form-group">
                     <label>Ngày bắt đầu *</label>
                     <input
                       type="datetime-local"
-                      className="form-input"
-                      required
+                      className={inputClass(milestoneErrors.start_date)}
                       min={toDatetimeLocalSlice(selectedBatch?.start_date) || undefined}
                       max={toDatetimeLocalSlice(selectedBatch?.end_date) || undefined}
                       value={form.start_date}
-                      onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))}
+                      onChange={(e) => {
+                        const start_date = e.target.value;
+                        setForm((f) => ({ ...f, start_date }));
+                        if (milestoneErrors.start_date) clearFieldError(setMilestoneErrors, "start_date");
+                      }}
+                      aria-invalid={Boolean(milestoneErrors.start_date)}
                     />
+                    <FieldError message={milestoneErrors.start_date} />
                   </div>
                   <div className="form-group">
                     <label>Ngày kết thúc *</label>
                     <input
                       type="datetime-local"
-                      className="form-input"
-                      required
+                      className={inputClass(milestoneErrors.end_date)}
                       min={toDatetimeLocalSlice(selectedBatch?.start_date) || undefined}
                       max={toDatetimeLocalSlice(selectedBatch?.end_date) || undefined}
                       value={form.end_date}
-                      onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
+                      onChange={(e) => {
+                        const end_date = e.target.value;
+                        setForm((f) => ({ ...f, end_date }));
+                        if (milestoneErrors.end_date) clearFieldError(setMilestoneErrors, "end_date");
+                      }}
+                      aria-invalid={Boolean(milestoneErrors.end_date)}
                     />
+                    <FieldError message={milestoneErrors.end_date} />
                   </div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -580,13 +663,19 @@ export default function AdminMilestones() {
                   <RequiredDocumentsPicker
                     resetKey={`${selectedBatchId}-${editId ?? "new"}`}
                     value={form.required_documents}
-                    onChange={(docs) => setForm((f) => ({ ...f, required_documents: docs }))}
+                    error={milestoneErrors.required_documents}
+                    onChange={(docs) => {
+                      setForm((f) => ({ ...f, required_documents: docs }));
+                      if (milestoneErrors.required_documents && docs.some((d) => String(d).trim())) {
+                        clearFieldError(setMilestoneErrors, "required_documents");
+                      }
+                    }}
                     disabled={submitting}
                   />
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? "Đang lưu..." : "Lưu"}</button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Hủy</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => { setShowForm(false); setMilestoneErrors({}); }}>Hủy</button>
                 </div>
               </form>
             </div>

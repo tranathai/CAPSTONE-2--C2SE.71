@@ -26,7 +26,7 @@ function removeAt(list, idx) {
   return list.filter((_, i) => i !== idx);
 }
 
-export default function RequiredDocumentsPicker({ value, onChange, disabled, ..._rest }) {
+export default function RequiredDocumentsPicker({ value, onChange, disabled, error, ..._rest }) {
   const [customLine, setCustomLine] = useState("");
 
   const addOne = (label) => {
@@ -41,11 +41,16 @@ export default function RequiredDocumentsPicker({ value, onChange, disabled, ...
   };
 
   return (
-    <div className="rdp-wrap">
+    <div className={`rdp-wrap${error ? " rdp-wrap--invalid" : ""}`}>
       <label className="form-group" style={{ marginBottom: 8, display: "block" }}>
-        Tài liệu cần nộp
+        Tài liệu cần nộp *
       </label>
-      <div className="rdp-panel rdp-panel--single" role="region" aria-label="Chọn tài liệu từ mẫu">
+      <div
+        className={`rdp-panel rdp-panel--single${error ? " rdp-panel--invalid" : ""}`}
+        role="region"
+        aria-label="Chọn tài liệu từ mẫu"
+        aria-invalid={Boolean(error)}
+      >
         <p className="rdp-hint rdp-hint--tight">
           Dùng tag đã chọn hoặc bấm [+] để thêm nhanh từ mẫu; có thể gõ tùy chỉnh ở cuối.
         </p>
@@ -94,6 +99,11 @@ export default function RequiredDocumentsPicker({ value, onChange, disabled, ...
       <div className="rdp-summary">
         Đã chọn: {value.length ? value.join(", ") : "—"}
       </div>
+      {error ? (
+        <p className="form-field-error" role="alert" style={{ marginTop: 8, marginBottom: 0 }}>
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

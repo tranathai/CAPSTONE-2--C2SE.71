@@ -5,6 +5,15 @@
   background: #f8fafc;
 }
 
+.rdp-wrap--invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.rdp-panel--invalid {
+  border-color: #dc2626;
+}
+
 .rdp-panel {
   background: #fff;
   border: 1px solid #e2e8f0;
