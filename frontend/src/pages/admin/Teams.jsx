@@ -34,6 +34,51 @@ function buildSemesterLabel(academicYear, semesterHalf) {
   return `${academicYear} — Học kỳ ${semesterHalf === "II" ? "II" : "I"}`;
 }
 
+function FieldError({ message }) {
+  if (!message) return null;
+  return (
+    <p className="form-field-error" role="alert">
+      {message}
+    </p>
+  );
+}
+
+function inputClass(hasError) {
+  return hasError ? "form-input form-input--invalid" : "form-input";
+}
+
+function clearFieldError(setErrors, field) {
+  setErrors((prev) => {
+    if (!prev[field]) return prev;
+    const next = { ...prev };
+    delete next[field];
+    return next;
+  });
+}
+
+function validateCreateForm(form, teamList) {
+  const errors = {};
+  const suffix = form.nameSuffix.trim();
+  if (!suffix) {
+    errors.nameSuffix = "Vui lòng nhập số / mã nhóm (VD: 40, 70).";
+  }
+  if (!form.semesterHalf) {
+    errors.semesterHalf = "Vui lòng chọn học kỳ.";
+  }
+  if (!form.academicYear) {
+    errors.academicYear = "Vui lòng chọn năm học.";
+  }
+  if (!errors.nameSuffix) {
+    const name = `${(form.namePrefix || "").trimEnd()}${suffix}`.replace(/\s+/g, " ").trim();
+    if (!name) {
+      errors.nameSuffix = "Tên nhóm không được trống.";
+    } else if (teamList.some((t) => String(t.name || "").trim().toLowerCase() === name.toLowerCase())) {
+      errors.nameSuffix = "Tên nhóm đã tồn tại. Vui lòng chọn tên khác.";
+    }
+  }
+  return errors;
+}
+
 function buildPageList(totalPages, current) {
   if (totalPages < 1) return [];
   if (totalPages === 1) return [1];
@@ -78,6 +123,7 @@ export default function AdminTeams() {
   const [memberSearchValue, setMemberSearchValue] = useState("");
   const [supervisorSearchValue, setSupervisorSearchValue] = useState("");
   const [busyStudentIds, setBusyStudentIds] = useState([]);
+  const [createErrors, setCreateErrors] = useState({});
 
   useEffect(() => {
     teams.list().then(setTeamList).catch(() => {});
@@ -95,7 +141,7 @@ export default function AdminTeams() {
       return;
     }
     const semester = showCreate
-      ? createSemesterLabel
+      ? (form.academicYear && form.semesterHalf ? createSemesterLabel : "")
       : String(selectedTeamDetail?.semester || "").trim();
     if (!semester) {
       setBusyStudentIds([]);
@@ -106,7 +152,7 @@ export default function AdminTeams() {
       .semesterBusyStudents(semester, excludeId)
       .then((ids) => setBusyStudentIds(Array.isArray(ids) ? ids.map(Number) : []))
       .catch(() => setBusyStudentIds([]));
-  }, [showCreate, selectedTeamDetail?.id, selectedTeamDetail?.semester, createSemesterLabel]);
+  }, [showCreate, selectedTeamDetail?.id, selectedTeamDetail?.semester, createSemesterLabel, form.academicYear, form.semesterHalf]);
 
   const busyStudentIdSet = useMemo(() => new Set(busyStudentIds), [busyStudentIds]);
 
@@ -121,21 +167,15 @@ export default function AdminTeams() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    const errors = validateCreateForm(form, teamList);
+    if (Object.keys(errors).length > 0) {
+      setCreateErrors(errors);
+      return;
+    }
+    setCreateErrors({});
     const suffix = form.nameSuffix.trim();
-    if (!suffix) {
-      showToast("Vui lòng nhập phần số / mã nhóm sau prefix (VD: 40, 70)", "error");
-      return;
-    }
     const name = `${(form.namePrefix || "").trimEnd()}${suffix}`.replace(/\s+/g, " ").trim();
-    if (!name) {
-      showToast("Tên nhóm không được trống", "error");
-      return;
-    }
     const semester = createSemesterLabel;
-    if (teamList.some((t) => String(t.name || "").trim().toLowerCase() === name.toLowerCase())) {
-      showToast("Tên nhóm đã tồn tại. Vui lòng chọn tên khác.", "error");
-      return;
-    }
     const selectedStudentIds = new Set(members);
     if (form.leader_user_id) {
       const leader = userList.find((u) => String(u.id) === String(form.leader_user_id));
@@ -177,6 +217,7 @@ export default function AdminTeams() {
         supervisor_user_id: "",
       });
       setMembers([]);
+      setCreateErrors({});
       teams.list().then(setTeamList).catch(() => {});
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Tạo nhóm thất bại";
@@ -388,7 +429,15 @@ export default function AdminTeams() {
           <h1>Quản lý nhóm</h1>
           <p>Tạo và quản lý các nhóm sinh viên</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowCreate((v) => !v)}>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            setShowCreate((v) => {
+              if (v) setCreateErrors({});
+              return !v;
+            });
+          }}
+        >
           <Icon name="Plus" size={16} /> Tạo nhóm mới
         </button>
       </div>
@@ -397,7 +446,7 @@ export default function AdminTeams() {
         <div className="card">
           <div className="card-title">Tạo nhóm mới</div>
           <form onSubmit={handleCreate}>
-            <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: 12, alignItems: "end" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "140px 1fr", gap: 12 }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Môn học *</label>
                 <select
@@ -413,37 +462,51 @@ export default function AdminTeams() {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Số / mã nhóm *</label>
                 <input
-                  className="form-input"
+                  className={inputClass(!!createErrors.nameSuffix)}
                   value={form.nameSuffix}
-                  onChange={(e) => setForm((f) => ({ ...f, nameSuffix: e.target.value }))}
+                  onChange={(e) => {
+                    if (createErrors.nameSuffix) clearFieldError(setCreateErrors, "nameSuffix");
+                    setForm((f) => ({ ...f, nameSuffix: e.target.value }));
+                  }}
                   placeholder="VD: 40, 70"
                 />
+                <FieldError message={createErrors.nameSuffix} />
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Học kỳ</label>
+                <label>Học kỳ *</label>
                 <select
-                  className="form-input"
+                  className={inputClass(!!createErrors.semesterHalf)}
                   value={form.semesterHalf}
-                  onChange={(e) => setForm((f) => ({ ...f, semesterHalf: e.target.value }))}
+                  onChange={(e) => {
+                    if (createErrors.semesterHalf) clearFieldError(setCreateErrors, "semesterHalf");
+                    setForm((f) => ({ ...f, semesterHalf: e.target.value }));
+                  }}
                 >
+                  <option value="">Chọn học kỳ</option>
                   {SEMESTER_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
+                <FieldError message={createErrors.semesterHalf} />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label>Năm học</label>
+                <label>Năm học *</label>
                 <select
-                  className="form-input"
+                  className={inputClass(!!createErrors.academicYear)}
                   value={form.academicYear}
-                  onChange={(e) => setForm((f) => ({ ...f, academicYear: e.target.value }))}
+                  onChange={(e) => {
+                    if (createErrors.academicYear) clearFieldError(setCreateErrors, "academicYear");
+                    setForm((f) => ({ ...f, academicYear: e.target.value }));
+                  }}
                 >
+                  <option value="">Chọn năm học</option>
                   {academicYearSelectOptions().map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
+                <FieldError message={createErrors.academicYear} />
               </div>
             </div>
 
@@ -556,7 +619,7 @@ export default function AdminTeams() {
 
             <div style={{ display: "flex", gap: 8 }}>
               <button type="submit" className="btn btn-primary" disabled={creating}>{creating ? "Đang tạo..." : "Tạo nhóm"}</button>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowCreate(false)}>Hủy</button>
+              <button type="button" className="btn btn-secondary" onClick={() => { setShowCreate(false); setCreateErrors({}); }}>Hủy</button>
             </div>
           </form>
         </div>

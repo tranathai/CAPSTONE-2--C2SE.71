@@ -3,6 +3,8 @@ import {
   getStudentProfile,
   getSupervisorProfile,
   updateUserProfile,
+  updateUserPassword,
+  findUserById,
   listUsers,
   createUser,
   updateUserRole,
@@ -64,6 +66,63 @@ export async function updateMyProfile(req, res, next) {
 
     await updateUserProfile(userId, { fullName: full_name, phone, avatarUrl: avatar_url });
     return res.status(200).json({ success: true, message: "Cập nhật hồ sơ thành công" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+function validateNewPassword(password) {
+  const p = String(password || "");
+  const hasMinLength = p.length >= 6;
+  const hasUpperCase = /[A-Z]/.test(p);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(p);
+  if (!hasMinLength || !hasUpperCase || !hasSpecialChar) {
+    return "Mật khẩu mới tối thiểu 6 ký tự, gồm chữ in hoa và ký tự đặc biệt";
+  }
+  return null;
+}
+
+export async function changeMyPassword(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const currentPassword = String(req.body?.current_password ?? "");
+    const newPassword = String(req.body?.new_password ?? "");
+    const confirmPassword = String(req.body?.confirm_password ?? "");
+
+    if (!currentPassword) {
+      return res.status(400).json({ success: false, message: "Vui lòng nhập mật khẩu hiện tại" });
+    }
+    if (!newPassword) {
+      return res.status(400).json({ success: false, message: "Vui lòng nhập mật khẩu mới" });
+    }
+    if (!confirmPassword) {
+      return res.status(400).json({ success: false, message: "Vui lòng nhập lại mật khẩu mới" });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: "Mật khẩu mới và xác nhận không khớp" });
+    }
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ success: false, message: "Mật khẩu mới phải khác mật khẩu hiện tại" });
+    }
+
+    const passwordError = validateNewPassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ success: false, message: passwordError });
+    }
+
+    const user = await findUserById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy tài khoản" });
+    }
+
+    const validCurrent = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!validCurrent) {
+      return res.status(400).json({ success: false, message: "Mật khẩu hiện tại không đúng" });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await updateUserPassword(userId, passwordHash);
+    return res.status(200).json({ success: true, message: "Đổi mật khẩu thành công" });
   } catch (error) {
     next(error);
   }

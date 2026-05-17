@@ -210,6 +210,33 @@ textarea.form-input { resize: vertical; min-height: 100px; }
   color: #b91c1c;
 }
 
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap .form-input {
+  padding-right: 44px;
+}
+
+.password-wrap .toggle-pw {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.password-wrap .toggle-pw:hover {
+  color: #334155;
+}
+
 /* ── Modals ───────────────────────────────────────── */
 .modal-overlay {
   position: fixed;

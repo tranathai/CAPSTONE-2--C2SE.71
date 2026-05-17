@@ -1,11 +1,14 @@
 export const AI_SUMMARY_DISCLAIMER = "bản tóm tắt này chỉ mang tính chất tham khảo";
 
-/** Gắn disclaimer cuối mỗi dòng / mỗi ý trong tóm tắt AI. */
+/** Gắn disclaimer một lần ở cuối phần tóm tắt AI. */
 export function formatSummaryWithDisclaimer(text) {
   if (!text || !String(text).trim()) return "";
 
-  const rawLines = String(text)
-    .trim()
+  const cleaned = String(text)
+    .replace(new RegExp(AI_SUMMARY_DISCLAIMER, "gi"), "")
+    .trim();
+
+  const rawLines = cleaned
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
@@ -17,11 +20,7 @@ export function formatSummaryWithDisclaimer(text) {
     else lines.push(line);
   }
 
-  return lines
-    .map((line) => {
-      const body = line.replace(new RegExp(AI_SUMMARY_DISCLAIMER, "gi"), "").trim();
-      if (!body) return AI_SUMMARY_DISCLAIMER;
-      return `${body}\n${AI_SUMMARY_DISCLAIMER}`;
-    })
-    .join("\n");
+  const body = lines.join("\n");
+  if (!body) return AI_SUMMARY_DISCLAIMER;
+  return `${body}\n${AI_SUMMARY_DISCLAIMER}`;
 }

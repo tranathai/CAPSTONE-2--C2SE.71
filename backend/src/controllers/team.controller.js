@@ -11,6 +11,7 @@ import {
   findTeamIdByNormalizedName,
   addTeamMember,
   removeTeamMember,
+  setTeamLeader,
   userBelongsToTeam,
   findUserRoleNameById,
   countStudentMembersInTeam,
@@ -346,6 +347,44 @@ export async function removeMember(req, res, next) {
 
     await removeTeamMember(teamId, user_id);
     return res.status(200).json({ success: true, message: "Xóa thành viên thành công" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function changeTeamLeader(req, res, next) {
+  try {
+    const teamId = Number(req.params.id);
+    const leaderUserId = Number(req.body?.leader_user_id);
+
+    if (!teamId || teamId <= 0) {
+      return res.status(400).json({ success: false, message: "team_id không hợp lệ" });
+    }
+    if (!leaderUserId || leaderUserId <= 0) {
+      return res.status(400).json({ success: false, message: "leader_user_id không hợp lệ" });
+    }
+
+    const team = await findTeamById(teamId);
+    if (!team) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy nhóm" });
+    }
+
+    const requesterId = Number(req.user.id);
+    if (!(await userBelongsToTeam(requesterId, teamId))) {
+      return res.status(403).json({ success: false, message: "Bạn không thuộc nhóm này" });
+    }
+
+    if (!(await userBelongsToTeam(leaderUserId, teamId))) {
+      return res.status(400).json({ success: false, message: "Thành viên không thuộc nhóm" });
+    }
+
+    const roleName = await findUserRoleNameById(leaderUserId);
+    if (roleName !== "student") {
+      return res.status(400).json({ success: false, message: "Trưởng nhóm phải là sinh viên" });
+    }
+
+    await setTeamLeader(teamId, leaderUserId);
+    return res.status(200).json({ success: true, message: "Đã cập nhật trưởng nhóm" });
   } catch (error) {
     next(error);
   }

@@ -61,6 +61,7 @@ export const auth = {
 export const users = {
   me: () => client.get("/users/me").then((r) => body(r.data)),
   updateProfile: (data) => client.put("/users/me", data).then((r) => body(r.data)),
+  changePassword: (data) => client.put("/users/me/password", data).then((r) => body(r.data)),
   list: (params) => client.get("/users", { params }).then((r) => body(r.data)),
   create: (data) => client.post("/users", data).then((r) => body(r.data)),
   importCsv: (rows) => client.post("/users/import-csv", { rows }).then((r) => body(r.data)),
@@ -89,6 +90,8 @@ export const teams = {
   remove: (id) => client.delete(`/teams/${id}`).then((r) => body(r.data)),
   addMember: (teamId, userId, isLeader) => client.post(`/teams/${teamId}/members`, { user_id: userId, is_leader: isLeader }).then((r) => body(r.data)),
   removeMember: (teamId, userId) => client.delete(`/teams/${teamId}/members`, { data: { user_id: userId } }).then((r) => body(r.data)),
+  setLeader: (teamId, leaderUserId) =>
+    client.patch(`/teams/${teamId}/leader`, { leader_user_id: leaderUserId }).then((r) => body(r.data)),
 };
 
 // ─── Milestones ─────────────────────────────────────────────────────────────

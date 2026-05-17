@@ -1,30 +1,20 @@
 export const AI_SUMMARY_DISCLAIMER = "bản tóm tắt này chỉ mang tính chất tham khảo";
 
-/** Chuẩn hóa hiển thị: disclaimer xuống dòng riêng (kể cả bản lưu cũ nối cùng dòng). */
+/** Chuẩn hóa hiển thị: gộp nội dung, disclaimer chỉ một dòng ở cuối (kể cả bản lưu cũ lặp disclaimer). */
 export function displayAiSummary(text) {
   if (!text || !String(text).trim()) return "";
 
-  const lines = String(text)
+  const cleaned = String(text)
+    .replace(new RegExp(AI_SUMMARY_DISCLAIMER, "gi"), "")
+    .trim();
+
+  const lines = cleaned
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter(Boolean);
 
-  const blocks = [];
-  for (const line of lines) {
-    if (line.toLowerCase() === AI_SUMMARY_DISCLAIMER.toLowerCase()) {
-      blocks.push(AI_SUMMARY_DISCLAIMER);
-      continue;
-    }
-    if (line.includes(AI_SUMMARY_DISCLAIMER)) {
-      const body = line.replace(new RegExp(AI_SUMMARY_DISCLAIMER, "gi"), "").trim();
-      if (body) blocks.push(body);
-      blocks.push(AI_SUMMARY_DISCLAIMER);
-    } else {
-      blocks.push(line);
-    }
-  }
-
-  return blocks.join("\n");
+  if (!lines.length) return AI_SUMMARY_DISCLAIMER;
+  return `${lines.join("\n")}\n${AI_SUMMARY_DISCLAIMER}`;
 }
 
 /** Khởi map id → tóm tắt đã lưu từ API feedbacks. */

@@ -29,6 +29,10 @@ export async function updateUserProfile(id, { fullName, phone, avatarUrl }) {
   );
 }
 
+export async function updateUserPassword(id, passwordHash) {
+  await pool.query(`UPDATE users SET password_hash = ? WHERE id = ?`, [passwordHash, id]);
+}
+
 export async function getStudentProfile(userId) {
   const [rows] = await pool.query(
     `SELECT u.id, u.email, u.full_name, u.phone, u.avatar_url, u.is_active,

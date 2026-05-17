@@ -194,6 +194,25 @@ export async function removeTeamMember(teamId, userId) {
   await pool.query(`DELETE FROM team_members WHERE team_id = ? AND user_id = ?`, [teamId, userId]);
 }
 
+export async function setTeamLeader(teamId, leaderUserId) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query(`UPDATE team_members SET is_leader = 0 WHERE team_id = ?`, [teamId]);
+    await conn.query(
+      `UPDATE team_members SET is_leader = 1 WHERE team_id = ? AND user_id = ?`,
+      [teamId, leaderUserId],
+    );
+    await conn.query(`UPDATE teams SET leader_user_id = ? WHERE id = ?`, [leaderUserId, teamId]);
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 export async function findTeamsBySupervisorId(supervisorId) {
   const [rows] = await pool.query(
     `SELECT DISTINCT t.id, t.name, t.semester, t.description, t.leader_user_id, t.supervisor_user_id,

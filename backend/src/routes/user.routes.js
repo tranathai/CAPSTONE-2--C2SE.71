@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getMyProfile, updateMyProfile, getUsers, createNewUser, importUsersFromCsv, changeUserRole, lockUnlockUser } from "../controllers/user.controller.js";
+import { getMyProfile, updateMyProfile, changeMyPassword, getUsers, createNewUser, importUsersFromCsv, changeUserRole, lockUnlockUser } from "../controllers/user.controller.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/roleGuard.js";
 
@@ -7,6 +7,7 @@ const router = Router();
 
 router.get("/me", requireAuth, getMyProfile);
 router.put("/me", requireAuth, updateMyProfile);
+router.put("/me/password", requireAuth, changeMyPassword);
 
 // Admin only
 router.get("/", requireAuth, requireRole("admin", "supervisor"), getUsers);

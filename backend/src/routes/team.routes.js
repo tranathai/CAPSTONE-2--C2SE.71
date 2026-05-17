@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getMyTeam, getMyTeamsJoined, getTeam, getTeams, getMySuperviseeTeams, getSemesterBusyStudents, createNewTeam, updateExistingTeam, removeTeam, addMember, removeMember } from "../controllers/team.controller.js";
+import { getMyTeam, getMyTeamsJoined, getTeam, getTeams, getMySuperviseeTeams, getSemesterBusyStudents, createNewTeam, updateExistingTeam, removeTeam, addMember, removeMember, changeTeamLeader } from "../controllers/team.controller.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/roleGuard.js";
 
@@ -11,6 +11,7 @@ router.get("/", requireAuth, getTeams);
 router.get("/supervisees", requireAuth, requireRole("supervisor"), getMySuperviseeTeams);
 router.get("/semester-busy-students", requireAuth, requireRole("admin", "supervisor"), getSemesterBusyStudents);
 router.get("/:id", requireAuth, getTeam);
+router.patch("/:id/leader", requireAuth, requireRole("student"), changeTeamLeader);
 
 // Admin/Supervisor
 router.post("/", requireAuth, requireRole("admin"), createNewTeam);
