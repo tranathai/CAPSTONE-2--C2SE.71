@@ -53,12 +53,12 @@ export async function deleteTopicByIdForTeam(topicId, teamId) {
 
 export async function deleteActiveTopicsByTeam(teamId) {
   const [rows] = await pool.query(
-    `SELECT id FROM topic_registrations WHERE team_id = ? AND status IN ('pending','approved','rejected')`,
+    `SELECT id FROM topic_registrations WHERE team_id = ? AND status IN ('pending','rejected')`,
     [teamId],
   );
   if (!rows.length) return [];
   await pool.query(
-    `DELETE FROM topic_registrations WHERE team_id = ? AND status IN ('pending','approved','rejected')`,
+    `DELETE FROM topic_registrations WHERE team_id = ? AND status IN ('pending','rejected')`,
     [teamId],
   );
   return rows.map((r) => Number(r.id));

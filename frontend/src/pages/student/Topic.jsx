@@ -279,17 +279,19 @@ export default function StudentTopic() {
                       Đăng ký lại
                     </button>
                   )}
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={() => {
-                      setDeleteTeamId(slot.team_id);
-                      setShowDeleteConfirm(true);
-                    }}
-                    disabled={deleting}
-                  >
-                    <Icon name="Trash" size={14} /> Xóa đề tài nhóm này
-                  </button>
+                  {slot.topic.status !== "approved" && (
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={() => {
+                        setDeleteTeamId(slot.team_id);
+                        setShowDeleteConfirm(true);
+                      }}
+                      disabled={deleting}
+                    >
+                      <Icon name="Trash" size={14} /> Xóa đề tài nhóm này
+                    </button>
+                  )}
                 </div>
               </>
             )}

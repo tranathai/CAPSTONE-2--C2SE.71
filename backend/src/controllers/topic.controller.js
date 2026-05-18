@@ -335,6 +335,12 @@ export async function deleteMyTopic(req, res, next) {
     if (!topic) {
       return res.status(404).json({ success: false, message: "Không có đề tài để xóa" });
     }
+    if (topic.status === "approved") {
+      return res.status(400).json({
+        success: false,
+        message: "Không thể xóa đề tài đã được giảng viên duyệt",
+      });
+    }
 
     const deletedIds = await deleteActiveTopicsByTeam(teamId);
     if (!deletedIds.length) {
