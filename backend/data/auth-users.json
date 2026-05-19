@@ -1,0 +1,16 @@
+[
+	{
+		"id": "user_trananhthai12a6",
+		"email": "trananhthai12a6@gmail.com",
+		"password": "Student@123",
+		"fullName": "Tran Anh Thai",
+		"role": "student"
+	},
+	{
+		"id": "user_henny4",
+		"email": "henny4@gmail.com",
+		"password": "Mentor@123",
+		"fullName": "Henny",
+		"role": "teacher"
+	}
+]

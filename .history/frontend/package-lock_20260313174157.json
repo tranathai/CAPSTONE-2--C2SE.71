@@ -4662,7 +4662,7 @@
       "license": "MIT",
       "dependencies": {
         "browserslist": "^4.28.1",
-        "caniuse-lite": "^1.0.30001774",
+        "caniuse-lite": "^1.0.50001774",
         "fraction.js": "^5.3.4",
         "picocolors": "^1.1.1",
         "postcss-value-parser": "^4.2.0"
@@ -5158,7 +5158,7 @@
       "license": "MIT",
       "dependencies": {
         "baseline-browser-mapping": "^2.9.0",
-        "caniuse-lite": "^1.0.30001759",
+        "caniuse-lite": "^1.0.50001759",
         "electron-to-chromium": "^1.5.263",
         "node-releases": "^2.0.27",
         "update-browserslist-db": "^1.2.0"
@@ -5306,8 +5306,8 @@
       }
     },
     "node_modules/caniuse-lite": {
-      "version": "1.0.30001777",
-      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001777.tgz",
+      "version": "1.0.50001777",
+      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.50001777.tgz",
       "integrity": "sha512-tmN+fJxroPndC74efCdp12j+0rk0RHwV5Jwa1zWaFVyw2ZxAuPeG8ZgWC3Wz7uSjT3qMRQ5XHZ4COgQmsCMJAQ==",
       "funding": [
         {

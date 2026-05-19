@@ -1,0 +1,159 @@
+.rdp-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.rdp-wrap--invalid {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.rdp-panel--invalid {
+  border-color: #dc2626;
+}
+
+.rdp-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.rdp-panel--single {
+  padding-top: 10px;
+}
+
+.rdp-hint {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.rdp-hint--tight {
+  margin: 0 0 6px;
+}
+
+.rdp-section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  margin: 0 0 6px;
+  letter-spacing: 0.02em;
+}
+
+.rdp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.rdp-chips--selected {
+  min-height: 0;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.rdp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: none;
+  font-family: inherit;
+  cursor: default;
+}
+
+.rdp-chip button {
+  border: none;
+  background: transparent;
+  color: #1e40af;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.rdp-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.rdp-quick button {
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.rdp-quick button:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.rdp-quick button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rdp-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.rdp-row--tight {
+  margin-bottom: 0;
+}
+
+.rdp-summary {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 8px;
+  line-height: 1.35;
+}
+
+.student-doc-btn {
+  font-size: 0.8rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.student-doc-btn:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.student-doc-btn--active {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.student-doc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

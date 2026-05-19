@@ -1,0 +1,141 @@
+.topic-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.topic-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  max-width: 520px;
+  width: 100%;
+  max-height: min(90vh, 640px);
+  overflow: auto;
+}
+
+.topic-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 0;
+}
+
+.topic-modal-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.topic-modal-close {
+  border: none;
+  background: #f1f5f9;
+  color: #475569;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.topic-modal-close:hover {
+  background: #e2e8f0;
+}
+
+.topic-modal-body {
+  padding: 16px 20px 24px;
+}
+
+.topic-modal-body .form-group {
+  margin-bottom: 16px;
+}
+
+.topic-modal-body label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.topic-modal-body .form-input,
+.topic-modal-body select.form-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.topic-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.student-topic-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.student-topic-heading.page-header {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 200px;
+}
+
+.student-topic-heading.page-header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+  line-height: 1.25;
+}
+
+.student-topic-heading.page-header p {
+  color: #64748b;
+  margin-top: 4px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.student-topic-toolbar-actions {
+  flex-shrink: 0;
+  padding-top: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.student-topic-register-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+}
+
+.student-topic-register-btn--blocked {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.student-topic-register-btn--blocked:hover {
+  background: #1e40af;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(30, 64, 175, 0.3);
+}

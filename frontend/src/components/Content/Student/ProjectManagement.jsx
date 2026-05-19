@@ -4,6 +4,22 @@ import { Link, useParams } from "react-router-dom";
 import { API_ORIGIN, listSubmissions, uploadSubmission } from "../../../lib/api";
 import "../../../styles/content.css";
 
+const PROJECT_SUBMISSIONS_KEY = "mentorai_project_submissions";
+
+function readProjectSubmissions() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PROJECT_SUBMISSIONS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function findSubmissionById(submissionId) {
+  const submissions = readProjectSubmissions();
+  return submissions.find((item) => String(item.id) === String(submissionId)) || null;
+}
+
 function badgeClass(status) {
   if (!status) return "pm-badge pending";
   const normalized = String(status).toLowerCase();
@@ -12,8 +28,10 @@ function badgeClass(status) {
   return "pm-badge";
 }
 
-function ProjectManagement() {
-  const { teamId } = useParams();
+function ProjectManagement({ teamId: propTeamId, projectItem: propProjectItem }) {
+  const { teamId: paramTeamId } = useParams();
+  const projectItem = propProjectItem || null;
+  const teamId = propTeamId || paramTeamId || projectItem?.teamId || projectItem?.submissionId || null;
   const numericTeamId = Number(teamId);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,8 +41,14 @@ function ProjectManagement() {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const isApprovedProject = projectItem?.kind === "approved";
 
   async function reload() {
+    if (isApprovedProject) {
+      setItems([]);
+      return;
+    }
+
     const data = await listSubmissions(
       Number.isInteger(numericTeamId) && numericTeamId > 0 ? { team_id: numericTeamId } : {},
     );
@@ -37,6 +61,11 @@ function ProjectManagement() {
       try {
         setLoading(true);
         setError("");
+        if (isApprovedProject) {
+          if (active) setItems([]);
+          return;
+        }
+
         const data = await listSubmissions(
           Number.isInteger(numericTeamId) && numericTeamId > 0
             ? { team_id: numericTeamId }
@@ -53,9 +82,62 @@ function ProjectManagement() {
     return () => {
       active = false;
     };
-  }, [numericTeamId]);
+  }, [numericTeamId, isApprovedProject]);
 
-  const project = useMemo(() => items[0] || null, [items]);
+  const approvedProject = useMemo(() => {
+    if (!isApprovedProject) {
+      return null;
+    }
+
+    if (projectItem?.submissionId) {
+      return findSubmissionById(projectItem.submissionId) || null;
+    }
+
+    return null;
+  }, [isApprovedProject, projectItem]);
+
+  const project = useMemo(() => {
+    if (isApprovedProject) {
+      return approvedProject || {
+        id: projectItem?.submissionId || projectItem?.id,
+        title: projectItem?.name,
+        projectTitle: projectItem?.name,
+        team_name: projectItem?.name,
+        student_name: "",
+        teamMembers: [],
+        roadmapMilestones: [],
+      };
+    }
+
+    return items[0] || null;
+  }, [approvedProject, items, isApprovedProject, projectItem]);
+
+  const projectMembers = useMemo(() => {
+    if (isApprovedProject) {
+      return Array.isArray(project?.teamMembers) ? project.teamMembers : [];
+    }
+
+    return [
+      {
+        email: project?.student_email || project?.studentEmail || "nguyenvana@gmail.com",
+        fullName: project?.student_name || project?.studentName || "Nguyen Van A",
+        isLeader: true,
+      },
+    ];
+  }, [project, isApprovedProject]);
+
+  const projectMilestones = useMemo(() => {
+    if (isApprovedProject) {
+      return Array.isArray(project?.roadmapMilestones) ? project.roadmapMilestones : [];
+    }
+
+    return [
+      { id: "proposal", title: "Proposal" },
+      { id: "milestone-1", title: "Milestone 1" },
+      { id: "milestone-2", title: "Milestone 2" },
+      { id: "final", title: "Final Report" },
+    ];
+  }, [project, isApprovedProject]);
 
   function resolveFileUrl(row) {
     const direct = row?.file_url || row?.fileUrl;
@@ -108,9 +190,9 @@ function ProjectManagement() {
         />
         <div>
           <h1 className="pm-hero-title">
-            {project?.title || "Eco-Track: Sustainable Campus Initiative"}
+            {project?.title || project?.projectTitle || projectItem?.name || "Eco-Track: Sustainable Campus Initiative"}
           </h1>
-          <p className="pm-hero-meta">{`Group Project: ${project?.team_name || "C2SE71"}`}</p>
+          <p className="pm-hero-meta">{`Group Project: ${project?.team_name || projectItem?.name || "C2SE71"}`}</p>
           <p className="pm-hero-meta">Project Mentor: Alex</p>
         </div>
       </section>
@@ -130,14 +212,27 @@ function ProjectManagement() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>{project?.team_name || "C2SE71"}</td>
-                <td>28201152213</td>
-                <td>{project?.student_name || "Nguyen Van A"}</td>
-                <td>☑</td>
-                <td>0797446259</td>
-                <td>nguyenvana@gmail.com</td>
-              </tr>
+              {projectMembers.length > 0 ? (
+                projectMembers.map((member, index) => (
+                  <tr key={`${member.email || member.fullName || index}`}>
+                    <td>{project?.team_name || projectItem?.name || "C2SE71"}</td>
+                    <td>{index === 0 ? "28201152213" : "—"}</td>
+                    <td>{member.fullName || member.name || "Nguyen Van A"}</td>
+                    <td>{index === 0 || member.isLeader ? "☑" : ""}</td>
+                    <td>{index === 0 ? "0797446259" : "—"}</td>
+                    <td>{member.email || "nguyenvana@gmail.com"}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td>{project?.team_name || projectItem?.name || "C2SE71"}</td>
+                  <td>28201152213</td>
+                  <td>{project?.student_name || "Nguyen Van A"}</td>
+                  <td>☑</td>
+                  <td>0797446259</td>
+                  <td>nguyenvana@gmail.com</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -146,30 +241,44 @@ function ProjectManagement() {
       <section className="pm-card pm-workflow">
         <h2 className="pm-section-title">Project Workflow</h2>
         <div className="pm-steps">
-          <span className="active">Proposal</span>
-          <span>Milestone 1</span>
-          <span>Milestone 2</span>
-          <span>Final Report</span>
+          {projectMilestones.length > 0 ? (
+            projectMilestones.map((milestone, index) => (
+              <span key={milestone.id || milestone.title} className={index === 0 ? "active" : ""}>
+                {milestone.title || milestone.label || `Milestone ${index + 1}`}
+              </span>
+            ))
+          ) : (
+            <>
+              <span className="active">Proposal</span>
+              <span>Milestone 1</span>
+              <span>Milestone 2</span>
+              <span>Final Report</span>
+            </>
+          )}
         </div>
       </section>
 
       <section className="pm-card">
         <div className="pm-title-row">
           <h2 className="pm-section-title">Project Deliverables</h2>
-          <button
-            type="button"
-            className="pm-icon-btn"
-            onClick={() => {
-              setUploadError("");
-              setUploadOpen(true);
-            }}
-            aria-label="Upload tài liệu"
-            title="Upload tài liệu"
-          >
-            <UploadCloud size={18} />
-          </button>
+          {!isApprovedProject ? (
+            <button
+              type="button"
+              className="pm-icon-btn"
+              onClick={() => {
+                setUploadError("");
+                setUploadOpen(true);
+              }}
+              aria-label="Upload tài liệu"
+              title="Upload tài liệu"
+            >
+              <UploadCloud size={18} />
+            </button>
+          ) : null}
         </div>
-        {loading ? (
+        {isApprovedProject ? (
+          <div className="page-muted">Chua co tai lieu duoc upload cho project nay.</div>
+        ) : loading ? (
           <p className="page-status">Đang tải danh sách…</p>
         ) : error ? (
           <p className="form-error">{error}</p>
@@ -227,7 +336,7 @@ function ProjectManagement() {
         )}
       </section>
 
-      {uploadOpen ? (
+      {!isApprovedProject && uploadOpen ? (
         <div
           className="upload-dialog-overlay"
           role="presentation"

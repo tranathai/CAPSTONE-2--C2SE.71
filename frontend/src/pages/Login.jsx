@@ -1,167 +1,98 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
-import axios from 'axios';
-import './Login.css';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
+import { auth } from "../lib/api.js";
+import Icon from "../components/UI/Icon.jsx";
+import "./Login.css";
 
-const Login = () => {
+export default function Login() {
   const navigate = useNavigate();
-  const { role } = useParams();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const { login } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const getApiErrorMessage = (err) => {
-    if (!err.response) {
-      return 'Khong the ket noi backend. Hay chay backend o cong 5000.';
-    }
-
-    if (err.response?.data?.message) {
-      return err.response.data.message;
-    }
-
-    if (err.response.status >= 500) {
-      return 'Backend dang loi (500). Vui long kiem tra terminal backend.';
-    }
-
-    return 'Da co loi xay ra';
-  };
-
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@(gmail\.com|gmail\.edu\.vn)$/;
-    return emailRegex.test(email);
-  };
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-    setError('');
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    // Validate email format
-    if (!validateEmail(formData.email)) {
-      setError('Gmail không đúng định dạng vui lòng nhập lại');
-      setLoading(false);
+    if (!email.trim()) {
+      setError("Vui lòng nhập email");
       return;
     }
-
+    setError("");
+    setLoading(true);
     try {
-      const response = await axios.post('/api/auth/login', {
-        ...formData,
-        role
-      });
-
-      if (response.data.success) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        navigate('/dashboard');
-      }
+      const res = await auth.login(email.trim(), password);
+      login(res.token, res.user);
+      const role = res.user.role;
+      if (role === "admin") navigate("/admin/dashboard", { replace: true });
+      else if (role === "supervisor") navigate("/supervisor/dashboard", { replace: true });
+      else navigate("/student/dashboard", { replace: true });
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      const msg =
+        err.response?.data?.message ||
+        (typeof err.response?.data === "string" ? err.response.data : null) ||
+        err.message ||
+        "Đăng nhập thất bại";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const getRoleTitle = () => {
-    return role === 'student' ? 'Sinh viên' : 'Giảng viên';
-  };
-
   return (
-    <div className="login-container">
-      <div className="login-header">
-        <div className="logo">
-          <span className="logo-icon">🏠</span>
-          <span className="logo-text">MentorAI Grad</span>
-        </div>
-        <div className="header-links">
-          <a href="#home">Home</a>
-          <a href="#about">About</a>
-          <a href="#support">Support</a>
-          <Link to={`/register/${role}`}>
-            <button className="register-btn">Register</button>
-          </Link>
-        </div>
+    <div className="login-page">
+      <div className="login-brand">
+        <h1 className="brand-name">MentorAI Grad</h1>
+        <p className="brand-tagline">Hệ thống quản lý đồ án capstone</p>
       </div>
 
-      <div className="login-content">
-        <div className="login-box">
-          <div className="lock-icon">🔒</div>
-          <h1>Welcome Back</h1>
-          <p className="subtitle">Đăng nhập với tư cách {getRoleTitle()}</p>
-
-          {error && <div className="error-message">{error}</div>}
-
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="email">
-                <span className="icon">@</span> Email Address
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                placeholder="name@university.edu"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="password">
-                <span className="icon">🔑</span> Password
-              </label>
-              <div className="password-input">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  name="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                />
-                <button
-                  type="button"
-                  className="toggle-password"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? '👁️' : '👁️‍🗨️'}
-                </button>
-              </div>
-            </div>
-
-            <div className="form-footer">
-              <a href="#forgot" className="forgot-password">Forgot password?</a>
-            </div>
-
-            <button type="submit" className="signin-btn" disabled={loading}>
-              {loading ? 'Đang đăng nhập...' : 'Sign In →'}
-            </button>
-          </form>
-
-          <div className="signup-link">
-            Don't have an account? <Link to={`/register/${role}`}>Register now</Link>
-          </div>
-
-          <div className="back-link">
-            <Link to="/">← Quay lại chọn vai trò</Link>
-          </div>
+      <div className="login-card">
+        <div className="login-card-header">
+          <div className="login-icon"><Icon name="School" size={48} sx={{ color: "#1e40af" }} /></div>
+          <h2>Đăng nhập</h2>
+          <p>Nhập email và mật khẩu được cấp bởi quản trị viên</p>
         </div>
+
+        {error && <div className="login-error">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="login-form">
+          <div className="form-field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@domain.com"
+              autoComplete="email"
+              autoFocus
+            />
+          </div>
+
+          <div className="form-field">
+            <label htmlFor="password">Mật khẩu</label>
+            <div className="password-wrap">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Nhập mật khẩu"
+                autoComplete="current-password"
+              />
+              <button type="button" className="toggle-pw" onClick={() => setShowPassword((v) => !v)}>
+                {showPassword ? <Icon name="VisibilityOff" size={18} /> : <Icon name="Visibility" size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" className="login-btn" disabled={loading}>
+            {loading ? "Đang đăng nhập..." : "Đăng nhập →"}
+          </button>
+        </form>
       </div>
     </div>
   );
-};
-
-export default Login;
+}

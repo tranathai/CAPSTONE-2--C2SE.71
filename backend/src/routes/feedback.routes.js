@@ -1,12 +1,12 @@
 import { Router } from "express";
-import {
-  getFeedbacksByVersionId,
-  postFeedback,
-} from "../controllers/feedback.controller.js";
+import { getFeedbacksByVersion, submitFeedback, updateExistingFeedback } from "../controllers/feedback.controller.js";
+import { requireAuth } from "../middleware/auth.js";
+import { requireRole } from "../middleware/roleGuard.js";
 
-const feedbackRouter = Router();
+const router = Router();
 
-feedbackRouter.get("/:versionId", getFeedbacksByVersionId);
-feedbackRouter.post("/", postFeedback);
+router.get("/version/:versionId", requireAuth, getFeedbacksByVersion);
+router.post("/", requireAuth, requireRole("supervisor"), submitFeedback);
+router.put("/:id", requireAuth, requireRole("supervisor"), updateExistingFeedback);
 
-export default feedbackRouter;
+export default router;

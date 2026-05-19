@@ -790,3 +790,192 @@
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+/* Student team directory — up to 5 members per row */
+.team-members-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(var(--member-cols, 5), minmax(0, 1fr));
+}
+
+@media (max-width: 768px) {
+  .team-members-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}
+
+.team-member-card {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  min-width: 0;
+}
+
+.team-member-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.team-member-card__avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: #3b82f6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.team-member-card__info {
+  min-width: 0;
+  flex: 1;
+}
+
+.team-member-card__name {
+  font-weight: 700;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.25;
+}
+
+.team-member-card__mssv {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.team-member-card__contact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.team-member-card__contact-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.team-member-card__contact-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-members-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.team-leader-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.team-leader-menu__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.team-leader-menu__trigger:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.team-leader-menu__trigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.team-leader-menu__dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 260px;
+  max-width: min(320px, 90vw);
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.team-leader-menu__title {
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.team-leader-menu__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.team-leader-menu__item:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.team-leader-menu__item:disabled {
+  cursor: default;
+}
+
+.team-leader-menu__item--active {
+  background: #fffbeb;
+}
+
+.team-leader-menu__item-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.team-leader-menu__action {
+  font-size: 0.75rem;
+  color: #2563eb;
+}
+
+.team-leader-menu__badge {
+  font-size: 0.72rem;
+  color: #b45309;
+  font-weight: 500;
+}

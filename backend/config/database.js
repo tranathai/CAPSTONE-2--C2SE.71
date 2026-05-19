@@ -1,13 +1,31 @@
-const mongoose = require('mongoose');
+const mysql = require('mysql2/promise');
+
+let pool;
 
 const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`Error: ${error.message}`);
-    process.exit(1);
+  if (pool) {
+    return pool;
   }
+
+  pool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT || 3306),
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'MentorAIGrad',
+    waitForConnections: true,
+    connectionLimit: Number(process.env.DB_POOL_SIZE || 10),
+    queueLimit: 0
+  });
+
+  await pool.query('SELECT 1');
+  console.log('MySQL Connected');
+  return pool;
 };
 
-module.exports = connectDB;
+const getPool = () => pool;
+
+module.exports = {
+  connectDB,
+  getPool
+};

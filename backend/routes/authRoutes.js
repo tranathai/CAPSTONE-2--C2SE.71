@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-// Using MOCK controller (no database)
-const { register, login, getMe, getAllMockUsers } = require('../controllers/authController.mock');
-const { protect } = require('../middleware/authMiddleware.mock');
+// Using MySQL database controller
+const { register, login, getMe, getAllMockUsers } = require('../controllers/authController.mysql');
+const { protect } = require('../middleware/authMiddleware');
 
 // Validation rules
 const registerValidation = [

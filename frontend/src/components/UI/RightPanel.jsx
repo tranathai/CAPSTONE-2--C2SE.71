@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getSubmission } from "../../lib/api";
+import { resolveSubmissionVersionId } from "../../lib/submissionVersion.js";
 import { MentorFeedbackSection } from "../Content/Mentor/MentorFeedbackSection";
 import "../../styles/rightpanel.css";
 
@@ -89,7 +90,7 @@ function RightPanel() {
           </p>
         ) : (
           <MentorFeedbackSection
-            submissionVersionId={submission?.submission_version_id}
+            submissionVersionId={resolveSubmissionVersionId(submission)}
             variant="panel"
             onFeedbacksChange={setFeedbacks}
           />

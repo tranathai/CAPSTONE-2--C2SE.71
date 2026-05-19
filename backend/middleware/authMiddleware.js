@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { getPool } = require('../config/database');
 
 exports.protect = async (req, res, next) => {
   let token;
@@ -10,16 +10,21 @@ exports.protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
 
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'temporary_secret_key');
 
-      // Get user from token
-      req.user = await User.findById(decoded.id).select('-password');
-
-      if (!req.user) {
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Không tìm thấy người dùng' 
-        });
+      // Get user from database
+      const pool = getPool();
+      if (pool) {
+        const [users] = await pool.query('SELECT id, email, full_name, role FROM users WHERE id = ?', [decoded.id]);
+        if (users.length === 0) {
+          return res.status(401).json({ 
+            success: false, 
+            message: 'Không tìm thấy người dùng' 
+          });
+        }
+        req.user = { id: users[0].id };
+      } else {
+        req.user = { id: decoded.id };
       }
 
       next();
@@ -30,9 +35,7 @@ exports.protect = async (req, res, next) => {
         message: 'Không có quyền truy cập' 
       });
     }
-  }
-
-  if (!token) {
+  } else if (!token) {
     return res.status(401).json({ 
       success: false, 
       message: 'Không có token, quyền truy cập bị từ chối' 
