@@ -53,6 +53,20 @@ export async function findSubmissionById(id) {
   return rows[0] || null;
 }
 
+/** Bài nộp hiện có của nhóm theo mốc + tên tài liệu (không phân biệt hoa thường). */
+export async function findSubmissionByTeamMilestoneTitle(teamId, milestoneId, title) {
+  const [rows] = await pool.query(
+    `SELECT s.id, s.team_id, s.milestone_id, s.title
+     FROM submissions s
+     WHERE s.team_id = ? AND s.milestone_id = ?
+       AND LOWER(TRIM(s.title)) = LOWER(TRIM(?))
+     ORDER BY s.id DESC
+     LIMIT 1`,
+    [teamId, milestoneId, title],
+  );
+  return rows[0] || null;
+}
+
 export async function findSubmissionVersions(submissionId) {
   const [rows] = await pool.query(
     `SELECT sv.id, sv.version_number, sv.file_path, sv.original_filename, sv.file_size,
@@ -113,7 +127,7 @@ export async function createSubmission({ teamId, milestoneId, title, filePath, o
 export async function findStudentSubmissionHistory(teamId, { sinceDate } = {}) {
   let sql = `SELECT s.id, s.team_id, s.milestone_id, s.title, s.submitted_at, s.status_label,
             m.name AS milestone_name, m.end_date AS milestone_deadline,
-            sv.id AS version_id, sv.version_number, sv.file_path, sv.is_late,
+            sv.id AS version_id, sv.version_number, sv.file_path, sv.is_late, sv.submitted_at AS version_submitted_at,
             EXISTS(SELECT 1 FROM feedbacks f WHERE f.submission_version_id = sv.id) AS has_feedback,
             EXISTS(SELECT 1 FROM feedbacks f WHERE f.submission_version_id = sv.id AND f.is_final = 1) AS has_final_feedback
      FROM submissions s
@@ -265,7 +279,7 @@ export async function addVersionToStudentSubmission({ submissionId, filePath, or
     );
 
     await connection.query(
-      `UPDATE submissions SET status_label = 'Pending Review', updated_at = NOW() WHERE id = ?`,
+      `UPDATE submissions SET status_label = 'Pending Review', submitted_at = NOW(), updated_at = NOW() WHERE id = ?`,
       [submissionId],
     );
 
@@ -302,6 +316,32 @@ export async function updateSubmissionTitle(submissionId, title, userId) {
     `UPDATE submissions SET title = ? WHERE id = ?`,
     [title, submissionId],
   );
+}
+
+export async function deleteStudentSubmission(submissionId, userId) {
+  const [memberRows] = await pool.query(
+    `SELECT 1 FROM team_members tm
+     INNER JOIN submissions s ON s.team_id = tm.team_id
+     WHERE s.id = ? AND tm.user_id = ?`,
+    [submissionId, userId],
+  );
+  if (memberRows.length === 0) {
+    throw new Error("Bạn không có quyền xóa bài nộp này");
+  }
+
+  const [subRows] = await pool.query(`SELECT id FROM submissions WHERE id = ?`, [submissionId]);
+  if (!subRows.length) {
+    throw new Error("Không tìm thấy bài nộp");
+  }
+
+  const [versions] = await pool.query(
+    `SELECT file_path FROM submission_versions WHERE submission_id = ?`,
+    [submissionId],
+  );
+  const filePaths = versions.map((v) => v.file_path).filter(Boolean);
+
+  await pool.query(`DELETE FROM submissions WHERE id = ?`, [submissionId]);
+  return { filePaths };
 }
 
 export async function deleteSubmissionVersion(versionId, userId) {

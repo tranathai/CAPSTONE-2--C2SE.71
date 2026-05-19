@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import Icon from "../../components/UI/Icon.jsx";
 import ConfirmModal from "../../components/UI/ConfirmModal.jsx";
-import { submissions, milestones, teams, topics } from "../../lib/api.js";
+import { submissions, milestones, teams, topics, getApiErrorMessage } from "../../lib/api.js";
 import { useToast } from "../../hooks/useToast.js";
 import { useNavigate } from "react-router-dom";
 import StudentRequiredDocumentSelect, {
@@ -46,6 +46,7 @@ export default function StudentSubmissions() {
   const [uploadingVersionForId, setUploadingVersionForId] = useState(null);
   const versionFileRef = useRef(null);
   const [deleteVersionId, setDeleteVersionId] = useState(null);
+  const [deleteSubmissionTarget, setDeleteSubmissionTarget] = useState(null);
   const [versionHistorySubmission, setVersionHistorySubmission] = useState(null);
   const { toast, showToast } = useToast();
   const navigate = useNavigate();
@@ -130,8 +131,8 @@ export default function StudentSubmissions() {
     formData.append("title", selectedDocument.trim());
 
     try {
-      await submissions.studentUpload(formData);
-      showToast("Upload thành công!", "success");
+      const res = await submissions.studentUpload(formData);
+      showToast(res?.message || "Upload thành công!", "success");
       setShowUpload(false);
       setSelectedMilestone("");
       setFile(null);
@@ -195,13 +196,30 @@ export default function StudentSubmissions() {
     const vid = deleteVersionId;
     try {
       await submissions.deleteVersion(vid);
-      showToast("Xóa thành công!", "success");
+      showToast("Xóa phiên bản thành công!", "success");
       setDeleteVersionId(null);
       await refreshSubmissionHistory();
       notifyStudentSubmissionsChanged();
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || "Xóa thất bại";
-      showToast(msg, "error");
+      showToast(getApiErrorMessage(err, "Xóa thất bại"), "error");
+    }
+  };
+
+  const executeDeleteSubmission = async () => {
+    if (!deleteSubmissionTarget) return;
+    const { id } = deleteSubmissionTarget;
+    try {
+      await submissions.remove(id);
+      showToast("Đã xóa tài liệu", "success");
+      setDeleteSubmissionTarget(null);
+      if (editingSubmission === id) {
+        setEditingSubmission(null);
+        setEditDocument("");
+      }
+      await refreshSubmissionHistory();
+      notifyStudentSubmissionsChanged();
+    } catch (err) {
+      showToast(getApiErrorMessage(err, "Xóa tài liệu thất bại"), "error");
     }
   };
 
@@ -303,6 +321,21 @@ export default function StudentSubmissions() {
         danger
         onCancel={() => setDeleteVersionId(null)}
         onConfirm={executeDeleteVersion}
+      />
+
+      <ConfirmModal
+        open={deleteSubmissionTarget != null}
+        title="Xóa tài liệu"
+        message={
+          deleteSubmissionTarget
+            ? `Bạn có chắc muốn xóa "${deleteSubmissionTarget.title}" và toàn bộ phiên bản đã nộp? Thao tác không thể hoàn tác.`
+            : ""
+        }
+        confirmLabel="Xóa tài liệu"
+        cancelLabel="Hủy"
+        danger
+        onCancel={() => setDeleteSubmissionTarget(null)}
+        onConfirm={executeDeleteSubmission}
       />
 
       <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
@@ -540,7 +573,22 @@ export default function StudentSubmissions() {
                           <Icon name="Edit" size={14} />
                         </button>
                         {Number(s.version_number) > 1 && (
-                          <button className="btn btn-sm btn-danger" onClick={() => setDeleteVersionId(s.version_id)}>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger"
+                            title="Xóa phiên bản hiện tại"
+                            onClick={() => setDeleteVersionId(s.version_id)}
+                          >
+                            <Icon name="Trash" size={14} />
+                          </button>
+                        )}
+                        {editingSubmission !== s.id && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger"
+                            title="Xóa tài liệu"
+                            onClick={() => setDeleteSubmissionTarget({ id: s.id, title: s.title })}
+                          >
                             <Icon name="Trash" size={14} />
                           </button>
                         )}

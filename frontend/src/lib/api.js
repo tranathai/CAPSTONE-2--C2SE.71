@@ -141,14 +141,20 @@ export const submissions = {
   upload: (formData) => client.post("/submissions/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   }).then((r) => body(r.data)),
-  studentUpload: (formData) => client.post("/submissions/student/upload", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  }).then((r) => body(r.data)),
+  studentUpload: (formData) =>
+    client.post("/submissions/student/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((r) => {
+      const d = r.data;
+      if (d?.success === false) throw new Error(d.message || "API error");
+      return d;
+    }),
   studentUploadVersion: (formData) => client.post("/submissions/student/upload-version", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   }).then((r) => body(r.data)),
   update: (id, data) => client.put(`/submissions/${id}`, data).then((r) => body(r.data)),
   deleteVersion: (versionId) => client.delete(`/submissions/version/${versionId}`).then((r) => body(r.data)),
+  remove: (id) => client.delete(`/submissions/${id}`).then((r) => body(r.data)),
   byMilestone: (teamId, milestoneId) => client.get(`/submissions/team/${teamId}/milestone/${milestoneId}`).then((r) => body(r.data)),
 };
 

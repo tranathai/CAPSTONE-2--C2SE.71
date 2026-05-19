@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 import {
   findAllSubmissions,
   findSubmissionById,
@@ -7,8 +8,10 @@ import {
   findStudentSubmissionHistory,
   findSupervisorSubmissions,
   createStudentSubmission,
+  findSubmissionByTeamMilestoneTitle,
   addVersionToStudentSubmission,
   updateSubmissionTitle,
+  deleteStudentSubmission,
   deleteSubmissionVersion,
   findSubmissionsByMilestone,
 } from "../models/submission.model.js";
@@ -307,12 +310,33 @@ export async function studentUploadSubmission(req, res, next) {
       return res.status(400).json({ success: false, message: titleCheck.message });
     }
     const submissionTitle = titleCheck.title;
-    const result = await createStudentSubmission({
-      teamId, milestoneId, title: submissionTitle,
-      filePath: `/uploads/${req.file.filename}`,
+    const filePath = `/uploads/${req.file.filename}`;
+    const fileMeta = {
+      filePath,
       originalFilename: req.file.originalname,
-      fileSize: req.file.size, userId,
-    });
+      fileSize: req.file.size,
+      userId,
+    };
+
+    const existing = await findSubmissionByTeamMilestoneTitle(teamId, milestoneId, submissionTitle);
+    let result;
+    let responseMessage;
+
+    if (existing) {
+      result = await addVersionToStudentSubmission({
+        submissionId: existing.id,
+        ...fileMeta,
+      });
+      responseMessage = `Đã cập nhật lên phiên bản v${result.versionNumber}`;
+    } else {
+      result = await createStudentSubmission({
+        teamId,
+        milestoneId,
+        title: submissionTitle,
+        ...fileMeta,
+      });
+      responseMessage = "Upload thành công";
+    }
 
     const [topicRows] = await pool.query(
       `SELECT supervisor_id FROM topic_registrations WHERE team_id = ? AND status = 'approved' LIMIT 1`,
@@ -321,14 +345,16 @@ export async function studentUploadSubmission(req, res, next) {
     if (topicRows[0]?.supervisor_id) {
       await createNotification({
         userId: topicRows[0].supervisor_id,
-        title: "Nộp bài mới",
-        message: `Nhóm đã nộp bài: "${submissionTitle}"`,
+        title: existing ? "Cập nhật phiên bản bài nộp" : "Nộp bài mới",
+        message: existing
+          ? `Nhóm đã nộp phiên bản mới (v${result.versionNumber}): "${submissionTitle}"`
+          : `Nhóm đã nộp bài: "${submissionTitle}"`,
         type: "feedback",
         relatedUrl: `/mentor/review/${result.submissionId}`,
       });
     }
 
-    return res.status(201).json({ success: true, message: "Upload thành công", data: result });
+    return res.status(201).json({ success: true, message: responseMessage, data: result });
   } catch (error) {
     if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
     next(error);
@@ -407,6 +433,33 @@ export async function deleteVersion(req, res, next) {
     await deleteSubmissionVersion(Number(versionId), userId);
     return res.status(200).json({ success: true, message: "Xóa phiên bản thành công" });
   } catch (error) {
+    if (error.message) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    next(error);
+  }
+}
+
+export async function deleteSubmissionById(req, res, next) {
+  try {
+    const submissionId = Number(req.params.id);
+    const userId = req.user.id;
+    if (!submissionId || submissionId <= 0) {
+      return res.status(400).json({ success: false, message: "submission id không hợp lệ" });
+    }
+
+    const { filePaths } = await deleteStudentSubmission(submissionId, userId);
+    for (const fp of filePaths) {
+      const rel = String(fp).replace(/^\/uploads\/?/, "");
+      const abs = path.join(process.cwd(), "uploads", rel);
+      await fs.promises.unlink(abs).catch(() => {});
+    }
+
+    return res.status(200).json({ success: true, message: "Đã xóa tài liệu" });
+  } catch (error) {
+    if (error.message) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     next(error);
   }
 }

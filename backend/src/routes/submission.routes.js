@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { listSubmissions, getSubmission, uploadSubmission, getMySubmissions, getSupervisorSubmissions, getDashboardStats, getMySubmissionsByTeam, studentUploadSubmission, studentUploadNewVersion, updateSubmission, deleteVersion, getSubmissionsByMilestone } from "../controllers/submission.controller.js";
+import { listSubmissions, getSubmission, uploadSubmission, getMySubmissions, getSupervisorSubmissions, getDashboardStats, getMySubmissionsByTeam, studentUploadSubmission, studentUploadNewVersion, updateSubmission, deleteVersion, deleteSubmissionById, getSubmissionsByMilestone } from "../controllers/submission.controller.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/roleGuard.js";
 import { uploadSingle } from "../middleware/upload.js";
@@ -18,6 +18,7 @@ router.post("/student/upload", requireAuth, requireRole("student"), uploadSingle
 router.post("/student/upload-version", requireAuth, requireRole("student"), uploadSingle("file"), studentUploadNewVersion);
 router.put("/:id", requireAuth, requireRole("student"), updateSubmission);
 router.delete("/version/:versionId", requireAuth, requireRole("student"), deleteVersion);
+router.delete("/:id", requireAuth, requireRole("student"), deleteSubmissionById);
 router.get("/team/:teamId/milestone/:milestoneId", requireAuth, getSubmissionsByMilestone);
 
 export default router;
