@@ -132,8 +132,9 @@ app.use(errorHandler);
 // ─── Bootstrap & Start ────────────────────────────────────────────────────────
 bootstrapDatabase()
   .then(() => {
-    httpServer.listen(port, () => {
-      console.log(`\n🚀 MentorAI Grad API ready at http://localhost:${port}`);
+    const host = process.env.HOST || "0.0.0.0";
+    httpServer.listen(port, host, () => {
+      console.log(`\n🚀 MentorAI Grad API ready on ${host}:${port}`);
       console.log(`   Frontend:        http://localhost:5173`);
       console.log(`\n📋 Demo accounts:`);
       console.log(`   Admin:          admin@mentorai.edu / admin123`);

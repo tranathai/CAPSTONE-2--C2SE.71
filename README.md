@@ -280,6 +280,16 @@ cd frontend && npm run build
 
 ---
 
+## Deploy miễn phí (Vercel + Render)
+
+Hướng dẫn chi tiết: **[docs/DEPLOY_FREE_VERCEL_RENDER.md](docs/DEPLOY_FREE_VERCEL_RENDER.md)**
+
+- **Frontend:** [Vercel](https://vercel.com) → `frontend/`
+- **API:** [Render](https://render.com) free → `backend/`
+- **MySQL:** [Railway](https://railway.app) free (Render không có MySQL free)
+
+---
+
 ## Ghi chú phát triển
 
 - Schema MySQL được quản lý chủ yếu qua **`bootstrap.js`** khi server start; thêm cột mới dùng hàm `ensure*Column` trong file đó.
