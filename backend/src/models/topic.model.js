@@ -1,6 +1,35 @@
 import pool from "../config/db.js";
 import { findFinalMilestone } from "./milestone.model.js";
 
+export function parseSelectedMilestoneIds(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map((x) => Number(x)).filter((x) => x > 0);
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.map((x) => Number(x)).filter((x) => x > 0) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Đợt tốt nghiệp gắn với đề tài đã duyệt (từ mốc GV đã chọn). */
+export async function findGraduationBatchForTopic(topic) {
+  if (!topic || topic.status !== "approved") return null;
+  const ids = parseSelectedMilestoneIds(topic.selected_milestone_ids);
+  if (!ids.length) return null;
+
+  const [rows] = await pool.query(
+    `SELECT gb.id, gb.name, gb.description, gb.start_date, gb.end_date
+     FROM milestones m
+     INNER JOIN graduation_batches gb ON gb.id = m.graduation_batch_id
+     WHERE m.id IN (?)
+     GROUP BY gb.id, gb.name, gb.description, gb.start_date, gb.end_date
+     LIMIT 1`,
+    [ids],
+  );
+  return rows[0] || null;
+}
+
 export async function findTopicByTeamId(teamId) {
   const [rows] = await pool.query(
     `SELECT tr.id, tr.team_id, tr.title, tr.description, tr.technologies, tr.status,

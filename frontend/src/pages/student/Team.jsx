@@ -8,6 +8,24 @@ function studentMembers(members) {
   return (members || []).filter((m) => m.student_code);
 }
 
+function formatBatchRange(batch) {
+  if (!batch?.start_date && !batch?.end_date) return "";
+  const fmt = (v) => {
+    if (!v) return "—";
+    return new Date(v).toLocaleDateString("vi-VN");
+  };
+  return ` (${fmt(batch.start_date)} – ${fmt(batch.end_date)})`;
+}
+
+function graduationBatchLabel(team) {
+  if (team.graduation_batch?.name) {
+    return team.graduation_batch.name + formatBatchRange(team.graduation_batch);
+  }
+  if (team.topic?.status === "pending") return "Chờ duyệt đề tài";
+  if (team.topic?.status === "rejected") return "—";
+  return "—";
+}
+
 function TeamLeaderMenu({ team, open, onToggle, onSelectLeader, busy }) {
   const menuRef = useRef(null);
   const students = studentMembers(team.members);
@@ -137,7 +155,11 @@ export default function StudentTeam() {
               <div>
                 <h2 style={{ fontSize: "1.1rem", fontWeight: 700 }}>{team.name}</h2>
                 <p style={{ color: "#64748b", fontSize: "0.875rem", marginTop: 2 }}>
-                  {team.semester ? `Học kỳ: ${team.semester}` : ""}{team.semester && team.leader_name ? " • " : ""}
+                  {team.semester ? `Học kỳ: ${team.semester}` : ""}
+                  {team.semester ? " • " : ""}
+                  Đợt tốt nghiệp: <strong>{graduationBatchLabel(team)}</strong>
+                </p>
+                <p style={{ color: "#64748b", fontSize: "0.875rem", marginTop: 2 }}>
                   {team.leader_name ? `Trưởng nhóm: ${team.leader_name}` : ""}
                 </p>
                 <p style={{ color: "#475569", fontSize: "0.85rem", marginTop: 4 }}>

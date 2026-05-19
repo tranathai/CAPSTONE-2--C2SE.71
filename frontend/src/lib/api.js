@@ -100,7 +100,12 @@ export const milestones = {
   upcoming: (limit) => client.get("/milestones/upcoming", { params: { limit } }).then((r) => body(r.data)),
   get: (id) => client.get(`/milestones/${id}`).then((r) => body(r.data)),
   create: (data) => client.post("/milestones", data).then((r) => body(r.data)),
-  update: (id, data) => client.put(`/milestones/${id}`, data).then((r) => body(r.data)),
+  update: (id, data) =>
+    client.put(`/milestones/${id}`, data).then((r) => {
+      const d = r.data;
+      if (d?.success === false) throw new Error(d.message || "API error");
+      return d;
+    }),
   remove: (id) => client.delete(`/milestones/${id}`).then((r) => body(r.data)),
   batchList: () => client.get("/milestones/batches").then((r) => body(r.data)),
   createBatch: (data) => client.post("/milestones/batches", data).then((r) => body(r.data)),

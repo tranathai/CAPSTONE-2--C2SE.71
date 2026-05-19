@@ -3,6 +3,24 @@ import Icon from "../../components/UI/Icon.jsx";
 import { teams } from "../../lib/api.js";
 import { useMentorScopeRefresh } from "../../hooks/useMentorScopeRefresh.js";
 
+function formatBatchRange(batch) {
+  if (!batch?.start_date && !batch?.end_date) return "";
+  const fmt = (v) => {
+    if (!v) return "—";
+    return new Date(v).toLocaleDateString("vi-VN");
+  };
+  return ` (${fmt(batch.start_date)} – ${fmt(batch.end_date)})`;
+}
+
+function graduationBatchLabel(team) {
+  if (team.graduation_batch?.name) {
+    return team.graduation_batch.name + formatBatchRange(team.graduation_batch);
+  }
+  if (team.topic?.status === "pending") return "Chờ duyệt đề tài";
+  if (team.topic?.status === "rejected") return "—";
+  return "—";
+}
+
 export default function MentorTeams() {
   const [teamList, setTeamList] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -42,14 +60,19 @@ export default function MentorTeams() {
       ) : (
         teamList.map((t) => (
           <div key={t.id} className="card" style={{ marginBottom: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => selectTeam(t.id)}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", cursor: "pointer" }} onClick={() => selectTeam(t.id)}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>{t.name}</div>
                 <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: 2 }}>
                   {t.leader_name ? `Trưởng nhóm: ${t.leader_name}` : ""} • {t.member_count} thành viên
                 </div>
+                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: 4 }}>
+                  Đợt tốt nghiệp: <strong style={{ color: "#334155" }}>{graduationBatchLabel(t)}</strong>
+                </div>
               </div>
-              <span style={{ color: "#64748b", fontSize: "0.8rem" }}>{t.semester || ""}</span>
+              <div style={{ textAlign: "right", color: "#64748b", fontSize: "0.8rem" }}>
+                {t.semester || null}
+              </div>
             </div>
             {selectedTeam?.id === t.id && (
               <div style={{ marginTop: 12, borderTop: "1px solid #f1f5f9", paddingTop: 12 }}>

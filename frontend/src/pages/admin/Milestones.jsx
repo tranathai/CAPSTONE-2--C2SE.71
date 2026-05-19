@@ -336,8 +336,8 @@ export default function AdminMilestones() {
         graduation_batch_id: Number(selectedBatchId),
       };
       if (editId) {
-        await milestones.update(editId, payload);
-        showToast("Cập nhật thành công!", "success");
+        const result = await milestones.update(editId, payload);
+        showToast(result?.message || "Cập nhật thành công!", "success");
       } else {
         await milestones.create(payload);
         showToast("Tạo milestone thành công!", "success");

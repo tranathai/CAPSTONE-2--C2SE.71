@@ -3,6 +3,7 @@ import {
   findMilestoneById,
   createMilestone,
   updateMilestone,
+  applyMilestoneDisplayOrderSwap,
   deleteMilestone,
   findUpcomingMilestones,
   findAllGraduationBatches,
@@ -212,17 +213,33 @@ export async function update(req, res, next) {
           : []
         : undefined;
 
+    let orderSwap = { swapped: false, swappedWith: null };
+    if (display_order !== undefined && display_order !== null) {
+      orderSwap = await applyMilestoneDisplayOrderSwap(id, display_order, effBatchId);
+    }
+
     await updateMilestone(id, {
       name: nameForUpdate,
       description,
       startDate: start_date,
       endDate: end_date,
       deadlineType: deadline_type,
-      displayOrder: display_order,
+      displayOrder:
+        display_order !== undefined && display_order !== null ? Number(display_order) : undefined,
       requiredDocuments: reqDocs,
       graduationBatchId: graduation_batch_id !== undefined && graduation_batch_id !== null ? Number(graduation_batch_id) : undefined,
     });
-    return res.status(200).json({ success: true, message: "Cập nhật milestone thành công" });
+
+    let message = "Cập nhật milestone thành công";
+    if (orderSwap.swapped && orderSwap.swappedWith?.name) {
+      message = `Cập nhật thành công. Đã hoán đổi thứ tự hiển thị với mốc "${orderSwap.swappedWith.name}".`;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message,
+      data: { swapped_with: orderSwap.swappedWith },
+    });
   } catch (error) {
     next(error);
   }

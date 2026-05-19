@@ -18,7 +18,7 @@ import {
   findStudentOtherTeamInSemester,
   findStudentUserIdsInSemester,
 } from "../models/team.model.js";
-import { findTopicByTeamId, hasActiveTopic } from "../models/topic.model.js";
+import { findTopicByTeamId, findGraduationBatchForTopic, hasActiveTopic } from "../models/topic.model.js";
 import pool from "../config/db.js";
 import { io } from "../server.js";
 
@@ -83,7 +83,8 @@ export async function getMyTeam(req, res, next) {
       teamRows.map(async (team) => {
         const members = await findTeamMembers(team.id);
         const topic = await findTopicByTeamId(team.id);
-        return { ...team, members, topic };
+        const graduation_batch = await findGraduationBatchForTopic(topic);
+        return { ...team, members, topic, graduation_batch };
       }),
     );
 
@@ -107,10 +108,11 @@ export async function getTeam(req, res, next) {
 
     const members = await findTeamMembers(teamId);
     const topic = await findTopicByTeamId(teamId);
+    const graduation_batch = await findGraduationBatchForTopic(topic);
 
     return res.status(200).json({
       success: true,
-      data: { ...team, members, topic },
+      data: { ...team, members, topic, graduation_batch },
     });
   } catch (error) {
     next(error);
@@ -130,8 +132,15 @@ export async function getTeams(req, res, next) {
 export async function getMySuperviseeTeams(req, res, next) {
   try {
     const supervisorId = req.user.id;
-    const teams = await findTeamsBySupervisorId(supervisorId);
-    return res.status(200).json({ success: true, data: teams });
+    const teamRows = await findTeamsBySupervisorId(supervisorId);
+    const data = await Promise.all(
+      teamRows.map(async (team) => {
+        const topic = await findTopicByTeamId(team.id);
+        const graduation_batch = await findGraduationBatchForTopic(topic);
+        return { ...team, topic, graduation_batch };
+      }),
+    );
+    return res.status(200).json({ success: true, data });
   } catch (error) {
     next(error);
   }

@@ -133,6 +133,55 @@ export async function createMilestone({
   return result.insertId;
 }
 
+/**
+ * Đổi thứ tự hiển thị; nếu đã có mốc khác cùng đợt dùng số thứ tự đó thì hoán đổi (vd. 2 ↔ 3).
+ * @returns {{ swapped: boolean, swappedWith: { id: number, name: string } | null }}
+ */
+export async function applyMilestoneDisplayOrderSwap(milestoneId, newOrder, graduationBatchId) {
+  const existing = await findMilestoneById(milestoneId);
+  if (!existing) return { swapped: false, swappedWith: null };
+
+  const target = Number(newOrder);
+  const current = Number(existing.display_order ?? 0);
+  if (!Number.isFinite(target) || target < 0) {
+    return { swapped: false, swappedWith: null };
+  }
+  if (target === current) {
+    return { swapped: false, swappedWith: null };
+  }
+
+  const batchId = graduationBatchId ?? existing.graduation_batch_id ?? null;
+  let peerSql = `SELECT m.id, m.name FROM milestones m
+     WHERE m.id <> ? AND m.display_order = ?`;
+  const peerParams = [milestoneId, target];
+  if (batchId != null && batchId !== "") {
+    peerSql += ` AND m.graduation_batch_id = ?`;
+    peerParams.push(batchId);
+  } else {
+    peerSql += ` AND m.graduation_batch_id IS NULL`;
+  }
+  peerSql += ` ORDER BY m.id ASC LIMIT 1`;
+
+  const [peers] = await pool.query(peerSql, peerParams);
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    let swappedWith = null;
+    if (peers.length > 0) {
+      swappedWith = { id: peers[0].id, name: peers[0].name };
+      await connection.query(`UPDATE milestones SET display_order = ? WHERE id = ?`, [current, peers[0].id]);
+    }
+    await connection.query(`UPDATE milestones SET display_order = ? WHERE id = ?`, [target, milestoneId]);
+    await connection.commit();
+    return { swapped: peers.length > 0, swappedWith };
+  } catch (err) {
+    await connection.rollback();
+    throw err;
+  } finally {
+    connection.release();
+  }
+}
+
 export async function updateMilestone(id, { name, description, startDate, endDate, deadlineType, displayOrder, requiredDocuments, graduationBatchId }) {
   let docsJson = undefined;
   if (requiredDocuments !== undefined) {
