@@ -1,5 +1,6 @@
 import { parseMilestoneRequiredDocs } from "../components/student/StudentRequiredDocumentSelect.jsx";
 import { normalizeTopicSlots } from "./projectDocumentProgress.js";
+import { getStudentVisibleMilestones } from "./studentMilestones.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -25,12 +26,9 @@ export function buildDocumentDeadlineWarnings({
   for (const slot of slots) {
     const teamId = slot.team_id;
     const teamName = slot.team_name || "";
-    const selectedIds = Array.isArray(slot.topic?.selected_milestone_ids)
-      ? slot.topic.selected_milestone_ids.map((x) => Number(x)).filter((x) => x > 0)
-      : [];
+    const visibleMilestones = getStudentVisibleMilestones(milestones, slot.topic);
 
-    for (const m of milestones) {
-      if (!selectedIds.includes(Number(m.id))) continue;
+    for (const m of visibleMilestones) {
 
       const endMs = new Date(m.end_date).getTime();
       if (!Number.isFinite(endMs)) continue;

@@ -9,6 +9,7 @@ import {
 } from "../../lib/deadlineWarnings.js";
 import { computeProjectDocumentProgress } from "../../lib/projectDocumentProgress.js";
 import { STUDENT_SUBMISSIONS_CHANGED } from "../../lib/studentSubmissionEvents.js";
+import { getStudentVisibleMilestonesForSlots } from "../../lib/studentMilestones.js";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -38,18 +39,11 @@ export default function StudentDashboard() {
       setAllMilestones(ms);
       setTopicRaw(topicsData);
       const slots = Array.isArray(topicsData) ? topicsData : topicsData && topicsData.id ? [topicsData] : [];
-      const selectedIds = [
-        ...new Set(
-          slots.flatMap((s) =>
-            s.topic?.status === "approved" && Array.isArray(s.topic?.selected_milestone_ids)
-              ? s.topic.selected_milestone_ids.map((x) => Number(x)).filter((x) => x > 0)
-              : [],
-          ),
-        ),
-      ];
+      const visibleMs = getStudentVisibleMilestonesForSlots(ms, slots);
+      const visibleIds = new Set(visibleMs.map((m) => Number(m.id)));
       const now = Date.now();
       const upcoming = ms
-        .filter((m) => selectedIds.includes(Number(m.id)))
+        .filter((m) => visibleIds.has(Number(m.id)))
         .filter((m) => {
           const endMs = new Date(m.end_date).getTime();
           return Number.isFinite(endMs) && endMs >= now;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import Icon from "../../components/UI/Icon.jsx";
 import ConfirmModal from "../../components/UI/ConfirmModal.jsx";
 import { submissions, milestones, teams, topics } from "../../lib/api.js";
@@ -8,6 +9,7 @@ import StudentRequiredDocumentSelect, {
   parseMilestoneRequiredDocs,
 } from "../../components/student/StudentRequiredDocumentSelect.jsx";
 import { notifyStudentSubmissionsChanged } from "../../lib/studentSubmissionEvents.js";
+import { getStudentVisibleMilestones } from "../../lib/studentMilestones.js";
 import SubmissionVersionHistoryModal from "../../components/student/SubmissionVersionHistoryModal.jsx";
 
 function normalizeTopicSlots(raw) {
@@ -26,6 +28,7 @@ function normalizeTopicSlots(raw) {
 }
 
 export default function StudentSubmissions() {
+  const location = useLocation();
   const [myTeams, setMyTeams] = useState([]);
   const [activeTeamId, setActiveTeamId] = useState(null);
   const [topicSlots, setTopicSlots] = useState([]);
@@ -59,17 +62,34 @@ export default function StudentSubmissions() {
     }
   }, [activeTeamId]);
 
-  useEffect(() => {
-    Promise.all([teams.myTeam(), topics.myTopic(), milestones.list()])
-      .then(([teamsData, slotsRaw, ms]) => {
-        const arr = Array.isArray(teamsData) ? teamsData : teamsData ? [teamsData] : [];
-        setMyTeams(arr);
-        setTopicSlots(normalizeTopicSlots(slotsRaw));
-        setMilestoneList(ms);
-        setActiveTeamId(arr[0]?.id ?? null);
-      })
-      .catch(() => {});
+  const reloadMilestonesAndTopics = useCallback(async () => {
+    try {
+      const [teamsData, slotsRaw, ms] = await Promise.all([
+        teams.myTeam(),
+        topics.myTopic(),
+        milestones.list(),
+      ]);
+      const arr = Array.isArray(teamsData) ? teamsData : teamsData ? [teamsData] : [];
+      setMyTeams(arr);
+      setTopicSlots(normalizeTopicSlots(slotsRaw));
+      setMilestoneList(ms);
+      setActiveTeamId((prev) => prev ?? arr[0]?.id ?? null);
+    } catch {
+      /* ignore */
+    }
   }, []);
+
+  useEffect(() => {
+    reloadMilestonesAndTopics();
+  }, [reloadMilestonesAndTopics, location.pathname]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") reloadMilestonesAndTopics();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [reloadMilestonesAndTopics]);
 
   useEffect(() => {
     if (!activeTeamId) {
@@ -191,14 +211,13 @@ export default function StudentSubmissions() {
     return <span className="badge badge-warning"><Icon name="Clock" size={12} /> Chờ phản hồi</span>;
   };
 
+  const visibleForTopic = useMemo(
+    () => getStudentVisibleMilestones(milestoneList, currentTopic),
+    [milestoneList, currentTopic],
+  );
+
   const projectMilestones = useMemo(() => {
-    const selected = Array.isArray(currentTopic?.selected_milestone_ids)
-      ? currentTopic.selected_milestone_ids.map((x) => Number(x)).filter((x) => x > 0)
-      : [];
-    const source =
-      selected.length > 0
-        ? milestoneList.filter((m) => selected.includes(Number(m.id)))
-        : milestoneList;
+    const source = visibleForTopic;
 
     const normalize = (v) => String(v || "").trim().toLowerCase();
     const wanted = ["proposal", "mid-term report", "final report"];
@@ -210,15 +229,9 @@ export default function StudentSubmissions() {
     return [...source]
       .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
       .slice(0, 3);
-  }, [milestoneList, currentTopic?.selected_milestone_ids]);
+  }, [visibleForTopic]);
 
-  const allowedMilestones = useMemo(() => {
-    const selected = Array.isArray(currentTopic?.selected_milestone_ids)
-      ? currentTopic.selected_milestone_ids.map((x) => Number(x)).filter((x) => x > 0)
-      : [];
-    if (selected.length === 0) return milestoneList;
-    return milestoneList.filter((m) => selected.includes(Number(m.id)));
-  }, [milestoneList, currentTopic?.selected_milestone_ids]);
+  const allowedMilestones = visibleForTopic;
 
   const selectedMilestoneMeta = useMemo(() => {
     if (!selectedMilestone) return null;

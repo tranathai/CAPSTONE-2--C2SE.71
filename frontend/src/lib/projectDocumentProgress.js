@@ -1,4 +1,5 @@
 import { parseMilestoneRequiredDocs } from "../components/student/StudentRequiredDocumentSelect.jsx";
+import { getStudentVisibleMilestones } from "./studentMilestones.js";
 
 function normalizeDocKey(s) {
   return String(s || "").trim().toLowerCase();
@@ -34,12 +35,9 @@ export function computeProjectDocumentProgress({
 
   for (const slot of slots) {
     const teamId = slot.team_id;
-    const selectedIds = Array.isArray(slot.topic?.selected_milestone_ids)
-      ? slot.topic.selected_milestone_ids.map((x) => Number(x)).filter((x) => x > 0)
-      : [];
+    const visibleMilestones = getStudentVisibleMilestones(milestones, slot.topic);
 
-    for (const m of milestones) {
-      if (!selectedIds.includes(Number(m.id))) continue;
+    for (const m of visibleMilestones) {
 
       const docs = parseMilestoneRequiredDocs(m);
       if (!docs.length) continue;
